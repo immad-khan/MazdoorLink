@@ -2594,13 +2594,41 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       ],
                     ),
                   ),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.rating),
-                      child: Text(bilingual(context, 'Cancel Job', 'کام منسوخ کریں')),
+                  if (_trackingState == 2) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () { 
+                              // explicitly stay on the current screen/state
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(bilingual(context, 'Waiting for worker to finish.', 'ورکر کا انتظار کیا جا رہا ہے۔'))),
+                              );
+                            },
+                            child: Text(bilingual(context, 'No', 'نہیں')),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () {
+                               Navigator.pushReplacementNamed(context, AppRoutes.rating);
+                            },
+                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                            child: Text(bilingual(context, 'Yes', 'ہاں')),
+                          ),
+                        ),
+                      ],
                     ),
-                  )
+                  ] else ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.customerHome),
+                        child: Text(bilingual(context, 'Cancel Job', 'کام منسوخ کریں')),
+                      ),
+                    )
+                  ]
                 ],
               ),
             ),

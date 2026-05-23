@@ -7,6 +7,7 @@ import '../app_state.dart';
 import '../app_theme.dart';
 import '../data/mock_data.dart';
 import 'admin_login_screen.dart';
+import 'admin_dashboard_screen.dart';
 import 'auth_login_screen.dart';
 import 'biometric_verification_screen.dart';
 import 'document_upload_screen.dart';
@@ -43,6 +44,8 @@ class TrackingArguments {
 
 class AppRoutes {
   static const welcome = '/';
+  static const adminLogin = '/admin/login';
+  static const adminDashboard = '/admin/dashboard';
   static const login = '/login';
   static const signup = '/signup';
   static const customerHome = '/customer/home';

@@ -730,6 +730,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _phone = TextEditingController();
+  final _emailController = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
   final _fullNameController = TextEditingController();
@@ -742,10 +743,14 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isForgotPassword = false;
   int _selectedSkillIndex = 0;
   final _skillsList = const ['Plumber', 'Electrician', 'Carpenter', 'AC Mechanic', 'Painter', 'Cleaner'];
+  
+  bool _idFrontUploaded = false;
+  bool _idBackUploaded = false;
 
   @override
   void dispose() {
     _phone.dispose();
+    _emailController.dispose();
     _password.dispose();
     _confirmPassword.dispose();
     _fullNameController.dispose();
@@ -792,38 +797,31 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (widget.isSignup) {
       if (step == 0) {
-        if (_phone.text.trim().isEmpty) return;
+        if (_fullNameController.text.trim().isEmpty || _phone.text.trim().isEmpty || _password.text.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please fill all required fields')),
+          );
+          return;
+        }
+        if (_password.text != _confirmPassword.text) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Passwords must match')),
+          );
+          return;
+        }
+        final role = AppScope.of(context).role;
+        if (role == UserRole.worker && (!_idFrontUploaded || !_idBackUploaded)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please upload both front and back of your ID card')),
+          );
+          return;
+        }
+
         setState(() => step = 1);
         _otpNodes.first.requestFocus();
         return;
       } else if (step == 1) {
-        setState(() => step = 2);
-        return;
-      }
-      
-      // Step 2: Password setup
-      if (_password.text.isEmpty || _password.text != _confirmPassword.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Passwords must match and cannot be empty')),
-        );
-        return;
-      }
-
-      // If worker, progress to step 3 (CNIC & Professional Profile)
-      final role = AppScope.of(context).role;
-      if (role == UserRole.worker && step == 2) {
-        setState(() => step = 3);
-        return;
-      }
-
-      // Step 3 checks: Name and CNIC required
-      if (role == UserRole.worker && step == 3) {
-        if (_fullNameController.text.trim().isEmpty || _cnicController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enter your full name and CNIC number')),
-          );
-          return;
-        }
+        // OTP done, proceed to navigation at the end
       }
     } else {
       // Login flow: check phone and password
@@ -1142,6 +1140,8 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _signupFlow() {
+    final role = AppScope.of(context).role;
+    
     if (step == 0) {
       return Column(
         key: const ValueKey('signupStep0'),
@@ -1153,35 +1153,137 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Enter your mobile number to get started',
+            'Fill in your details to get started',
             style: TextStyle(fontSize: 15, color: Colors.black54),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Mobile number',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+          const Text('Full name', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _fullNameController,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.person_outline),
+              hintText: 'Enter your full name',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
           ),
+          const SizedBox(height: 16),
+          const Text('Email', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.mail_outline),
+              hintText: 'Enter your email address',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text('Mobile number', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
           const SizedBox(height: 8),
           Directionality(
             textDirection: TextDirection.ltr,
             child: TextField(
               controller: _phone,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                prefixIcon: Padding(
+              decoration: InputDecoration(
+                prefixIcon: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Text('+92', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                 ),
-                prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                hintText: '300 1234567',
+                prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                hintText: '3038064241',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+                ),
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          const Text('Password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _password,
+            obscureText: _obscurePassword,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.lock_outline),
+              hintText: 'Enter your password',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              suffixIcon: IconButton(
+                icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text('Confirm password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _confirmPassword,
+            obscureText: _obscureConfirmPassword,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.lock_outline),
+              hintText: 'Confirm your password',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              suffixIcon: IconButton(
+                icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text('Password must be at least 8 characters with letters and numbers', style: TextStyle(fontSize: 11, color: Colors.black54)),
           const SizedBox(height: 24),
+          
+          if (role == UserRole.worker) ...[
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text('ID Card Images (Front & Back)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _idFrontUploaded = !_idFrontUploaded),
+                    child: Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300)
+                      ),
+                      child: Icon(_idFrontUploaded ? Icons.image : Icons.add_a_photo, color: _idFrontUploaded ? Colors.green : Colors.grey, size: 32),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _idBackUploaded = !_idBackUploaded),
+                    child: Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300)
+                      ),
+                      child: Icon(_idBackUploaded ? Icons.image : Icons.add_a_photo, color: _idBackUploaded ? Colors.green : Colors.grey, size: 32),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
           SizedBox(
             width: double.infinity,
+            height: 48,
             child: FilledButton(
               onPressed: _next,
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
               child: const Text('Continue'),
             ),
           ),
@@ -1200,7 +1302,7 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ],
       );
-    } else if (step == 1) {
+    } else {
       return Column(
         key: const ValueKey('signupStep1'),
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1253,143 +1355,10 @@ class _AuthScreenState extends State<AuthScreen> {
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
+            height: 48,
             child: FilledButton(
               onPressed: _next,
-              child: const Text('Continue'),
-            ),
-          ),
-        ],
-      );
-    } else if (step == 2) {
-      final role = AppScope.of(context).role;
-      return Column(
-        key: const ValueKey('signupStep2'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Create password',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Choose a strong password to protect your account',
-            style: TextStyle(fontSize: 15, color: Colors.black54),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Password',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _password,
-            obscureText: _obscurePassword,
-            decoration: InputDecoration(
-              hintText: 'Enter password',
-              suffixIcon: IconButton(
-                icon: Icon((_obscurePassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscurePassword = !(_obscurePassword)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Confirm Password',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _confirmPassword,
-            obscureText: _obscureConfirmPassword,
-            decoration: InputDecoration(
-              hintText: 'Re-enter password',
-              suffixIcon: IconButton(
-                icon: Icon((_obscureConfirmPassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscureConfirmPassword = !(_obscureConfirmPassword)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _next,
-              child: Text(role == UserRole.worker ? 'Continue to Onboarding' : 'Complete Sign up'),
-            ),
-          ),
-        ],
-      );
-    } else {
-      return Column(
-        key: const ValueKey('signupStep3'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Professional Profile',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Complete your profile to start receiving job offers',
-            style: TextStyle(fontSize: 15, color: Colors.black54),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Full Name',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _fullNameController,
-            decoration: const InputDecoration(
-              hintText: 'Enter your full name',
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'CNIC Number',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-          ),
-          const SizedBox(height: 8),
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: TextField(
-              controller: _cnicController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                hintText: 'XXXXX-XXXXXXX-X',
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Select your Skill / Profession',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: List.generate(_skillsList.length, (i) {
-              final selected = i == _selectedSkillIndex;
-              return ChoiceChip(
-                selected: selected,
-                onSelected: (_) => setState(() => _selectedSkillIndex = i),
-                label: Text(_skillsList[i]),
-                selectedColor: const Color(0xFFE6F4F1),
-                checkmarkColor: const Color(0xFF0D9488),
-                labelStyle: TextStyle(
-                  color: selected ? const Color(0xFF0D9488) : Colors.black87,
-                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _next,
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
               child: const Text('Complete Sign up'),
             ),
           ),

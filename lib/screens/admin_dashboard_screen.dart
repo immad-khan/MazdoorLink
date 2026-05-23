@@ -1423,6 +1423,36 @@ class _ListDetailSheetState extends State<_ListDetailSheet> {
                   'The customer reported that during the service, the worker accidentally damaged the item. Please review the chat and approve/reject the claim. This is a system-generated description for "${item['title']}".',
                   style: TextStyle(color: Colors.grey.shade700, height: 1.5),
                 ),
+                const SizedBox(height: 24),
+                const Text('Evidence Photos:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Icon(Icons.broken_image_outlined, color: Colors.grey.shade400, size: 40),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Icon(Icons.image_outlined, color: Colors.grey.shade400, size: 40),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 32),
                 const Text('Contact Information', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),

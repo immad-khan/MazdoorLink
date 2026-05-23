@@ -170,8 +170,8 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
               children: [
                 Text(
                   isUrdu 
-                      ? 'ملازمت پوسٹ کرنے کے لیے ایک عام مسئلہ منتخب کریں تاکہ ورکرز کو فوری قیمت معلوم ہو سکے۔' 
-                      : 'Choose a common issue to post your job and get instant pricing.',
+                      ? 'ملازمت پوسٹ کرنے کے لیے ایک عام مسئلہ منتخب کریں۔' 
+                      : 'Choose a common issue to post your job.',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Colors.black54,
@@ -232,31 +232,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
                                     fontFamily: AppTheme.fontName,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  isUrdu ? 'تخمینہ قیمت' : 'Estimated Price',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade500,
-                                    fontFamily: AppTheme.fontName,
-                                  ),
-                                ),
                               ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF59E0B).withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Rs. ${issuesList[index].price.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                color: Color(0xFFD97706),
-                                fontWeight: FontWeight.bold,
-                                fontFamily: AppTheme.fontName,
-                              ),
                             ),
                           ),
                         ],

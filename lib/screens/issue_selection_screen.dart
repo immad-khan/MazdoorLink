@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../app_state.dart';
+import 'mazdoor_flow.dart';
+import 'recommendation_arguments.dart';
 
 class JobPostingArguments {
   final String descriptionEn;

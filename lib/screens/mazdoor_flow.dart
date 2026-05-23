@@ -17,6 +17,7 @@ import 'privacy_settings_screen.dart';
 import 'voice_navigation_screen.dart';
 import 'issue_selection_screen.dart';
 import 'worker_services_setup_screen.dart';
+import 'recommendation_arguments.dart';
 
 class ProfileArguments {
   final WorkerModel worker;
@@ -39,12 +40,6 @@ class TrackingArguments {
   TrackingArguments({required this.worker, required this.job});
 }
 
-class RecommendationArguments {
-  final List<IssueItem> selectedIssues;
-  final String categoryKey;
-
-  RecommendationArguments({required this.selectedIssues, required this.categoryKey});
-}
 
 class AppRoutes {
   static const welcome = '/';
@@ -1854,11 +1849,7 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
   }
 }
 
-class RecommendationArguments {
-  final List<IssueItem> selectedIssues;
-  final String categoryKey;
-  RecommendationArguments({required this.selectedIssues, required this.categoryKey});
-}
+
 
 class WorkerRecommendationsScreen extends StatelessWidget {
   const WorkerRecommendationsScreen({super.key});

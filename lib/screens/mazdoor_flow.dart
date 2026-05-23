@@ -2549,7 +2549,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                     ),
                     title: Text(worker.name),
                     subtitle: Text(
-                      '${worker.category} • ${bilingual(context, job.descriptionEn, job.descriptionUr)} • ${worker.price}'
+                      '${worker.category} • ${bilingual(context, job?.descriptionEn ?? "Service", job?.descriptionUr ?? "سروس")} • ${worker.price}'
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,

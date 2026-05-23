@@ -1297,6 +1297,22 @@ class _ListDetailSheetState extends State<_ListDetailSheet> {
                         Text('${item['sub']} · ${item['amount']}',
                             style: TextStyle(
                                 fontSize: 12, color: Colors.grey.shade600)),
+                        const SizedBox(height: 8),
+                        if (widget.title == 'Damage Claims')
+                          SizedBox(
+                            width: double.infinity,
+                            child: TextButton.icon(
+                              onPressed: () => _showDamageViewSheet(context, item),
+                              icon: const Icon(Icons.visibility_outlined, size: 18),
+                              label: const Text('View Claim Details & Contact Info'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF0D9488),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                backgroundColor: const Color(0xFF0D9488).withOpacity(0.05),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ),
                         if (status == 'Pending') ...[
                           const SizedBox(height: 10),
                           Row(
@@ -1352,6 +1368,115 @@ class _ListDetailSheetState extends State<_ListDetailSheet> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showDamageViewSheet(BuildContext context, Map<String, String> item) {
+    final parts = item['sub']!.split(' · ');
+    final customerName = parts.isNotEmpty ? parts[0] : 'Customer User';
+    final workerName = parts.length > 1 ? parts[1] : 'Worker Profile';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.65,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, scrollController) => Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text(item['title']!, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Claim Amount:', style: TextStyle(color: Colors.grey.shade600)),
+                    Text(item['amount']!, style: const TextStyle(fontSize: 16, color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const Text('Issue Description:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text(
+                  'The customer reported that during the service, the worker accidentally damaged the item. Please review the chat and approve/reject the claim. This is a system-generated description for "${item['title']}".',
+                  style: TextStyle(color: Colors.grey.shade700, height: 1.5),
+                ),
+                const SizedBox(height: 32),
+                const Text('Contact Information', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 12),
+                _buildPartyInfo(context, 'Customer', customerName, '+92 300 1234567'),
+                const SizedBox(height: 12),
+                _buildPartyInfo(context, 'Worker', workerName, '+92 321 7654321'),
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPartyInfo(BuildContext context, String role, String name, String phone) {
+    final isCustomer = role == 'Customer';
+    final primaryColor = isCustomer ? const Color(0xFF0D9488) : const Color(0xFFF59E0B);
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: primaryColor.withOpacity(0.1),
+            child: Icon(isCustomer ? Icons.person_outline : Icons.construction_outlined, color: primaryColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text('$role Account • $phone', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Chat with $role',
+            icon: Icon(Icons.chat_bubble_outline, color: primaryColor),
+            onPressed: () {
+               // Close the current detail sheet and navigate to chat
+               Navigator.pop(context); // Close party info sheet
+               Navigator.pop(context); // Close list detail sheet
+               Navigator.pushNamed(context, '/shared/chat');
+            },
+          ),
+        ],
+      )
     );
   }
 }

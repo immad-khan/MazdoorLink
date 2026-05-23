@@ -2186,49 +2186,32 @@ class WorkerRecommendationsScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.workerProfile,
-                                  arguments: ProfileArguments(
-                                    worker: matchedWorkers[i],
-                                    job: JobPostingArguments(
-                                      descriptionEn: selectedIssues[i].titleEn,
-                                      descriptionUr: selectedIssues[i].titleUr,
-                                      price: 0,
-                                      categoryKey: categoryKey,
-                                    ),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.person_outline, size: 16),
-                              label: Text(bilingual(context, 'View Profile', 'پروفائل'), style: const TextStyle(fontSize: 13)),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF0D9488),
-                                side: const BorderSide(color: Color(0xFF0D9488)),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              AppRoutes.workerProfile,
+                              arguments: ProfileArguments(
+                                worker: matchedWorkers[i],
+                                job: JobPostingArguments(
+                                  descriptionEn: selectedIssues[i].titleEn,
+                                  descriptionUr: selectedIssues[i].titleUr,
+                                  price: 0,
+                                  categoryKey: categoryKey,
+                                ),
                               ),
-                            ),
+                            );
+                          },
+                          icon: const Icon(Icons.person_outline, size: 16),
+                          label: Text(bilingual(context, 'View Profile', 'پروفائل دیکھیں'), style: const TextStyle(fontSize: 14)),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D9488),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: () => _showOfferModal(context, matchedWorkers[i], categoryKey),
-                              icon: const Icon(Icons.local_offer_outlined, size: 16),
-                              label: Text(bilingual(context, 'Make Offer', 'پیشکش کریں'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF0D9488),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -2241,8 +2224,21 @@ class WorkerRecommendationsScreen extends StatelessWidget {
   }
 }
 
-class FlowWorkerProfileScreen extends StatelessWidget {
+class FlowWorkerProfileScreen extends StatefulWidget {
   const FlowWorkerProfileScreen({super.key});
+
+  @override
+  State<FlowWorkerProfileScreen> createState() => _FlowWorkerProfileScreenState();
+}
+
+class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
+  final TextEditingController _offerController = TextEditingController();
+
+  @override
+  void dispose() {
+    _offerController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2311,45 +2307,21 @@ class FlowWorkerProfileScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0FDFA),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFCCFBF1)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.payments, color: Color(0xFF0D9488), size: 24),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  bilingual(context, 'Agreed Price Offer', 'طے شدہ قیمت کی پیشکش'),
-                                  style: TextStyle(fontSize: 12, color: Colors.teal.shade800, fontWeight: FontWeight.w500),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  worker.price,
-                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F766E)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFCCFBF1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              bilingual(context, 'Fixed', 'فکسڈ'),
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-                            ),
-                          ),
-                        ],
+                    TextField(
+                      controller: _offerController,
+                      keyboardType: TextInputType.number,
+                      textDirection: TextDirection.ltr,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.currency_rupee, size: 18, color: Color(0xFF0D9488)),
+                        hintText: isUrdu ? 'مثلاً 500' : 'E.g., 500',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+                        ),
+                        labelText: isUrdu ? 'اپنی پیشکش درج کریں (Rs)' : 'Enter Your Offer (Rs)',
+                        filled: true,
+                        fillColor: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -2384,6 +2356,17 @@ class FlowWorkerProfileScreen extends StatelessWidget {
                 Expanded(
                   child: FilledButton(
                     onPressed: () {
+                      final priceText = _offerController.text.trim();
+                      final offerPrice = double.tryParse(priceText);
+                      if (offerPrice == null || offerPrice <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(bilingual(context, 'Please enter a valid amount to make an offer.', 'براہ کرم پیشکش کرنے کے لئے ایک درست رقم درج کریں۔')),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                        return;
+                      }
                       Navigator.pushNamed(
                         context,
                         AppRoutes.matchingSimulator,
@@ -2392,7 +2375,7 @@ class FlowWorkerProfileScreen extends StatelessWidget {
                           job: args?.job ?? JobPostingArguments(
                             descriptionEn: 'Service',
                             descriptionUr: 'سروس',
-                            price: 1000,
+                            price: offerPrice,
                             categoryKey: worker.category.toLowerCase(),
                           ),
                         ),

@@ -2307,6 +2307,14 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(bilingual(context, 'Worker\'s Preset Price:', 'ورکر کی مقرر کردہ قیمت:'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text(worker.price, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: _offerController,
                       keyboardType: TextInputType.number,
@@ -2433,8 +2441,29 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class ServiceTrackingScreen extends StatelessWidget {
+class ServiceTrackingScreen extends StatefulWidget {
   const ServiceTrackingScreen({super.key});
+
+  @override
+  State<ServiceTrackingScreen> createState() => _ServiceTrackingScreenState();
+}
+
+class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
+  int _trackingState = 0; // 0: tracking, 1: arrived, 2: completed?
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimers();
+  }
+
+  void _startTimers() async {
+    await Future.delayed(const Duration(seconds: 10));
+    if (mounted) setState(() => _trackingState = 1);
+    
+    await Future.delayed(const Duration(seconds: 10));
+    if (mounted) setState(() => _trackingState = 2);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2511,12 +2540,28 @@ class ServiceTrackingScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Text(bilingual(context, 'Arriving in 12 min', '12 منٹ میں پہنچ رہا ہے'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
-                      const Spacer(),
+                      Expanded(
+                        child: Text(
+                          _trackingState == 0 
+                              ? bilingual(context, 'Arriving in 12 min', '12 منٹ میں پہنچ رہا ہے')
+                              : _trackingState == 1 
+                                  ? bilingual(context, 'Worker arrived', 'ورکر پہنچ گیا')
+                                  : bilingual(context, 'Worker claims job is completed', 'ورکر کا دعویٰ ہے کہ کام مکمل ہو گیا'),
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       const Icon(Icons.explore),
                     ],
                   ),
-                  Text(bilingual(context, '2.5 km away', '2.5 کلومیٹر دور')),
+                  if (_trackingState == 0) Text(bilingual(context, '2.5 km away', '2.5 کلومیٹر دور')),
+                  if (_trackingState == 2) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      bilingual(context, 'Is it completed?', 'کیا کام مکمل ہو گیا ہے؟'),
+                      style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold),
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   ListTile(
                     contentPadding: EdgeInsets.zero,

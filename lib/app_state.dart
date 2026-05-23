@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum UserRole { customer, worker }
+enum UserRole { customer, worker, admin }
 
 class AppController extends ChangeNotifier {
   UserRole? role;

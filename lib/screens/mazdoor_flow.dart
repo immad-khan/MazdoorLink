@@ -6,6 +6,8 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../app_state.dart';
 import '../app_theme.dart';
 import '../data/mock_data.dart';
+import 'admin_login_screen.dart';
+import 'auth_login_screen.dart';
 import 'biometric_verification_screen.dart';
 import 'document_upload_screen.dart';
 import 'notification_preferences_screen.dart';
@@ -71,12 +73,15 @@ class AppRoutes {
   static const sharedHistory = '/shared/history';
   static const sharedSettings = '/shared/settings';
   static const matchingSimulator = '/customer/matching-simulator';
+  static const adminLogin = '/admin/login';
 }
 
 Route<dynamic> buildRoute(RouteSettings settings) {
   switch (settings.name) {
     case AppRoutes.welcome:
       return _page(const WelcomeScreen(), settings);
+    case AppRoutes.adminLogin:
+      return _page(const AdminLoginScreen(), settings);
     case AppRoutes.login:
       return _page(const AuthScreen(isSignup: false), settings);
     case AppRoutes.signup:
@@ -643,6 +648,18 @@ class WelcomeScreen extends StatelessWidget {
                 c.selectRole(UserRole.worker);
                 c.setLocale(const Locale('en')); // English
                 Navigator.pushNamed(context, AppRoutes.login);
+              },
+            ),
+            const SizedBox(height: 16),
+            // Admin
+            _RoleCard(
+              icon: Icons.admin_panel_settings,
+              title: 'Admin Dashboard',
+              subtitle: 'Management Portal Access',
+              onTap: () {
+                c.selectRole(UserRole.admin);
+                c.setLocale(const Locale('en'));
+                Navigator.pushNamed(context, AppRoutes.adminLogin);
               },
             ),
           ],

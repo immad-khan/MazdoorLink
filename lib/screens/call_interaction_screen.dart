@@ -47,6 +47,7 @@ class _CallInteractionScreenState extends State<CallInteractionScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(t.t('call_ended'))),
                 );
+                Navigator.pop(context);
               },
               icon: Icon(Icons.call_end),
               label: Text(t.t('end_call')),

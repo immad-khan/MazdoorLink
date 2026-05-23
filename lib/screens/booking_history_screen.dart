@@ -133,7 +133,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   Widget _buildBookingCard(BookingItem booking) {
     return Container(
       margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -146,91 +145,111 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppTheme.notWhite,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(_getCategoryIcon(booking.category),
-                    color: Theme.of(context).primaryColor, size: 24),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      booking.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.darkerText,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              if (!booking.isCompleted) {
+                Navigator.pushNamed(context, '/customer/tracking');
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Job Details opened')),
+                );
+              }
+            },
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppTheme.notWhite,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(_getCategoryIcon(booking.category),
+                            color: Theme.of(context).primaryColor, size: 24),
                       ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      booking.date,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.deactivatedText,
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              booking.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.darkerText,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              booking.date,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.deactivatedText,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _getStatusColor(booking.status).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: _getStatusColor(booking.status).withOpacity(0.3),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(booking.status).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _getStatusColor(booking.status).withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          booking.status,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _getStatusColor(booking.status),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                child: Text(
-                  booking.status,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _getStatusColor(booking.status),
+                  SizedBox(height: 12),
+                  Divider(color: AppTheme.notWhite, height: 0),
+                  SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Amount',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.lightText,
+                        ),
+                      ),
+                      Text(
+                        'Rs ${booking.amount.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.darkerText,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-          SizedBox(height: 12),
-          Divider(color: AppTheme.notWhite, height: 0),
-          SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Amount',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.lightText,
-                ),
-              ),
-              Text(
-                'Rs ${booking.amount.toStringAsFixed(0)}',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.darkerText,
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

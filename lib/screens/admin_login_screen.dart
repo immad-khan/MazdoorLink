@@ -152,7 +152,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         ),
                         GestureDetector(
                           onTap: () {
-                            // Forgot Password Action
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please contact system administrator to reset password.')),
+                            );
                           },
                           child: const Text(
                             'Forgot Password?',

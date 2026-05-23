@@ -383,7 +383,16 @@ class _BiometricVerificationScreenState extends State<BiometricVerificationScree
                 _faceScanned,
                 _faceScanned
                     ? () {}
-                    : (_fingerprintScanned ? () => _startScan(false) : () {}),
+                    : (_fingerprintScanned
+                        ? () => _startScan(false)
+                        : () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please scan fingerprint first'),
+                                backgroundColor: Colors.amber,
+                              ),
+                            );
+                          }),
               ),
               SizedBox(height: 32),
 

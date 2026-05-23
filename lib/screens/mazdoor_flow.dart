@@ -71,7 +71,6 @@ class AppRoutes {
   static const sharedHistory = '/shared/history';
   static const sharedSettings = '/shared/settings';
   static const matchingSimulator = '/customer/matching-simulator';
-  static const adminLogin = '/admin/login';
 }
 
 Route<dynamic> buildRoute(RouteSettings settings) {

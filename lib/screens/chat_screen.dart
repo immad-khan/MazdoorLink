@@ -272,7 +272,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () {},
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Calling worker...')),
+                );
+              },
               borderRadius: BorderRadius.circular(8),
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
@@ -283,7 +287,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () {},
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('More options opened')),
+                );
+              },
               borderRadius: BorderRadius.circular(8),
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),

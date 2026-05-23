@@ -380,50 +380,82 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
   }
 
   Widget _buildCommandExample(String command, String description) {
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.spacer),
+        side: BorderSide(color: AppTheme.spacer),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.mic,
-                color: Theme.of(context).primaryColor, size: 20),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  command,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkerText,
-                  ),
+      child: InkWell(
+        onTap: _listening ? null : () {
+          setState(() {
+            _listening = true;
+            _recognizedCommand = '';
+          });
+          for (var controller in _waveControllers) {
+            controller.repeat();
+          }
+          Future.delayed(const Duration(seconds: 2), () {
+            for (var controller in _waveControllers) {
+              controller.stop();
+            }
+            setState(() {
+              _listening = false;
+              _recognizedCommand = command;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Command recognized: "$command"'),
+                backgroundColor: const Color(0xFF059669),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                SizedBox(height: 2),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.lightText,
-                  ),
+                child: Icon(Icons.mic,
+                    color: Theme.of(context).primaryColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      command,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.darkerText,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.lightText,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

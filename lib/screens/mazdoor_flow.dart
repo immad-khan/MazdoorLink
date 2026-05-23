@@ -77,6 +77,8 @@ Route<dynamic> buildRoute(RouteSettings settings) {
       return _page(const WelcomeScreen(), settings);
     case AppRoutes.adminLogin:
       return _page(const AdminLoginScreen(), settings);
+    case AppRoutes.adminDashboard:
+      return _page(const AdminDashboardScreen(), settings);
     case AppRoutes.login:
       return _page(const AuthScreen(isSignup: false), settings);
     case AppRoutes.signup:
@@ -966,7 +968,11 @@ class _AuthScreenState extends State<AuthScreen> {
           Align(
             alignment: Alignment.center,
             child: TextButton(
-              onPressed: () {},
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Verification code resent successfully')),
+                );
+              },
               child: const Text('Resend code', style: TextStyle(color: Color(0xFF0D9488))),
             ),
           ),
@@ -1234,7 +1240,11 @@ class _AuthScreenState extends State<AuthScreen> {
           Align(
             alignment: Alignment.center,
             child: TextButton(
-              onPressed: () {},
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Verification code resent successfully')),
+                );
+              },
               child: const Text('Resend code', style: TextStyle(color: Color(0xFF0D9488))),
             ),
           ),
@@ -1510,7 +1520,14 @@ class CustomerHomeScreen extends StatelessWidget {
               title: Text(w.name),
               subtitle: Text('⭐ ${w.rating}  ${w.category}  • ${w.distanceKm} km'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.pushNamed(context, AppRoutes.workerProfile),
+              onTap: () => Navigator.pushNamed(
+                context, 
+                AppRoutes.workerProfile,
+                arguments: ProfileArguments(
+                  worker: w,
+                  job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+                ),
+              ),
             ),
           const SizedBox(height: 10),
         ],
@@ -1829,7 +1846,14 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
           leading: const Icon(Icons.location_on),
           title: Text(bilingual(context, 'Service Location', 'سروس لوکیشن')),
           subtitle: Text(bilingual(context, 'House 42, Street 7, Sector F-8/4', 'گھر 42، سٹریٹ 7، سیکٹر ایف-8/4')),
-          trailing: TextButton(onPressed: () {}, child: Text(bilingual(context, 'Change', 'تبدیل'))),
+          trailing: TextButton(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Location picker opened')),
+              );
+            }, 
+            child: Text(bilingual(context, 'Change', 'تبدیل'))
+          ),
         ),
         const SizedBox(height: 16),
         Container(
@@ -2529,7 +2553,14 @@ class ServiceTrackingScreen extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedChat), icon: const Icon(Icons.chat)),
-                        IconButton(onPressed: () {}, icon: const Icon(Icons.call, color: Colors.green)),
+                        IconButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Calling worker...')),
+                            );
+                          }, 
+                          icon: const Icon(Icons.call, color: Colors.green)
+                        ),
                       ],
                     ),
                   ),
@@ -3058,7 +3089,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
             ),
             subtitle: Text(isUrdu ? 'پلمبر' : 'Plumber'),
-            trailing: const Icon(Icons.notifications),
+            trailing: IconButton(
+              icon: const Icon(Icons.notifications),
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.workerNotification),
+            ),
           ),
           AnimatedContainer(
             duration: const Duration(milliseconds: 500),
@@ -3670,7 +3704,14 @@ class _SmartChatScreenState extends State<SmartChatScreen> {
                     ),
                   ),
                 ),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.mic_none)),
+                IconButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Voice input activated')),
+                    );
+                  }, 
+                  icon: const Icon(Icons.mic_none)
+                ),
                 Expanded(
                   child: TextField(
                     controller: input,
@@ -3739,11 +3780,22 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
               children: [
                 for (final item in list)
                   Card(
-                    child: ListTile(
-                      leading: Icon(item.status == 'completed' ? Icons.check_circle : Icons.schedule, color: item.status == 'completed' ? Colors.green : Colors.amber.shade700),
-                      title: Text(isUrdu ? item.titleUr : item.titleEn),
-                      subtitle: Text('${item.time} • ${item.distance}'),
-                      trailing: Text(item.price, style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
+                    child: InkWell(
+                      onTap: () {
+                        if (activeTab) {
+                          Navigator.pushNamed(context, AppRoutes.tracking);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Job Details opened')),
+                          );
+                        }
+                      },
+                      child: ListTile(
+                        leading: Icon(item.status == 'completed' ? Icons.check_circle : Icons.schedule, color: item.status == 'completed' ? Colors.green : Colors.amber.shade700),
+                        title: Text(isUrdu ? item.titleUr : item.titleEn),
+                        subtitle: Text('${item.time} • ${item.distance}'),
+                        trailing: Text(item.price, style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
+                      ),
                     ),
                   )
               ],

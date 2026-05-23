@@ -1,0 +1,1876 @@
+Mazdoor Link
+BILAL AZIZ : BCS231019 HANZALA HABIB AWAN:BCSP251011 MUHAMMAD WASIF RAFIQ : BCSP251006
+Supervised By
+Ms. Rabea Saleem
+Spring-2026
+Department of Computer Science
+Capital University of Science & Technology, Islamabad
+Contents
+. . . . . . . . .. . . . . .. . . .. . . . . . . .. . . . . . . .. . . . . . . . . . . . . .. .. . . . . . . .. . . . . . . .. . . . . . . . . . . . .. . . . . .. . . . .. . . .. . . . . . . . . . . . . .. . . . . . . . . . .. . . . . .. . . . . . . . . . .. . . . . . . . . . . . .. . . . . . . . .2.6Domain Model2.5System Sequence Diagrams2.4System Use Case Modeling2.3Selected Functional Requirements2.2Non-Functional Requirements2.1Functional Requirements2Requirement Specification and Analysis1.6Project Timeline1.5Project Work Break Down1.4.5Development Tools1.4.4Speech and Translation APIs1.4.3AI and Machine Learning: Python1.4.2Backend: Firebase Services1.4.1Mobile Frontend: Flutter1.4Useful Tools and Technologies1.3.1Safety and Liability Management1.3Business Scope1.2.4TaskBid (International Reference)1.2.3HomeServices.pk1.2.2Kam Kaaj1.2.1Karsaaz App1.2Existing Examples / Solutions1.1Project Introduction1Introduction. . . . . . . . .. . . . . .. . . .. . . . . . . .. . . . . . . .. . . . . . . . . . . . . .. .. . . . . . . .. . . . . . . .. . . . . . . . . . . . .. . . . . .. . . . .. . . .. . . . . . . . . . . . . .. . . . . . . . . . .. . . . . .. . . . . . . . . . .. . . . . . . . . . . . .. . . . . . . . .2.6Domain Model2.5System Sequence Diagrams2.4System Use Case Modeling2.3Selected Functional Requirements2.2Non-Functional Requirements2.1Functional Requirements2Requirement Specification and Analysis1.6Project Timeline1.5Project Work Break Down1.4.5Development Tools1.4.4Speech and Translation APIs1.4.3AI and Machine Learning: Python1.4.2Backend: Firebase Services1.4.1Mobile Frontend: Flutter1.4Useful Tools and Technologies1.3.1Safety and Liability Management1.3Business Scope1.2.4TaskBid (International Reference)1.2.3HomeServices.pk1.2.2Kam Kaaj1.2.1Karsaaz App1.2Existing Examples / Solutions1.1Project Introduction1Introduction4
+. . . . . . . . .
+. . . . . .
+. . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . . . . . . . .
+. .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . . . . . . .
+. . . . . .
+. . . . .
+. . . .
+. . . . . . . . . . . . . .
+. . . . . . . . . . .
+. . . . . .
+. . . . . . . . . . .
+. . . . . . . . . . . . .
+. . . . . . . . .
+2.6Domain Model
+2.5System Sequence Diagrams
+2.4System Use Case Modeling
+2.3Selected Functional Requirements
+2.2Non-Functional Requirements
+2.1Functional Requirements
+2Requirement Specification and Analysis
+1.6Project Timeline
+1.5Project Work Break Down
+1.4.5Development Tools
+1.4.4Speech and Translation APIs
+1.4.3AI and Machine Learning: Python
+1.4.2Backend: Firebase Services
+1.4.1Mobile Frontend: Flutter
+1.4Useful Tools and Technologies
+1.3.1Safety and Liability Management
+1.3Business Scope
+1.2.4TaskBid (International Reference)
+1.2.3HomeServices.pk
+1.2.2Kam Kaaj
+1.2.1Karsaaz App
+1.2Existing Examples / Solutions
+1.1Project Introduction
+1Introduction
+. . . . . . . . .
+. . . . . .
+. . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . . . . . . . .
+. .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . . . . . . .
+. . . . . .
+. . . . .
+. . . .
+. . . . . . . . . . . . . .
+. . . . . . . . . . .
+. . . . . .
+. . . . . . . . . . .
+. . . . . . . . . . . . .
+. . . . . . . . .
+2.6Domain Model
+2.5System Sequence Diagrams
+2.4System Use Case Modeling
+2.3Selected Functional Requirements
+2.2Non-Functional Requirements
+2.1Functional Requirements
+2Requirement Specification and Analysis
+1.6Project Timeline
+1.5Project Work Break Down
+1.4.5Development Tools
+1.4.4Speech and Translation APIs
+1.4.3AI and Machine Learning: Python
+1.4.2Backend: Firebase Services
+1.4.1Mobile Frontend: Flutter
+1.4Useful Tools and Technologies
+1.3.1Safety and Liability Management
+1.3Business Scope
+1.2.4TaskBid (International Reference)
+1.2.3HomeServices.pk
+1.2.2Kam Kaaj
+1.2.1Karsaaz App
+1.2Existing Examples / Solutions
+1.1Project Introduction
+1Introduction
+. . . . . . . . . . . . . . . .4
+. . . . . . . . . . . . . . . .7
+. . . . . . . . . . . . . . . .7
+. . . . . . . . . . . . . . . .8
+. . . . . . . . . . . . . . . .8
+. . . . . . . . . . . . . . . .8
+. . . . . . . . . . . . . . . .9
+.11
+.12
+.12
+.13
+.14
+.14
+.14
+.15
+.16
+18
+.19
+.21
+.22
+.24
+.37
+.49
+3   System Design52
+Layer Definition53
+    Presentation Layer54
+    Application Logic Layer54
+    AI Services Layer54
+1
+3.1.4      Data Layer54
+Software Architecture55
+Class Diagram58
+Sequence Diagrams60
+Entity Relationship Diagram67
+Database Schema69
+User Interface Design71
+Software COTS83
+List of Tables
+1.1Existing Solutions Features Comparison1.1Existing Solutions Features Comparison. . . . . . . . . . . . . . . .9
+1.1Existing Solutions Features Comparison
+1.1Existing Solutions Features Comparison
+2.2Non-Functional Requirements2.2Non-Functional Requirements2.1Functional Requirements2.1Functional Requirements1.2Work Breakdown – Task Assignment1.2Work Breakdown – Task Assignment.16
+2.2Non-Functional Requirements
+2.2Non-Functional Requirements
+2.1Functional Requirements
+2.1Functional Requirements
+1.2Work Breakdown – Task Assignment
+1.2Work Breakdown – Task Assignment
+2.3Selected Functional Requirements2.3Selected Functional Requirements.19
+2.3Selected Functional Requirements
+2.3Selected Functional Requirements
+2.4UC-01: Customer Register and Login2.4UC-01: Customer Register and Login.21
+2.4UC-01: Customer Register and Login
+2.4UC-01: Customer Register and Login
+.22
+26
+Layers Definition53
+Software COTS Components83
+List of Figures
+1.1Project Work Breakdown Structure1.1Project Work Breakdown Structure.15
+1.1Project Work Breakdown Structure
+1.1Project Work Breakdown Structure
+2.2UC-03: Worker Registers2.2UC-03: Worker Registers1.2Project Timeline – April 2026 to December 20261.2Project Timeline – April 2026 to December 2026.17
+2.2UC-03: Worker Registers
+2.2UC-03: Worker Registers
+1.2Project Timeline – April 2026 to December 2026
+1.2Project Timeline – April 2026 to December 2026
+.24
+2.24 MazdoorLink AI – Domain Model2.24 MazdoorLink AI – Domain Model2.23 System Sequence Diagram – UC-122.23 System Sequence Diagram – UC-122.22 System Sequence Diagram – UC-112.22 System Sequence Diagram – UC-112.21 System Sequence Diagram – UC-102.21 System Sequence Diagram – UC-102.20 System Sequence Diagram – UC-092.20 System Sequence Diagram – UC-092.19 System Sequence Diagram – UC-082.19 System Sequence Diagram – UC-082.18 System Sequence Diagram – UC-072.18 System Sequence Diagram – UC-072.17 System Sequence Diagram – UC-062.17 System Sequence Diagram – UC-062.16 System Sequence Diagram – UC-052.16 System Sequence Diagram – UC-052.15 System Sequence Diagram – UC-042.15 System Sequence Diagram – UC-042.14 System Sequence Diagram – UC-032.14 System Sequence Diagram – UC-032.13 System Sequence Diagram – UC-022.13 System Sequence Diagram – UC-022.12 System Sequence Diagram – UC-012.12 System Sequence Diagram – UC-012.9UC-10: Admin mange comlaints2.9UC-10: Admin mange comlaints2.4UC-05: Worker Accepts or Rejects Job Request2.4UC-05: Worker Accepts or Rejects Job Request2.3UC-04: Admin Verifies Worker Documents2.3UC-04: Admin Verifies Worker Documents2.1MazdoorLink App – System Use Case Diagram2.1MazdoorLink App – System Use Case Diagram.27
+2.24 MazdoorLink AI – Domain Model
+2.24 MazdoorLink AI – Domain Model
+2.23 System Sequence Diagram – UC-12
+2.23 System Sequence Diagram – UC-12
+2.22 System Sequence Diagram – UC-11
+2.22 System Sequence Diagram – UC-11
+2.21 System Sequence Diagram – UC-10
+2.21 System Sequence Diagram – UC-10
+2.20 System Sequence Diagram – UC-09
+2.20 System Sequence Diagram – UC-09
+2.19 System Sequence Diagram – UC-08
+2.19 System Sequence Diagram – UC-08
+2.18 System Sequence Diagram – UC-07
+2.18 System Sequence Diagram – UC-07
+2.17 System Sequence Diagram – UC-06
+2.17 System Sequence Diagram – UC-06
+2.16 System Sequence Diagram – UC-05
+2.16 System Sequence Diagram – UC-05
+2.15 System Sequence Diagram – UC-04
+2.15 System Sequence Diagram – UC-04
+2.14 System Sequence Diagram – UC-03
+2.14 System Sequence Diagram – UC-03
+2.13 System Sequence Diagram – UC-02
+2.13 System Sequence Diagram – UC-02
+2.12 System Sequence Diagram – UC-01
+2.12 System Sequence Diagram – UC-01
+2.9UC-10: Admin mange comlaints
+2.9UC-10: Admin mange comlaints
+2.4UC-05: Worker Accepts or Rejects Job Request
+2.4UC-05: Worker Accepts or Rejects Job Request
+2.3UC-04: Admin Verifies Worker Documents
+2.3UC-04: Admin Verifies Worker Documents
+2.1MazdoorLink App – System Use Case Diagram
+2.1MazdoorLink App – System Use Case Diagram
+.28
+.29
+.30
+2.5UC-06: Real-Time Chat with Automatic Translation2.5UC-06: Real-Time Chat with Automatic Translation.31
+2.5UC-06: Real-Time Chat with Automatic Translation
+2.5UC-06: Real-Time Chat with Automatic Translation
+.32
+2.7UC-08: Customer Rates and Reviews Worker2.7UC-08: Customer Rates and Reviews Worker.33
+2.7UC-08: Customer Rates and Reviews Worker
+2.7UC-08: Customer Rates and Reviews Worker
+2.10 UC-11: Worker Toggles Availability and Receives Job Alert2.10 UC-11: Worker Toggles Availability and Receives Job Alert2.8UC-09: Customer Reports complaints2.8UC-09: Customer Reports complaints2.6UC-07: Customer Makes In-App Payment2.6UC-07: Customer Makes In-App Payment.34
+2.10 UC-11: Worker Toggles Availability and Receives Job Alert
+2.10 UC-11: Worker Toggles Availability and Receives Job Alert
+2.8UC-09: Customer Reports complaints
+2.8UC-09: Customer Reports complaints
+2.6UC-07: Customer Makes In-App Payment
+2.6UC-07: Customer Makes In-App Payment
+.35
+.36
+2.11 UC-12: Worker Uploads Before-and-After Service Photos2.11 UC-12: Worker Uploads Before-and-After Service Photos.37
+2.11 UC-12: Worker Uploads Before-and-After Service Photos
+2.11 UC-12: Worker Uploads Before-and-After Service Photos
+.38
+.39
+.40
+.41
+.42
+.43
+.44
+.45
+.46
+.47
+.48
+.49
+MazdoorLink AI – Software Architecture Diagram57
+MazdoorLink AI – Class Diagram59
+Sequence Diagram – Customer Login and Registration61
+Sequence Diagram – Customer Posts Job Request62
+Sequence Diagram – Worker Accepts Job Request63
+Sequence Diagram – Real-Time Chat with Automatic Translation64
+Sequence Diagram – Admin Verifies Worker Documents65
+Sequence Diagram – Customer Reports Complaint and Admin Resolves Claim66
+MazdoorLink AI – Entity Relationship Diagram68
+MazdoorLink AI – Database Schema70
+MazdoorLink AI – Welcome and Authentication Screen72
+MazdoorLink AI – Customer Home Screen74
+MazdoorLink AI – Worker Home Screen76
+MazdoorLink AI – Job Request Posting Screen78
+MazdoorLink AI – Chat Screen with Translation80
+MazdoorLink AI – Worker Profile Screen82
+Chapter 1 Introduction
+This chapter provides a brief summary of the project scope, project specification, a comparison study with the available existing solutions, and existing tools and tech-nologies that may be used for the development of this project. This chapter also includes a project work breakdown structure and a proposed timeline.
+Project Introduction
+In the current socio-economic landscape of Pakistan, a significant portion of the ur-ban population regularly requires skilled labor services such as plumbing, electrical work, carpentry, painting, and general home maintenance. Despite the high demand for these services, the process of finding and hiring reliable workers remains largely informal, unstructured, and inefficient. Customers typically rely on personal refer-ences, local contacts, or random phone numbers obtained through word-of-mouth, which often leads to a lack of trust, no price transparency, poor communication, and an overall unsatisfactory service experience [1].
+At the same time, skilled workers in Pakistan face significant challenges in secur-ing consistent job opportunities. The majority of these workers belong to low-literacy demographics with limited digital access and minimal exposure to technology-based platforms. Existing methods of job acquisition, such as standing at designated labor gathering points (labour chowks) or relying on intermediaries, are inherently ineffi-cient and do not guarantee regular employment. This dual-sided problem creates a substantial communication and accessibility gap between customers seeking services and workers offering them [2].
+The proposed system, titled MazdoorLink AI (alternatively UstaadConnect), aims to address these challenges by providing a comprehensive, AI-powered smart la-bor hiring and communication platform designed specifically for the Pakistani market. The platform is delivered as a unified cross-platform mobile application that supports
+three distinct user roles: Customer, Worker, and Administrator.
+The core workflow of the proposed system is as follows. A customer initiates the process by either searching for a specific type of worker, selecting from pre-defined job templates for common tasks, or posting a custom job request describing the required service. Customers can also schedule bookings for future dates and times, allowing for better planning of home maintenance tasks. The system’s AI-powered job matching engine then identifies and recommends the most suitable workers based on multiple parameters including skill category, geographic proximity, real-time availability, and historical ratings. The customer can review worker profiles, which include verified credentials, past job ratings, service photos from previous work, and available service packages, before confirming the booking. Customers can also save frequently used workers to their favorites list for quick access in future bookings.
+A critical innovation of the proposed system is its focus on bridging the technol-ogy gap for non-technical workers. Recognizing that a large proportion of Pakistani laborers have limited literacy and are not technology-friendly, the system incorpo-rates voice-based interaction capabilities. Workers can speak instead of typing, with speech-to-text technology converting their voice input into system-processable data. The interface is designed primarily in Urdu, the national language, with simplified one-tap buttons for key actions such as toggling online/offline availability, accepting or rejecting jobs, and viewing earnings. Automatic location detection eliminates the need for manual address entry, and optional call-based interaction is supported for workers who prefer traditional communication methods [3].
+Furthermore, the system integrates a smart chat translation feature that enables seamless English-to-Urdu and Urdu-to-English communication between customers and workers, effectively eliminating the language barrier that frequently hinders ser-vice coordination. The platform includes an integrated time tracking system that automatically monitors work duration, providing transparency for both customers and workers regarding service time. Workers can create service packages offering bun-dled services at discounted rates, such as combined plumbing and electrical work, enabling them to increase their earning potential.
+To ensure safety and trust, the platform incorporates a comprehensive labor veri-fication process. Workers are required to submit their CNIC (Computerized National Identity Card) with front and back images, a police clearance certificate, and pay a refundable security deposit that serves as financial assurance against potential dam-
+ages or disputes. The security deposit is held by the platform and returned to workers at the end of each month, provided no verified damage claims have been filed against them. Only workers who successfully pass the verification process and pay the security deposit are listed on the platform, providing customers with the assurance that they are hiring vetted and trustworthy individuals. Additionally, workers must complete OTP (One-Time Password) verification during registration to ensure phone number authenticity.
+The main actors of the proposed system include the Customer, Worker, and Ad-ministrator, all of whom access the system through the same mobile application with role-specific interfaces. The Customer can search for services using smart filters, post jobs manually or select from quick-access job templates, book workers for im-mediate or scheduled future service, save preferred workers to a favorites list, track service progress in real-time with GPS-based location tracking, monitor work duration through the integrated time tracker, communicate via chat or voice with automatic translation, view before-and-after service photos, make secure in-app payments, and provide ratings and reviews. In case of service issues or property damage, customers can submit detailed damage reports with photographic evidence through the plat-form’s dedicated reporting system.
+The Worker can register with simplified onboarding that includes CNIC and po-lice clearance document upload, pay a refundable monthly security deposit, complete OTP verification, manage availability status with a single-tap toggle, receive instant push notifications for nearby job opportunities, view scheduled bookings in a calen-dar interface, accept or reject job requests, interact with the system through voice commands for hands-free operation, create and manage service packages for bundled offerings, upload before-and-after photos of completed work to build a portfolio, use the integrated time tracker to record actual work hours, communicate with customers via auto-translated chat, navigate to job locations using integrated GPS, track daily, weekly, and monthly earnings through a visual dashboard, and view their ratings and customer reviews.
+The Administrator manages the overall platform through a dedicated admin in-terface within the mobile application, including user account management, worker verification by reviewing submitted CNIC and police clearance documents, process-ing and approving security deposit payments, handling damage reports by reviewing evidence from both parties and making fair decisions, dispute resolution between
+customers and workers, managing the security deposit refund process at month-end, viewing platform analytics including total users, active jobs, and revenue statistics, configuring service categories and platform settings such as commission rates, and monitoring system health and user feedback.
+The proposed system is developed as a cross-platform mobile application using Flutter for deployment on both Android and iOS platforms, Firebase services includ-ing Authentication for OTP-based user login, Firestore for real-time NoSQL cloud database, Cloud Storage for storing images and documents, and Cloud Messaging for push notifications. The backend business logic is implemented using Firebase Cloud Functions with Node.js, and Python-based AI modules are deployed as separate microservices for natural language processing, speech recognition, machine learning-based job matching, and smart chat translation. This technology stack ensures scal-ability, security, real-time synchronization, and cross-platform accessibility, enabling all stakeholders to access the system through their Android or iOS mobile devices.
+Existing Examples / Solutions
+There are a number of applications and platforms currently operating in or relevant to the Pakistani labor hiring market that provide services for connecting customers with skilled workers. In the following section, some of these existing solutions are listed and compared with the proposed system.
+Karsaaz App
+Karsaaz is a Pakistani mobile application that connects customers with home ser-vice providers including plumbers, electricians, painters, and other skilled workers. Launched as a marketplace for blue-collar services, Karsaaz allows customers to browse service categories, view worker profiles, and book services through the app. The platform provides basic worker registration and customer review functionality. However, Karsaaz does not incorporate any AI-powered features such as intelligent job matching, voice-based interaction for low-literacy workers, smart chat translation, or scheduled booking capabilities. The platform’s interface is primarily in English, creating a significant usability barrier for Urdu-speaking workers with limited liter-acy. Additionally, it lacks advanced features such as service packages, time tracking, damage reporting mechanisms, and worker security deposits [4].
+Kam Kaaj
+Kam Kaaj is a Lahore-based home services platform that offers a range of domestic services including cleaning, plumbing, electrical work, and handyman services. The platform operates through a mobile application and website, allowing customers to book verified service providers. Kam Kaaj emphasizes service quality through a vet-ting process for workers. However, the platform does not provide AI-based job match-ing, voice-based worker interaction, real-time bilingual chat translation, scheduled bookings, job templates for quick posting, or worker-created service packages. Ad-ditionally, the platform’s digital interface is not specifically designed for low-literacy users, and it does not support voice-based navigation, Urdu-first interface design, or comprehensive damage liability management through security deposits [5].
+HomeServices.pk
+HomeServices.pk is a Pakistani web-based platform that provides a directory of home service providers across multiple cities in Pakistan. The platform enables customers to search for workers by service category and location, and provides basic contact information for service providers. While the platform serves as a useful directory, it lacks a transactional booking system, real-time tracking, in-app communication, AI-powered features, scheduled booking functionality, favorites management, worker verification mechanisms, time tracking, damage reporting, and mobile application support. The platform functions primarily as a listing service without the intelligent matching and communication capabilities proposed in the current system [6].
+TaskBid (International Reference)
+TaskBid is an international task-based hiring platform that allows customers to post tasks and receive bids from available workers. The platform incorporates a bidding mechanism where workers compete for jobs, and includes features such as worker profiles, ratings, and in-app messaging. TaskBid demonstrates a viable business model with commission-based revenue generation. However, the platform is not designed for the Pakistani market, does not support Urdu language, does not incorporate voice-based interaction for low-literacy users, and does not include AI-powered features such as intelligent job matching based on local context, speech-to-text functionality, smart chat translation, scheduled bookings, job templates, service packages, time tracking,
+or damage liability management through security deposits [7].
+1.11.1Tablepresents a comparison of features between the existing solutions and the
+1.1
+1.1
+proposed MazdoorLink AI platform.
+Table 1.1: Existing Solutions Features Comparison
+Sr.
+Characteristics
+Karsaaz App
+Kam Kaaj
+HomeServices.pk
+TaskBid
+MazdoorLink AI (Proposed)
+1
+Worker Registration
+✓
+✓
+✗
+✓
+✓
+2
+OTP Verification
+✓
+✗
+✗
+✓
+✓
+3
+AI Job Matching
+✗
+✗
+✗
+✗
+✓
+4
+Voice-Based Interaction
+✗
+✗
+✗
+✗
+✓
+5
+Urdu Language Support
+✗
+✗
+✗
+✗
+✓
+6
+Smart Chat Translation
+✗
+✗
+✗
+✗
+✓
+7
+Scheduled Bookings
+✗
+✓
+✗
+✗
+✓
+8
+Favorite Workers
+✗
+✗
+✗
+✗
+✓
+9
+Job Templates
+✗
+✗
+✗
+✗
+✓
+10
+Service Packages
+✗
+✗
+✗
+✗
+✓
+11
+Time Tracker
+✗
+✗
+✗
+✗
+✓
+12
+Service Photos
+✗
+✓
+✗
+✗
+✓
+13
+Worker Verification
+✗
+✓
+✗
+✗
+✓
+14
+Damage Reporting
+✗
+✗
+✗
+✗
+✓
+15
+Security Deposit
+✗
+✗
+✗
+✗
+✓
+16
+Real-Time GPS Tracking
+✗
+✗
+✗
+✗
+✓
+17
+Rating & Review
+✓
+✓
+✗
+✓
+✓
+18
+In-App Communication
+✓
+✗
+✗
+✓
+✓
+19
+Low-Literacy UI Design
+✗
+✗
+✗
+✗
+✓
+20
+Cross-Platform Mobile App
+✓
+✓
+✗
+✓
+✓
+21
+Police Clearance Check
+✗
+✗
+✗
+✗
+✓
+As evident from Table 1.1, the proposed MazdoorLink AI platform offers a unique combination of features that are not collectively available in any single existing solu-tion in the Pakistani market. While platforms like Karsaaz and Kam Kaaj provide basic service booking capabilities, none of the existing solutions offer the compre-hensive feature set including AI-powered job matching, voice-based interaction for low-literacy workers, smart bilingual chat translation, scheduled bookings, job tem-plates for quick posting, favorite workers management, service packages, integrated time tracking, before-and-after service photos, comprehensive damage reporting with security deposit protection, and worker verification including police clearance checks. The proposed system fills this critical gap by providing an intelligent, inclusive, and trust-oriented platform specifically designed for Pakistan’s informal labor market.
+Business Scope
+The informal labor sector in Pakistan constitutes a significant portion of the national economy, with an estimated 40 million workers engaged in skilled and semi-skilled trades including plumbing, electrical work, carpentry, painting, masonry, and general home maintenance services [2]. Despite the massive scale of this workforce, the sector
+remains largely undigitized, with service discovery, hiring, and payment conducted through informal channels that lack transparency, accountability, and efficiency.
+The proposed MazdoorLink AI platform targets the rapidly growing urban cen-ters of Pakistan, including Islamabad, Karachi, Lahore, Rawalpindi, and Faisalabad, where the demand for skilled labor services is consistently high. The system ad-dresses critical pain points experienced by both customers and workers, including the difficulty of finding reliable workers, the absence of price standardization, communi-cation barriers between English-speaking customers and Urdu-speaking workers, lack of worker verification mechanisms, absence of damage liability protection, and the inability of low-literacy workers to utilize existing technology platforms.
+The platform has strong business potential through multiple revenue streams. The primary revenue model is a commission-based structure, where the platform charges a 5–15% service fee on each completed job transaction. Additional revenue can be generated through featured worker listings, where workers pay a premium to appear at the top of search results; subscription plans for workers seeking enhanced visibility and priority job notifications; one-time or monthly security deposit processing fees; and advertisement placements by related businesses such as hardware stores, tool suppliers, and construction material providers.
+The adoption of such a platform can lead to significant improvements in service quality, customer satisfaction, and worker income stability. Studies on gig economy platforms in developing countries have reported increases of up to 35% in worker earnings and a 45% improvement in customer satisfaction when digital intermediation is introduced into informal labor markets [8].
+Furthermore, the AI-powered features of the proposed system, including intelli-gent job matching, voice-based interaction, and real-time chat translation, provide a competitive advantage over existing platforms that rely solely on manual search and basic listing functionalities. The cloud-based architecture utilizing Firebase services ensures that the system can be deployed with minimal infrastructure, reducing the total cost of deployment and enabling rapid scaling to new cities and regions.
+The comprehensive safety and liability management system, including mandatory security deposits, damage reporting workflows, and worker verification, addresses a critical gap in existing platforms and provides significant value to customers who are concerned about trusting unknown workers in their homes. This feature alone can serve as a major differentiator and adoption driver in the Pakistani market.
+The system also presents opportunities for collaboration with government initia-tives such as the Punjab Information Technology Board (PITB) and the Ehsaas Pro-gram, which aim to digitize public services and provide economic support to marginal-ized communities. By providing a verified database of skilled workers with digital records, the platform can serve as a valuable resource for government workforce de-velopment and skills certification programs. The initial deployment is planned for Islamabad, with subsequent expansion to other major cities based on user adoption and market demand.
+Safety and Liability Management
+One of the most significant concerns in the informal labor market is the risk of prop-erty damage or disputes during service provision. To address this critical issue, the proposed platform implements a comprehensive multi-layered protection mechanism that ensures accountability and provides recourse for both customers and workers.
+Workers are required to pay a refundable security deposit ranging from PKR 5,000 to PKR 10,000 upon successful registration and verification. This deposit serves as financial assurance against potential damages or service-related disputes. The security deposit is held securely by the platform and is fully refundable at the end of each month, provided that no verified damage claims have been filed against the worker during that period. This monthly refund cycle ensures that workers maintain good standing continuously and provides an ongoing incentive for professional conduct.
+The damage reporting system allows customers to submit detailed incident reports with photographic evidence directly through the mobile application. When a damage report is filed, the platform administrator is immediately notified and initiates a review process. The administrator contacts both the customer and the worker to gather statements and evidence from both parties. Both customers and workers are strongly encouraged to take before-and-after photographs of the work site at the beginning and completion of each job, creating a transparent and timestamped record that can be referenced objectively in case of disputes.
+If a damage claim is verified by the administrator after reviewing evidence from both sides, the appropriate compensation amount is deducted from the worker’s secu-rity deposit and transferred to the customer. The worker’s rating is also reduced, and the incident is recorded in their profile. Workers who accumulate multiple verified damage reports face progressive penalties including further rating reductions, tempo-
+rary suspension, and potential permanent removal from the platform if the pattern of problematic behavior continues.
+This system creates a balanced approach that protects customers from financial loss due to negligent or malicious damage while also protecting workers from false or exaggerated claims through the administrator-mediated review process. The trans-parency provided by timestamped photographs and the financial stake represented by the security deposit work together to create a trust-based ecosystem that encourages professional service delivery and honest reporting.
+Useful Tools and Technologies
+The following tools and technologies are selected for the development of the pro-posed MazdoorLink AI platform. The selection is based on factors including perfor-mance, scalability, cross-platform compatibility, AI integration capabilities, real-time synchronization, community support, cost-effectiveness, and alignment with industry best practices.
+Mobile Frontend: Flutter
+Flutter is an open-source UI software development kit created by Google for building natively compiled applications for mobile, web, and desktop from a single codebase. Flutter uses the Dart programming language and provides a rich set of pre-designed widgets that enable the creation of visually appealing and highly responsive user interfaces. Flutter’s hot reload feature significantly accelerates the development cycle by allowing developers to see changes in real-time without restarting the application. Flutter is selected as the mobile frontend framework for the proposed system due to its ability to produce a single codebase that runs on both Android and iOS platforms, which is essential for maximizing user reach in the Pakistani market where both operating systems are prevalent. Flutter’s widget-based architecture is well-suited for implementing the simplified, low-literacy-friendly interface required for the worker-side application, including large one-tap buttons, voice input integration, and Urdu text rendering. The framework’s excellent performance characteristics ensure smooth animations and responsive interactions even on lower-end devices commonly
+used by the target worker demographic.
+Backend: Firebase Services
+Firebase is a comprehensive mobile and web application development platform pro-vided by Google that offers a suite of cloud-based services including authentication, real-time database, cloud storage, cloud functions, and push notifications. Fire-base provides automatic scaling, built-in security, real-time data synchronization, and seamless integration with Flutter applications.
+Firebase is selected as the primary backend infrastructure for the proposed system due to several compelling advantages. Firebase Authentication provides secure OTP-based phone number verification, which is essential for ensuring user authen-ticity without requiring email addresses that many workers may not have. Cloud Firestore is a flexible, scalable NoSQL cloud database that stores data in JSON-like documents, allowing for dynamic schemas that can evolve with application require-ments. Firestore’s real-time synchronization capabilities are essential for live features such as instant job notifications, real-time chat messaging, and GPS location tracking updates.
+Firebase Cloud Storage provides secure, scalable object storage for user-uploaded content including CNIC images, police clearance certificates, before-and-after service photos, and user profile pictures. The storage service integrates seamlessly with Fire-base Security Rules to ensure that only authorized users can access sensitive docu-ments.
+Firebase Cloud Functions allows the deployment of backend business logic as serverless functions written in Node.js. These functions can be triggered by database events, HTTP requests, or scheduled tasks, enabling complex workflows such as auto-matic notification sending, commission calculation, monthly security deposit refunds, and integration with external AI services.
+Firebase Cloud Messaging (FCM) provides reliable, battery-efficient push notification delivery to both Android and iOS devices, ensuring that workers receive instant job alerts and customers receive booking confirmations and status updates.
+The cloud-hosted nature of Firebase eliminates the need for on-premises server in-frastructure, reduces operational complexity, and provides automatic scaling to handle varying loads as the platform grows.
+AI and Machine Learning: Python
+Python is a high-level, general-purpose programming language widely recognized as the leading language for artificial intelligence, machine learning, and natural language processing applications. Python’s extensive ecosystem of AI libraries, including Ten-sorFlow, PyTorch, scikit-learn, NLTK, and spaCy, provides comprehensive tools for developing intelligent systems.
+Python is selected for implementing the AI-powered core features of the proposed system, including the intelligent job matching algorithm using machine learning-based recommendation models that consider worker skills, location proximity, availability, historical ratings, and customer preferences. The speech-to-text module for voice-based worker interaction utilizes the Google Cloud Speech-to-Text API with Urdu language support, enabling workers to interact naturally without typing. The smart chat translation engine for English-Urdu bilingual communication is implemented using the Google Cloud Translation API with neural machine translation models, ensuring contextually accurate translations that preserve meaning across languages.
+These Python-based AI services are deployed as separate microservices that ex-pose REST APIs, which are consumed by Firebase Cloud Functions to integrate AI capabilities seamlessly into the mobile application workflow.
+Speech and Translation APIs
+The proposed system integrates specialized APIs for speech recognition and language translation to enable voice-based interaction and bilingual communication.
+Google Cloud Speech-to-Text API is used to convert worker voice input into text, supporting Urdu language recognition. This API provides high-accuracy speech recognition with support for multiple languages and dialects, enabling workers to interact with the system through natural speech instead of typing [9].
+Google Cloud Translation API is used to provide real-time English-to-Urdu and Urdu-to-English translation within the chat module, enabling seamless commu-nication between customers and workers who may prefer different languages [10].
+Development Tools
+Visual Studio Code: A lightweight, extensible source code editor developed by Microsoft, used for Flutter and Node.js development with rich plugin support
+Interviews & SurveysInterviews & SurveysData Object IdentificationData Object IdentificationSoftware ArchitectureSoftware ArchitectureDatabase & Physical DesignDatabase & Physical DesignWorker App ModuleWorker App ModuleAI Module (Matching/Voice)AI Module (Matching/Voice)Black Box TestingBlack Box TestingIntegration TestingIntegration Testingfor Dart, Firebase, and Git integration.
+Interviews & Surveys
+Interviews & Surveys
+Data Object Identification
+Data Object Identification
+Software Architecture
+Software Architecture
+Database & Physical Design
+Database & Physical Design
+Worker App Module
+Worker App Module
+AI Module (Matching/Voice)
+AI Module (Matching/Voice)
+Black Box Testing
+Black Box Testing
+Integration Testing
+Integration Testing
+Android Studio: The official IDE for Android development, used for Flutter mobile application testing and debugging with Android emulators and physical device testing.
+Firebase Console: The web-based administration interface for Firebase ser-vices, used for monitoring database activity, managing authentication, viewing analytics, and configuring security rules.
+Git & GitHub: A distributed version control system and a cloud-based repos-itory hosting service, used for source code management, version tracking, and team collaboration.
+Postman: An API development and testing tool, used for testing the backend RESTful APIs and Firebase Cloud Functions during development.
+Project Work Break Down
+The project is divided into five major phases: Requirements Gathering, Requirement Analysis, Design, Implementation, and Testing. The work breakdown structure in
+1.11.1Figureillustrates the decomposition of the project into manageable tasks and the
+1.1
+1.1
+assignment of responsibilities to each team member.
+RequirementsGatheringRequirementAnalysisSystemDesignImplementationTestingBusiness ScopeFunctional &Non-FunctionalLogical DesignCustomer AppModuleTest CasesWrite-upMazdoorLink AI ProjectRequirementsGatheringRequirementAnalysisSystemDesignImplementationTestingBusiness ScopeFunctional &Non-FunctionalLogical DesignCustomer AppModuleTest CasesWrite-upMazdoorLink AI ProjectTool StudyTool StudyUse Case ModelingUse Case ModelingAdmin Web PanelAdmin Web PanelWorker VerificationWorker VerificationSecurity Deposit & Damage SystemSecurity Deposit & Damage System
+Requirements
+Gathering
+Requirement
+Analysis
+System
+Design
+Implementation
+Testing
+Business Scope
+Functional &
+Non-Functional
+Logical Design
+Customer App
+Module
+Test Cases
+Write-up
+MazdoorLink AI Project
+Requirements
+Gathering
+Requirement
+Analysis
+System
+Design
+Implementation
+Testing
+Business Scope
+Functional &
+Non-Functional
+Logical Design
+Customer App
+Module
+Test Cases
+Write-up
+MazdoorLink AI Project
+Tool Study
+Tool Study
+Use Case Modeling
+Use Case Modeling
+Admin Web Panel
+Admin Web Panel
+Worker Verification
+Worker Verification
+Security Deposit & Damage System
+Security Deposit & Damage System
+Figure 1.1: Project Work Breakdown Structure
+1.21.2Tableprovides a detailed description of the work breakdown with the respon-
+1.2
+1.2
+sible team members for each task.
+Table 1.2: Work Breakdown – Task Assignment
+Sr.TaskResponsible Member(s)
+Requirements GatheringBilal, Hanzala, Wasif
+Market Research & Business Scope Analysis
+Bilal
+Stakeholder Interviews & SurveysHanzala
+Relevant Tool & Technology StudyWasif
+Functional & Non-Functional Require-ments
+Bilal, Hanzala
+Use Case ModelingHanzala
+Data Object IdentificationBilal
+Logical DesignBilal
+Software ArchitectureWasif
+Database & Physical DesignHanzala
+Customer Mobile Application ModuleBilal
+Worker Mobile Application ModuleHanzala
+AIModule(JobMatching,Voice, Translation)
+Wasif
+Admin Interface DevelopmentBilal, Wasif
+Worker Verification & Security Deposit Module
+Hanzala
+Damage Reporting SystemBilal, Hanzala
+Scheduled Bookings & Time TrackerWasif
+Service Photos & Packages FeatureHanzala
+Test Cases Write-upHanzala
+Black Box / Integration TestingWasif
+DocumentationBilal, Hanzala, Wasif
+Project Timeline
+The proposed project timeline is aligned with the official FYP Calendar – Spring 2026 issued by the Department of Computer Science, Capital University of Science and Technology. The project work formally commences after the Proposal Defense scheduled on 31st March 2026 (Tuesday). The timeline spans from April 2026 to De-cember 2026, covering the complete development life cycle across the defined academic milestones.
+1.21.2The Gantt chart in Figureillustrates the project schedule with task assign-
+1.2
+1.2
+ments mapped to the official FYP deadlines.
+AprMayJunJulAugSepOctNovDecAprMayJunJulAugSepOctNovDecSystem & Database Design Logical & Architecture Design Database Schema & UI/UX Design Core Module Implementation Auth & Customer Mobile App Worker Mobile App & Voice Module AI Job Matching & Translation Chat System & Communication
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+Worker Verification & Security Deposit Admin Interface & Damage Reporting
+Integration & Testing API Integration & Unit Testing Integration & Acceptance Testing Documentation & Deployment Documentation & Report Submission Deployment & Presentation
+Proposal Defense Mid Report & Exam Final Report to REQRC Final Report Submission
+Final Exam
+Figure 1.2: Project Timeline – April 2026 to December 2026
+Chapter 2
+Requirement Specification and Analysis
+The emphasis of this chapter is on getting a clear and comprehensive understanding of the requirements for the MazdoorLink AI platform. The requirements have been gathered through market research, stakeholder interviews with potential customers and workers in Pakistan’s informal labor sector, and analysis of existing home service platforms. The chapter presents both functional and non-functional requirements, use case modeling with fully dressed use cases, system sequence diagrams for each use case, and a domain model that collectively define the expected behavior and architectural foundation of the proposed system.
+Requirement Specification
+Requirements specification for MazdoorLink AI involves frequent communication with the three primary user groups — customers seeking home maintenance services, skilled workers looking for consistent job opportunities, and administrators managing the platform ecosystem — to determine specific feature expectations, resolve conflicts or ambiguity in requirements, and document all aspects of the project development process from start to finish. Requirements are a description of how the system should behave, or a statement of what the application is expected to do, presented in precise, clear, and plain language so that they can be reviewed by a business analyst or non-technical stakeholder with minimal technical expertise.
+18
+Functional Requirements
+The Functional Requirements Specification documents the operations and activities that the MazdoorLink AI system must be able to perform. These requirements are organized by user role (Customer, Worker, Administrator) and written in simple, non-technical language.
+Table 2.1: Functional Requirements
+S. No.
+Functional Requirement
+Type
+Status
+FR-C01
+Customers can sign up and log in to the
+application
+Core
+Pending
+FR-C02
+Customers can search for workers by
+service category
+Core
+Pending
+FR-C03
+Customers can post job requests
+Core
+Pending
+FR-C04
+Customers can schedule bookings
+Core
+Pending
+FR-C05
+Customers can view worker profiles
+Core
+Pending
+FR-C06
+Customers can receive suitable worker
+recommendations using AI matching
+Core
+Pending
+FR-C07
+Customers can view dashboard
+Core
+Pending
+FR-C08
+Customers can view work duration details
+Core
+Pending
+FR-C09
+Customers can communicate with Worker
+Core
+Pending
+FR-C10
+Customers can report complaints
+Intermediate
+Pending
+FR-C11
+Customers can receive notifications for
+booking
+Core
+Pending
+FR-C12
+Customers can communicate with Worker
+Core
+Pending
+FR-C13
+Customers can change the interface
+language
+Core
+Pending
+FR-
+W01
+Workers can sign up and log in to the
+application
+Core
+Pending
+FR-
+W02
+Workers can communicate with Customer
+Intermediate
+Pending
+FR-
+W03
+Workers can use a simplified interface
+Intermediate
+Pending
+Continued on next page
+Table 2.1 – Continued from previous page
+S. No.
+Functional Requirement
+Type
+Status
+FR-
+W04
+Workers can toggle their availability status
+Core
+Pending
+FR-
+W05
+Workers can receive notifications
+Core
+Pending
+FR-
+W06
+Workers can view job details
+Core
+Pending
+FR-
+W07
+Workers can see the customer’s location
+Core
+Pending
+FR-
+W08
+Workers can change interface language
+Core
+Pending
+FR-
+W09
+Workers can view their dashboard
+Core
+Pending
+FR-
+W10
+Workers can view their feedback
+Core
+Pending
+FR-
+W11
+Workers can view complaints
+Intermediate
+Pending
+FR-A01
+Administrators can log in
+Core
+Pending
+FR-A02
+Administrators can approve or reject
+worker registrations
+Core
+Pending
+FR-A03
+Administrators can view complaints
+Core
+Pending
+FR-A04
+Administrators can approve or reject
+damage claims
+Core
+Pending
+FR-A05
+Administrators can deduct compensation
+from worker security deposit
+Core
+Pending
+FR-A06
+Administrators can suspend or ban
+customers or workers
+Core
+Pending
+FR-A07
+Administrators can view platform
+dashboard
+Intermediate
+Pending
+FR-A08
+Administrators can process monthly
+security deposit refunds
+Intermediate
+Pending
+Non-Functional Requirements
+Non-functional requirements specify criteria that judge the operation of the system rather than specific behaviours. The following requirements define the quality at-tributes for the MazdoorLink App platform.
+Table 2.2: Non-Functional Requirements
+S. No.
+Non Functional Requirements
+Category
+1
+The system should have an intuitive and easy-to-use
+interface for all users
+Usability
+2
+The system should provide clear feedback for all user
+actions
+Usability
+3
+Sensitive user data and passwords must be securely
+encrypted
+Security
+4
+All payment transactions must be processed securely
+through compliant gateways
+Security
+5
+The AI job matching should respond quickly
+Performance
+6
+The system should support a large number of
+concurrent users
+Scalability
+7
+The system should have high availability and uptime
+Reliability
+8
+Push notifications should be delivered quickly
+Performance
+9
+The application should support most modern Android
+and iOS devices
+Compatibility
+10
+The system should respond to user actions without
+noticeable delays
+Performance
+Selected Functional Requirements
+The following functional requirements have been selected for the current development iteration (Phase 1 – MVP). These represent the core features necessary to launch a functional and usable labor hiring platform and will be fully implemented in the first release.
+Table 2.3: Selected Functional Requirements
+S. No.
+Functional Requirement
+Reference
+1
+Customers can sign up and log in to the application
+FR-C01
+2
+Customers can search for workers by service
+category
+FR-C02
+3
+Customers can post job requests
+FR-C03
+4
+Customers can schedule bookings
+FR-C04
+5
+Customers can view worker profiles
+FR-C05
+6
+Customers can receive suitable worker
+recommendations using AI matching
+FR-C06
+7
+Customers can view work duration details
+FR-C08
+8
+Customers can communicate with Worker
+FR-C09
+9
+Customers can report complaints
+FR-C10
+10
+Customers can communicate with Worker
+FR-C12
+11
+Customers can change the interface language
+FR-C13
+12
+Workers can sign up and log in to the application
+FR-W01
+13
+Workers can communicate with Customer
+FR-W02
+14
+Workers can toggle their availability status
+FR-W04
+15
+Workers can view job details
+FR-W06
+16
+Workers can see the customer’s location
+FR-W07
+17
+Workers can change interface language
+FR-W08
+18
+Workers can view their dashboard
+FR-W09
+19
+Workers can view complaints
+FR-W11
+20
+Administrators can log in
+FR-A01
+21
+Administrators can approve or reject worker
+registrations
+FR-A02
+Continued on next page
+Table 2.3 – Continued from previous page
+S. No.
+Functional Requirement
+Reference
+22
+Administrators can view complaints
+FR-A03
+23
+Administrators can approve or reject damage claims
+FR-A04
+24
+Administrators can deduct compensation from
+worker security deposit
+FR-A05
+25
+Administrators can suspend or ban customers or
+workers
+FR-A06
+26
+Administrators can view platform dashboard
+FR-A07
+27
+Administrators can process monthly security deposit
+refunds
+FR-A08
+System Use Case Modeling
+A use case defines a set of use-case instances where each instance is a sequence of actions a system performs that yields an observable result of value to a particular actor. The functionality of the MazdoorLink App system is defined by different use cases, each of which represents a specific goal for a particular actor. Figure 2.1 presents the complete use case diagram for the MazdoorLink App system showing all major actors and their associated system functions.
+Figure 2.1: MazdoorLink App – System Use Case Diagram
+ActorSystem1. Customer opens app2. System displays Welcome screen with Register and Login options3. Customer taps "Register"4. System displays phone number entry form5. Customer enters phone number and taps "Send OTP"6. System sends OTP via Firebase Auth7. Customer enters received OTP8. System verifies OTP9. Customer enters full name and confirms10. System creates profile in Firestore and navigates to Home screenActorSystem1. Customer opens app2. System displays Welcome screen with Register and Login options3. Customer taps "Register"4. System displays phone number entry form5. Customer enters phone number and taps "Send OTP"6. System sends OTP via Firebase Auth7. Customer enters received OTP8. System verifies OTP9. Customer enters full name and confirms10. System creates profile in Firestore and navigates to Home screenUse Case 1: Customer Register and Login
+Actor
+System
+1. Customer opens app
+2. System displays Welcome screen with Register and Login options
+3. Customer taps "Register"
+4. System displays phone number entry form
+5. Customer enters phone number and taps "Send OTP"
+6. System sends OTP via Firebase Auth
+7. Customer enters received OTP
+8. System verifies OTP
+9. Customer enters full name and confirms
+10. System creates profile in Firestore and navigates to Home screen
+Actor
+System
+1. Customer opens app
+2. System displays Welcome screen with Register and Login options
+3. Customer taps "Register"
+4. System displays phone number entry form
+5. Customer enters phone number and taps "Send OTP"
+6. System sends OTP via Firebase Auth
+7. Customer enters received OTP
+8. System verifies OTP
+9. Customer enters full name and confirms
+10. System creates profile in Firestore and navigates to Home screen
+Use Case ID:
+UC-01
+Use Case Name:
+Customer Register and Login with OTP
+Created By:
+Bilal AzizLast Updated By: Bilal Aziz
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Customer
+Secondary: Firebase Authentication (OTP Service)
+Description:
+A new customer registers on the MazdoorLink A platform by entering their phone number and verifying it through a one-time password (OTP). Returning customers use the same process to log in.
+Trigger:
+Customer opens the application and taps "Register" or "Login".
+Preconditions:
+The customer has a register mobile phone number.
+The customer has an active internet connection.
+Post Conditions:
+Customer account is created or session is started.
+Customer is redirected to the home screen.
+Customer profile is stored in Firebase Firestore.
+Normal Flow:
+Alternative Flows:
+Alt-1: Returning Customer Login — Customer taps "Login" instead of "Register" at step 3 and follows the same OTP verification flow.
+Alt-2: OTP Not Received — Customer taps "Resend OTP" (system allows up to 3 attempts after a 30-second wait).
+Exceptions:
+E1: Invalid phone number — System shows "Enter a valid Pakistani mobile number".
+E2: Incorrect OTP — System shows "Incorrect OTP. Try again" (3 attempts allowed).
+E3: Account banned — System shows "Your account has been suspended. Contact support."
+Figure 2.2: UC-01: 1: Register and Login
+ActorSystem1. Customer taps "Post New Job"2. System displays job posting form3. Customer selects service category (e.g., Plumber)4. System shows relevant fields5. Customer writes job description, adds location and photos6. System validates input7. Customer submits the job request8. System saves job and runs AI matching9. System displays top 5 matched workersActorSystem1. Customer taps "Post New Job"2. System displays job posting form3. Customer selects service category (e.g., Plumber)4. System shows relevant fields5. Customer writes job description, adds location and photos6. System validates input7. Customer submits the job request8. System saves job and runs AI matching9. System displays top 5 matched workersUse Case 2: Customer Posts Job Request
+Actor
+System
+1. Customer taps "Post New Job"
+2. System displays job posting form
+3. Customer selects service category (e.g., Plumber)
+4. System shows relevant fields
+5. Customer writes job description, adds location and photos
+6. System validates input
+7. Customer submits the job request
+8. System saves job and runs AI matching
+9. System displays top 5 matched workers
+Actor
+System
+1. Customer taps "Post New Job"
+2. System displays job posting form
+3. Customer selects service category (e.g., Plumber)
+4. System shows relevant fields
+5. Customer writes job description, adds location and photos
+6. System validates input
+7. Customer submits the job request
+8. System saves job and runs AI matching
+9. System displays top 5 matched workers
+Use Case ID:
+UC-02
+Use Case Name:
+Customer Posts Job Request
+Created By:
+Bilal AzizLast Updated By: Bilal Aziz
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Customer
+Secondary: AI Job Matching Engine
+Description:
+A logged-in customer creates a new job request by describing the required service, optionally uploading photos, and submitting the request. The AI matching engine then identifies and presents the top five most suitable available workers.
+Trigger:
+Customer taps the "Post New Job" button on the home screen.
+Preconditions:
+Customer is logged in with a verified account.
+Customer has granted location permission to the application.
+At least one worker in the selected category is currently available.
+Post Conditions:
+Job request is saved in Firestore with status "Posted".
+Top 5 matched workers receive push notifications.
+Customer sees the recommended worker list.
+Normal Flow:
+Alternative Flows:
+Alt-1: Save as Draft — Customer saves the job as draft for later submission.
+Alt-2: Change Category — Customer changes category before submitting.
+Exceptions:
+E1: Missing required fields — System highlights the fields.
+E2: No workers available — System shows "No workers available in this category right now."
+Figure 2.3: UC-02: 2: Posts Job Request
+ActorSystem1. Worker taps "Register as Worker"2. System displays worker registration form in Urdu3. Worker enters name, phone number, and selects skill category4. Worker taps "Send OTP"5. System sends OTP to entered number6. Worker enters OTP7. System verifies OTP successfully8. Worker uploads CNIC front image9. Worker uploads CNIC back image10. Worker uploads police clearance certificate11. Worker taps "Proceed to Deposit"12. System displays security deposit amount (PKR 5,000-10,000) and payment options13. Worker selects payment method and completes payment14. System confirms payment and stores deposit record15. System creates worker profile with status "Pending Verification"16. System notifies admin of new verification request17. System displays "Your registration is under review" message to workerActorSystem1. Worker taps "Register as Worker"2. System displays worker registration form in Urdu3. Worker enters name, phone number, and selects skill category4. Worker taps "Send OTP"5. System sends OTP to entered number6. Worker enters OTP7. System verifies OTP successfully8. Worker uploads CNIC front image9. Worker uploads CNIC back image10. Worker uploads police clearance certificate11. Worker taps "Proceed to Deposit"12. System displays security deposit amount (PKR 5,000-10,000) and payment options13. Worker selects payment method and completes payment14. System confirms payment and stores deposit record15. System creates worker profile with status "Pending Verification"16. System notifies admin of new verification request17. System displays "Your registration is under review" message to workerUse Case 3: Worker Registers
+Actor
+System
+1. Worker taps "Register as Worker"
+2. System displays worker registration form in Urdu
+3. Worker enters name, phone number, and selects skill category
+4. Worker taps "Send OTP"
+5. System sends OTP to entered number
+6. Worker enters OTP
+7. System verifies OTP successfully
+8. Worker uploads CNIC front image
+9. Worker uploads CNIC back image
+10. Worker uploads police clearance certificate
+11. Worker taps "Proceed to Deposit"
+12. System displays security deposit amount (PKR 5,000-10,000) and payment options
+13. Worker selects payment method and completes payment
+14. System confirms payment and stores deposit record
+15. System creates worker profile with status "Pending Verification"
+16. System notifies admin of new verification request
+17. System displays "Your registration is under review" message to worker
+Actor
+System
+1. Worker taps "Register as Worker"
+2. System displays worker registration form in Urdu
+3. Worker enters name, phone number, and selects skill category
+4. Worker taps "Send OTP"
+5. System sends OTP to entered number
+6. Worker enters OTP
+7. System verifies OTP successfully
+8. Worker uploads CNIC front image
+9. Worker uploads CNIC back image
+10. Worker uploads police clearance certificate
+11. Worker taps "Proceed to Deposit"
+12. System displays security deposit amount (PKR 5,000-10,000) and payment options
+13. Worker selects payment method and completes payment
+14. System confirms payment and stores deposit record
+15. System creates worker profile with status "Pending Verification"
+16. System notifies admin of new verification request
+17. System displays "Your registration is under review" message to worker
+Use Case ID:
+UC-03
+Use Case Name:
+Worker Registers with CNIC and Security Deposit
+Created By:
+Hanzala Habib AwanLast Updated By: Hanzala Habib Awan
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Worker
+Secondary: Firebase Auth, Payment Gateway, Admin
+Description:
+A new worker registers on the platform by entering personal information, uploading CNIC and police clearance documents, verifying their phone number with OTP, and paying the required refundable security deposit. The account remains inactive until the administrator approves the submitted documents.
+Trigger:
+Worker opens the application and taps "Register as Worker".
+Preconditions:
+Worker has a valid CNIC.
+Worker has a police clearance certificate.
+Worker has a Pakistani mobile phone number.
+Post Conditions:
+Worker account is created with status "Pending Verification".
+Security deposit is recorded and held by the platform.
+Admin receives a new verification request notification.
+Worker receives a confirmation that their registration is under review.
+Normal Flow:
+Alternative Flows:
+Exceptions:
+E1: Invalid CNIC format — System shows error and highlights the CNIC field.
+E2: Payment fails — System retries once and then prompts worker to try a different method.
+Figure 2.4: UC-03: 3: Registers
+ActorSystem1. Admin opens Verification Requests section2. System displays list of all pending worker verification requests3. Admin selects a pending request4. System displays worker details, CNIC images, and police clearance document in full screen view5. Admin examines all submitted documents carefully6. Admin taps "Approve"7. System updates worker status to "Verified"8. System sends push notification to worker: "Your account has been approved"9. System makes worker profile live and searchable on the platformActorSystem1. Admin opens Verification Requests section2. System displays list of all pending worker verification requests3. Admin selects a pending request4. System displays worker details, CNIC images, and police clearance document in full screen view5. Admin examines all submitted documents carefully6. Admin taps "Approve"7. System updates worker status to "Verified"8. System sends push notification to worker: "Your account has been approved"9. System makes worker profile live and searchable on the platformUse Case 4: Admin Verifies Worker Documents
+Actor
+System
+1. Admin opens Verification Requests section
+2. System displays list of all pending worker verification requests
+3. Admin selects a pending request
+4. System displays worker details, CNIC images, and police clearance document in full screen view
+5. Admin examines all submitted documents carefully
+6. Admin taps "Approve"
+7. System updates worker status to "Verified"
+8. System sends push notification to worker: "Your account has been approved"
+9. System makes worker profile live and searchable on the platform
+Actor
+System
+1. Admin opens Verification Requests section
+2. System displays list of all pending worker verification requests
+3. Admin selects a pending request
+4. System displays worker details, CNIC images, and police clearance document in full screen view
+5. Admin examines all submitted documents carefully
+6. Admin taps "Approve"
+7. System updates worker status to "Verified"
+8. System sends push notification to worker: "Your account has been approved"
+9. System makes worker profile live and searchable on the platform
+Use Case ID:
+UC-04
+Use Case Name:
+Admin Verifies Worker Documents
+Created By:
+Hanzala Habib AwanLast Updated By: Hanzala Habib Awan
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Administrator
+Secondary: Worker (receives notification)
+Description:
+The administrator reviews all pending worker registration requests by examining the submitted CNIC images and police clearance certificate, then either approves or rejects the application. The worker is notified of the decision automatically.
+Trigger:
+Administrator receives a push notification for a new pending worker verification request.
+Preconditions:
+Admin is logged in with administrator credentials.
+At least one worker verification request is in pending status.
+Worker has completed registration and paid the security deposit.
+Post Conditions:
+Worker account status is updated to "Verified" or "Rejected".
+Worker receives a push notification with the decision.
+If approved, worker profile becomes visible on the platform.
+If rejected, security deposit is refunded to the worker.
+Normal Flow:
+Alternative Flows:
+Alt-1: Admin Rejects Application — At step 6, admin taps "Reject" and enters a reason. System updates worker status to "Rejected", notifies the worker with the reason, and initiates security deposit refund.
+Exceptions:
+E1: Document image not loading — System displays "Document unavailable. Retry or contact support."
+E2: Admin session expires — System redirects to login screen and saves no partial decision.
+ActorSystem1. Worker receives and taps job notification2. System displays Job Details screen: category, description, customer distance, estimated price, customer rating, photos3. Worker reviews all job details4. Worker taps "Accept Job"5. System shows confirmation dialog6. Worker confirms acceptance7. System updates job status to "Assigned" in Firestore8. System sends confirmation notification to customer9. System displays "Start Navigation" button to worker10. Worker taps "Start Navigation"11. System launches Google Maps with customer's address as destinationActorSystem1. Worker receives and taps job notification2. System displays Job Details screen: category, description, customer distance, estimated price, customer rating, photos3. Worker reviews all job details4. Worker taps "Accept Job"5. System shows confirmation dialog6. Worker confirms acceptance7. System updates job status to "Assigned" in Firestore8. System sends confirmation notification to customer9. System displays "Start Navigation" button to worker10. Worker taps "Start Navigation"11. System launches Google Maps with customer's address as destinationUse Case 5: Worker Accepts or Rejects Job Request
+Actor
+System
+1. Worker receives and taps job notification
+2. System displays Job Details screen: category, description, customer distance, estimated price, customer rating, photos
+3. Worker reviews all job details
+4. Worker taps "Accept Job"
+5. System shows confirmation dialog
+6. Worker confirms acceptance
+7. System updates job status to "Assigned" in Firestore
+8. System sends confirmation notification to customer
+9. System displays "Start Navigation" button to worker
+10. Worker taps "Start Navigation"
+11. System launches Google Maps with customer's address as destination
+Actor
+System
+1. Worker receives and taps job notification
+2. System displays Job Details screen: category, description, customer distance, estimated price, customer rating, photos
+3. Worker reviews all job details
+4. Worker taps "Accept Job"
+5. System shows confirmation dialog
+6. Worker confirms acceptance
+7. System updates job status to "Assigned" in Firestore
+8. System sends confirmation notification to customer
+9. System displays "Start Navigation" button to worker
+10. Worker taps "Start Navigation"
+11. System launches Google Maps with customer's address as destination
+Use Case ID:
+UC-05
+Use Case Name:
+Worker Accepts or Rejects Job Request
+Created By:
+Hanzala Habib AwanLast Updated By: Hanzala Habib Awan
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Worker
+Secondary: Customer (receives notification)
+Description:
+A verified and online worker receives a push notification for a new job matching their skill category and proximity. The worker reviews the job details and either accepts or rejects the request. On acceptance, the booking is confirmed and the worker begins navigation to the job location.
+Trigger:
+Worker receives push notification: "New job available near you".
+Preconditions:
+Worker is logged in, verified.
+Worker availability status is set to "Online".
+Worker is within the defined service radius of the job location.
+Post Conditions:
+Job status changes to "Assigned" in Firestore.
+Customer receives a confirmation notification.
+Worker sees the job in their Active Jobs list.
+Navigation to customer location is activated.
+Normal Flow:
+Alternative Flows:
+Alt-1: Worker uses Urdu voice command — At step 4, worker says "Qabool Karein" (Accept). System recognises voice command and triggers acceptance.
+Alt-2: Worker rejects job — At step 4, worker taps "Reject". System marks this worker as unavailable for this job and offers the job to the next recommended worker.
+Exceptions:
+E1: Job already taken by another worker — System displays "This job is no longer available." E2: Network timeout during acceptance — System retries 3 times then notifies worker of failure. E3: Worker account suspended — System displays error and logs worker out.
+ActorSystem1. Customer taps "Chat"2. System opens chat screen and loads message history from Firestore3. Customer types message in English and taps Send4. System detects message language5. System calls Google Translation API and translates message to Urdu6. System delivers original English text to customer's chat view7. System delivers Urdu translated text to worker's chat view8. Worker reads Urdu message and types reply in Urdu9. System translates Urdu reply to English10. System delivers Urdu original to worker's view and English translation to customer's viewActorSystem1. Customer taps "Chat"2. System opens chat screen and loads message history from Firestore3. Customer types message in English and taps Send4. System detects message language5. System calls Google Translation API and translates message to Urdu6. System delivers original English text to customer's chat view7. System delivers Urdu translated text to worker's chat view8. Worker reads Urdu message and types reply in Urdu9. System translates Urdu reply to English10. System delivers Urdu original to worker's view and English translation to customer's viewUse Case 6: Real-Time Chat with Automatic Translation
+Actor
+System
+1. Customer taps "Chat"
+2. System opens chat screen and loads message history from Firestore
+3. Customer types message in English and taps Send
+4. System detects message language
+5. System calls Google Translation API and translates message to Urdu
+6. System delivers original English text to customer's chat view
+7. System delivers Urdu translated text to worker's chat view
+8. Worker reads Urdu message and types reply in Urdu
+9. System translates Urdu reply to English
+10. System delivers Urdu original to worker's view and English translation to customer's view
+Actor
+System
+1. Customer taps "Chat"
+2. System opens chat screen and loads message history from Firestore
+3. Customer types message in English and taps Send
+4. System detects message language
+5. System calls Google Translation API and translates message to Urdu
+6. System delivers original English text to customer's chat view
+7. System delivers Urdu translated text to worker's chat view
+8. Worker reads Urdu message and types reply in Urdu
+9. System translates Urdu reply to English
+10. System delivers Urdu original to worker's view and English translation to customer's view
+Use Case ID:
+UC-06
+Use Case Name:
+Real-Time Chat with Automatic Translation
+Created By:
+Muhammad Wasif RafiqLast Updated By: Muhammad Wasif Rafiq
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Customer, Worker
+Secondary: Google Cloud Translation API
+Description:
+A customer and a worker communicate through an in-app chat during an active job. Messages written in English by the customer are automatically translated and delivered in Urdu to the worker, and vice versa, enabling seamless bilingual communication without either party requiring knowledge of the other's language.
+Trigger:
+Customer or worker taps the "Chat" button on the active job screen.
+Preconditions:
+A job booking is active between the customer and worker.
+Both parties are logged into their respective accounts.
+Internet connection is available on both devices.
+Post Conditions:
+All chat messages are stored in Firestore .
+Both parties have received and read each other's messages.
+Normal Flow:
+Alternative Flows:
+Alt-1: Worker uses voice input instead of typing — At step 8, worker taps microphone icon and speaks message in Urdu. System converts speech to text, then translates and delivers as above.
+Exceptions:
+E1: Translation API unavailable — System delivers original message without translation and shows "Translation unavailable."
+E2: Message delivery failure — System retries up to 3 times and shows failed status icon.
+ActorSystem1. Customer views payment summary screen2. System displays job duration, total cost, platform commission breakdown, and amount due3. Customer selects payment method (JazzCash or Easypaisa)4. Customer enters payment PIN and confirms5. System processes payment through selected gateway6. System confirms successful payment7. System deducts platform commission (5-15%)8. System credits remaining amount to worker's earnings balanceActorSystem1. Customer views payment summary screen2. System displays job duration, total cost, platform commission breakdown, and amount due3. Customer selects payment method (JazzCash or Easypaisa)4. Customer enters payment PIN and confirms5. System processes payment through selected gateway6. System confirms successful payment7. System deducts platform commission (5-15%)8. System credits remaining amount to worker's earnings balanceUse Case 7: Customer Makes In-App Payment
+Actor
+System
+1. Customer views payment summary screen
+2. System displays job duration, total cost, platform commission breakdown, and amount due
+3. Customer selects payment method (JazzCash or Easypaisa)
+4. Customer enters payment PIN and confirms
+5. System processes payment through selected gateway
+6. System confirms successful payment
+7. System deducts platform commission (5-15%)
+8. System credits remaining amount to worker's earnings balance
+Actor
+System
+1. Customer views payment summary screen
+2. System displays job duration, total cost, platform commission breakdown, and amount due
+3. Customer selects payment method (JazzCash or Easypaisa)
+4. Customer enters payment PIN and confirms
+5. System processes payment through selected gateway
+6. System confirms successful payment
+7. System deducts platform commission (5-15%)
+8. System credits remaining amount to worker's earnings balance
+Use Case ID:
+UC-07
+Use Case Name:
+Customer Makes In-App Payment
+Created By:
+Bilal AzizLast Updated By: Bilal Aziz
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Customer
+Secondary: Payment Gateway (JazzCash / Easypaisa)
+Description:
+After the worker marks the job as complete, the customer reviews the total bill (which includes work duration from the time tracker and any applicable charges) and completes the payment securely through JazzCash or Easypaisa. The platform deducts its commission and transfers the remainder to the worker's earnings balance.
+Trigger:
+Worker taps "Mark Job as Complete", triggering the payment screen for the customer.
+Preconditions:
+An active job exists between the customer and worker.
+Worker has marked the job as complete.
+Customer is logged in and on the active job screen.
+Post Conditions:
+Payment record is created in Firestore.
+Worker's earnings balance is updated after commission deduction.
+Customer receives a digital receipt.
+Job status is updated to "Completed".
+Normal Flow:
+Alternative Flows:
+Alt-1: Customer pays in cash — Customer selects "Cash Payment". System records cash payment and updates job status to "Completed" without processing through gateway. Worker earnings are logged manually.
+Exceptions:
+E1: Payment gateway timeout — System displays "Payment failed. Please retry."
+E2: Insufficient account balance — Gateway returns error; system prompts customer to choose another method.
+E3: Network failure during transaction — System rolls back and displays "Transaction incomplete. No amount deducted."
+ActorSystem1. System displays rating prompt after payment confirmation2. Customer selects star rating (1 to 5)3. Customer writes optional text review4. Customer taps "Submit Review"5. System validates that a star rating has been selected6. System stores rating and review in Firestore7. System recalculates and updates worker's average rating8. System displays "Thank you for your feedback" confirmation9. System navigates customer to Home screenActorSystem1. System displays rating prompt after payment confirmation2. Customer selects star rating (1 to 5)3. Customer writes optional text review4. Customer taps "Submit Review"5. System validates that a star rating has been selected6. System stores rating and review in Firestore7. System recalculates and updates worker's average rating8. System displays "Thank you for your feedback" confirmation9. System navigates customer to Home screenUse Case 8: Customer Rates and Reviews Worker
+Actor
+System
+1. System displays rating prompt after payment confirmation
+2. Customer selects star rating (1 to 5)
+3. Customer writes optional text review
+4. Customer taps "Submit Review"
+5. System validates that a star rating has been selected
+6. System stores rating and review in Firestore
+7. System recalculates and updates worker's average rating
+8. System displays "Thank you for your feedback" confirmation
+9. System navigates customer to Home screen
+Actor
+System
+1. System displays rating prompt after payment confirmation
+2. Customer selects star rating (1 to 5)
+3. Customer writes optional text review
+4. Customer taps "Submit Review"
+5. System validates that a star rating has been selected
+6. System stores rating and review in Firestore
+7. System recalculates and updates worker's average rating
+8. System displays "Thank you for your feedback" confirmation
+9. System navigates customer to Home screen
+Use Case ID:
+UC-08
+Use Case Name:
+Customer Rates and Reviews Worker
+Created By:
+Muhammad Wasif RafiqLast Updated By: Muhammad Wasif Rafiq
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Customer
+Secondary: System (updates worker rating)
+Description:
+After a job is completed and payment is processed, the customer is prompted to rate the worker on a 5-star scale and optionally leave a written review. The system recalculates the worker's average rating and updates their profile.
+Trigger:
+Job status changes to "Completed" and payment is confirmed.
+Preconditions:
+The job has been marked as completed by the worker.
+Payment for the job has been successfully processed.
+The customer has not yet submitted a rating for this job.
+Post Conditions:
+Rating and review are stored in Firestore linked to the job and worker.
+Worker's overall average rating is recalculated and updated.
+Review appears on the worker's public profile.
+Normal Flow:
+Alternative Flows:
+Alt-1: Customer skips review — At step 4, customer taps "Skip". System records only the star rating without text and updates worker profile.
+Exceptions:
+E1: Customer attempts to submit without selecting stars — System displays "Please select a star rating before submitting."
+E2: Review submission fails due to network — System saves review locally and retries when connection is restored.
+ActorSystem1. Customer taps "Report Damage / Issue"2. System displays damage report form3. Customer writes description of the damage or issue4. Customer uploads one or more photos as evidence5. Customer enters claimed compensation amount6. Customer taps "Submit Report"7. System validates that description and at least one photo are present8. System creates damage report in Firestore with status "Pending"9. System notifies administrator of new damage report10. System notifies worker that a report has been filedActorSystem1. Customer taps "Report Damage / Issue"2. System displays damage report form3. Customer writes description of the damage or issue4. Customer uploads one or more photos as evidence5. Customer enters claimed compensation amount6. Customer taps "Submit Report"7. System validates that description and at least one photo are present8. System creates damage report in Firestore with status "Pending"9. System notifies administrator of new damage report10. System notifies worker that a report has been filedUse Case 9: Customer Reports Damage or Service Issue
+Actor
+System
+1. Customer taps "Report Damage / Issue"
+2. System displays damage report form
+3. Customer writes description of the damage or issue
+4. Customer uploads one or more photos as evidence
+5. Customer enters claimed compensation amount
+6. Customer taps "Submit Report"
+7. System validates that description and at least one photo are present
+8. System creates damage report in Firestore with status "Pending"
+9. System notifies administrator of new damage report
+10. System notifies worker that a report has been filed
+Actor
+System
+1. Customer taps "Report Damage / Issue"
+2. System displays damage report form
+3. Customer writes description of the damage or issue
+4. Customer uploads one or more photos as evidence
+5. Customer enters claimed compensation amount
+6. Customer taps "Submit Report"
+7. System validates that description and at least one photo are present
+8. System creates damage report in Firestore with status "Pending"
+9. System notifies administrator of new damage report
+10. System notifies worker that a report has been filed
+Use Case ID:
+UC-09
+Use Case Name:
+Customer Reports Damage or Service Issue
+Created By:
+Bilal AzizLast Updated By: Bilal Aziz
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Customer Secondary: Administrator
+Description:
+After a job is completed, if a customer has experienced property damage or unsatisfactory service caused by the worker, they can submit a formal damage report through the application. The report includes a written description, photographic evidence, and the claimed compensation amount.
+The administrator is notified immediately.
+Trigger:
+Customer taps "Report Damage / Issue" on the completed job screen.
+Preconditions:
+The job has been marked as completed.
+The customer is logged into their account.
+No previous damage report has been filed for this job by this customer.
+Post Conditions:
+Damage report record is created in Firestore with status "Pending".
+Administrator receives an immediate push notification.
+Worker is notified that a damage report has been filed against them.
+Customer receives a confirmation that the report is under review.
+Normal Flow:
+Alternative Flows:
+Alt-1: Customer exits without submitting — At any step, customer taps back. System discards the unsaved report with no record created.
+Exceptions:
+E1: Photo upload fails — System prompts "Failed to upload photo. Please check your connection and retry."
+E2: Description field is empty — System displays "Please describe the issue before submitting." E3: Duplicate report attempt — System displays "You have already submitted a report for this job."
+ActorSystem1. Admin opens Damage Reports section2. System displays list of all pending damage reports3. Admin selects a report4. System displays full report: customer photos, description, claim amount, worker response, and original job details5. Admin reviews all evidence from both sides6. Admin taps "Approve Claim"7. System deducts approved amount from worker's security deposit8. System records compensation credit for customer9. System reduces worker rating by 1.010. System updates report status to "Approved"11. System notifies both customer and worker of the decisionActorSystem1. Admin opens Damage Reports section2. System displays list of all pending damage reports3. Admin selects a report4. System displays full report: customer photos, description, claim amount, worker response, and original job details5. Admin reviews all evidence from both sides6. Admin taps "Approve Claim"7. System deducts approved amount from worker's security deposit8. System records compensation credit for customer9. System reduces worker rating by 1.010. System updates report status to "Approved"11. System notifies both customer and worker of the decisionUse Case 10: Admin Handles Damage Report
+Actor
+System
+1. Admin opens Damage Reports section
+2. System displays list of all pending damage reports
+3. Admin selects a report
+4. System displays full report: customer photos, description, claim amount, worker response, and original job details
+5. Admin reviews all evidence from both sides
+6. Admin taps "Approve Claim"
+7. System deducts approved amount from worker's security deposit
+8. System records compensation credit for customer
+9. System reduces worker rating by 1.0
+10. System updates report status to "Approved"
+11. System notifies both customer and worker of the decision
+Actor
+System
+1. Admin opens Damage Reports section
+2. System displays list of all pending damage reports
+3. Admin selects a report
+4. System displays full report: customer photos, description, claim amount, worker response, and original job details
+5. Admin reviews all evidence from both sides
+6. Admin taps "Approve Claim"
+7. System deducts approved amount from worker's security deposit
+8. System records compensation credit for customer
+9. System reduces worker rating by 1.0
+10. System updates report status to "Approved"
+11. System notifies both customer and worker of the decision
+Use Case ID:
+UC-10
+Use Case Name:
+Admin Handles Damage Report and Resolves Claim
+Created By:
+Hanzala Habib AwanLast Updated By: Hanzala Habib Awan
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Administrator Secondary: Customer, Worker
+Description:
+The administrator reviews a submitted damage report by examining the customer's photo evidence, the worker's written response, and the job details. The administrator then approves or rejects the claim. If approved, the compensation amount is deducted from the worker's security deposit and transferred to the customer, and the worker's rating is penalised.
+Trigger:
+Administrator receives push notification for a new pending damage report.
+Preconditions:
+A damage report with status "Pending" exists in the system.
+The worker has submitted a response to the report.
+Administrator is logged in with admin credentials.
+Post Conditions:
+Damage report status is updated to "Approved" or "Rejected".
+If approved: compensation is deducted from worker's security deposit and credited to customer.
+Worker's rating is reduced by 1.0 star if claim is approved.
+Both parties are notified of the administrator's decision.
+Normal Flow:
+Alternative Flows:
+Alt-1: Admin rejects the claim — At step 6, admin taps "Reject Claim" and enters a reason. System updates report status to "Rejected", notifies both parties, and makes no deduction from security deposit.
+Alt-2: Admin requests more information — At step 5, if evidence is insufficient, admin taps "Request More Info". System sends a message to the customer requesting additional photos or details.
+Exceptions:
+E1: Worker security deposit is insufficient to cover the approved claim — System deducts the available balance and flags the worker for mandatory deposit top-up.
+E2: Evidence photos fail to load — System displays "Unable to load evidence. Please try again."
+ActorSystem1. Worker opens the application2. System displays Worker Home Screen with large Online/Offline toggle (currently Offline)3. Worker taps the Online toggle4. System updates worker status to "Online" in Firestore5. System begins tracking worker GPS location6. System registers worker device token with Firebase Cloud Messaging7. System displays green "You are Online" status indicator8. When a matching job is posted nearby, System sends push notification to worker9. Worker receives notification and taps to view job detailsActorSystem1. Worker opens the application2. System displays Worker Home Screen with large Online/Offline toggle (currently Offline)3. Worker taps the Online toggle4. System updates worker status to "Online" in Firestore5. System begins tracking worker GPS location6. System registers worker device token with Firebase Cloud Messaging7. System displays green "You are Online" status indicator8. When a matching job is posted nearby, System sends push notification to worker9. Worker receives notification and taps to view job detailsUse Case 11: Worker Toggles Availability
+Actor
+System
+1. Worker opens the application
+2. System displays Worker Home Screen with large Online/Offline toggle (currently Offline)
+3. Worker taps the Online toggle
+4. System updates worker status to "Online" in Firestore
+5. System begins tracking worker GPS location
+6. System registers worker device token with Firebase Cloud Messaging
+7. System displays green "You are Online" status indicator
+8. When a matching job is posted nearby, System sends push notification to worker
+9. Worker receives notification and taps to view job details
+Actor
+System
+1. Worker opens the application
+2. System displays Worker Home Screen with large Online/Offline toggle (currently Offline)
+3. Worker taps the Online toggle
+4. System updates worker status to "Online" in Firestore
+5. System begins tracking worker GPS location
+6. System registers worker device token with Firebase Cloud Messaging
+7. System displays green "You are Online" status indicator
+8. When a matching job is posted nearby, System sends push notification to worker
+9. Worker receives notification and taps to view job details
+Use Case ID:
+UC-11
+Use Case Name:
+Worker Toggles Availability and Receives Job Alert
+Created By:
+Muhammad Wasif RafiqLast Updated By: Muhammad Wasif Rafiq
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Worker
+Secondary: System (AI Matching Engine, FCM)
+Description:
+A verified worker opens the application, toggles their status to Online using a single large button on the home screen, and begins receiving push notifications for job opportunities that match their registered skill category and current GPS location.
+Trigger:
+Worker opens the application and taps the Online/Offline toggle button.
+Preconditions:
+Worker is logged in and account is verified by admin.
+Security deposit has been paid.
+Worker has granted location permission.
+Post Conditions:
+Worker availability status is updated to "Online" in Firestore.
+Worker's GPS location begins updating every 30 seconds.
+Worker appears in search results and is eligible to receive job notifications.
+Normal Flow:
+Alternative Flows:
+Alt-1: Worker goes Offline — Worker taps the toggle again. System updates status to Offline, stops GPS updates, removes worker from search results, and stops sending job notifications.
+Exceptions:
+E1: Location permission denied — System prompts worker to enable location in device settings. Status change is blocked until location is granted.
+E2: Worker account is suspended — System displays suspension message and prevents going Online.
+Figure 2.12: UC-11: 11: Toggles Availability
+ActorSystem1. Worker arrives at job location and taps "Upload Before Photo"2. System opens device camera3. Worker takes photo of the work area before starting4. System displays photo preview5. Worker confirms photo6. System uploads photo to Firebase Cloud Storage with timestamp7. System links photo URL to the active job record in Firestore8. System displays upload confirmation9. Worker completes the job and taps "Upload After Photo"10. System opens camera again11. Worker takes after-work photo12. System uploads after photo with timestamp and links to job record13. System notifies customer that work photos are available to viewActorSystem1. Worker arrives at job location and taps "Upload Before Photo"2. System opens device camera3. Worker takes photo of the work area before starting4. System displays photo preview5. Worker confirms photo6. System uploads photo to Firebase Cloud Storage with timestamp7. System links photo URL to the active job record in Firestore8. System displays upload confirmation9. Worker completes the job and taps "Upload After Photo"10. System opens camera again11. Worker takes after-work photo12. System uploads after photo with timestamp and links to job record13. System notifies customer that work photos are available to viewUse Case 12: Worker Uploads Before-and-After Photos
+Actor
+System
+1. Worker arrives at job location and taps "Upload Before Photo"
+2. System opens device camera
+3. Worker takes photo of the work area before starting
+4. System displays photo preview
+5. Worker confirms photo
+6. System uploads photo to Firebase Cloud Storage with timestamp
+7. System links photo URL to the active job record in Firestore
+8. System displays upload confirmation
+9. Worker completes the job and taps "Upload After Photo"
+10. System opens camera again
+11. Worker takes after-work photo
+12. System uploads after photo with timestamp and links to job record
+13. System notifies customer that work photos are available to view
+Actor
+System
+1. Worker arrives at job location and taps "Upload Before Photo"
+2. System opens device camera
+3. Worker takes photo of the work area before starting
+4. System displays photo preview
+5. Worker confirms photo
+6. System uploads photo to Firebase Cloud Storage with timestamp
+7. System links photo URL to the active job record in Firestore
+8. System displays upload confirmation
+9. Worker completes the job and taps "Upload After Photo"
+10. System opens camera again
+11. Worker takes after-work photo
+12. System uploads after photo with timestamp and links to job record
+13. System notifies customer that work photos are available to view
+Use Case ID:
+UC-12
+Use Case Name:
+Worker Uploads Before-and-After Service Photos
+Created By:
+Hanzala Habib AwanLast Updated By: Hanzala Habib Awan
+Date Created:
+15-Apr-2026Last Revision Date: 20-Apr-2026
+Actors:
+Primary: Worker
+Secondary: Firebase Cloud Storage
+Description:
+During and after completing a job, the worker uploads before-work and after-work photographs directly through the application. These photos are timestamped, stored in Firebase Cloud Storage, linked to the active job record, and serve simultaneously as a professional portfolio entry and as objective evidence in the event of any future damage dispute.
+Trigger:
+Worker taps "Upload Before Photo" at job start or "Upload After Photo" at job completion.
+Preconditions:
+A job booking is active and assigned to the worker.
+Worker is logged in and on the active job screen.
+Worker has granted camera and storage permissions on their device.
+Post Conditions:
+Photos are stored in Firebase Cloud Storage with timestamp metadata.
+Photo URLs are linked to the job document in Firestore.
+Photos are visible to both the customer and the administrator.
+Normal Flow:
+Alternative Flows:
+Alt-1: Worker uploads from gallery instead of camera — At step 3 or 11, worker selects "Choose from Gallery". System opens device photo gallery and worker selects an existing image.
+Exceptions:
+E1: Upload fails due to network — System retries automatically and notifies worker of upload status.
+E2: Camera permission denied — System displays "Camera permission required. Please enable in settings."
+E3: File size too large — System compresses image and retries upload automatically.
+Figure 2.13: UC-12: 12: Uploads Before-and-After Photos
+System Sequence Diagrams
+The following diagrams show the sequence of interactions between actors and the MazdoorLink App system for each of the primary use cases.
+SSD 01: Customer Register and Login with OTP
+Figure 2.12: System Sequence Diagram – UC-01
+SSD 02: Customer Posts Job Request
+Figure 2.13: System Sequence Diagram – UC-02
+SSD 03: Worker Registers with CNIC and Security Deposit
+Figure 2.14: System Sequence Diagram – UC-03
+SSD 04: Admin Verifies Worker Documents
+Figure 2.15: System Sequence Diagram – UC-04
+SSD 05: Worker Accepts or Rejects Job Request
+Figure 2.16: System Sequence Diagram – UC-05
+SSD 06: Real-Time Chat with Automatic Translation
+Figure 2.17: System Sequence Diagram – UC-06
+SSD 07: Customer Makes In-App Payment
+Figure 2.18: System Sequence Diagram – UC-07
+SSD 08: Customer Rates and Reviews Worker
+Figure 2.19: System Sequence Diagram – UC-08
+SSD 09: Customer Reports Damage or Service Issue
+Figure 2.20: System Sequence Diagram – UC-09
+SSD 10: Admin Handles Damage Report and Resolves Claim
+Figure 2.21: System Sequence Diagram – UC-10
+SSD 11: Worker Toggles Availability and Receives Job Alert
+Figure 2.22: System Sequence Diagram – UC-11
+SSD 12: Worker Uploads Before-and-After Service Photos
+Figure 2.23: System Sequence Diagram – UC-12
+Domain Model
+The domain model represents the conceptual entities and their relationships.
+Figure 2.24: MazdoorLink AI – Domain Model
+Chapter 3 
+         System Design
+The purpose of this chapter is to provide information that is complementary to the code of the MazdoorLink AI platform. Without an adequate design that delivers the required functions as well as quality attributes, the project will fail. Communicat- ing architecture to its stakeholders is as important a job as creating it in the first place. This chapter presents the structural and behavioral design artifacts of the MazdoorLink AI system, including the software architecture, class diagram, sequence diagrams, entity relationship diagram, database schema, user interface design, and a list of third-party software components used in the development of the system.
+Two views are considered while defining the software architecture of the Maz- doorLink AI platform. The structural view encompasses the architecture diagram, component diagram, and class diagram, which collectively describe the static organi- zation of the system. The behavioral view encompasses the sequence diagrams and activity diagrams, which describe the dynamic interactions and workflows within the system. Both views together provide a comprehensive understanding of the system design.
+The MazdoorLink AI platform follows the Layered Architecture pattern as its primary architectural style, separating the system into distinct layers: the Presen- tation Layer (Flutter mobile frontend), the Business Logic Layer (Firebase Cloud Functions with Node.js), the AI Services Layer (Python-based microservices), and the Data Layer (Firebase Firestore and Cloud Storage). This separation of concerns ensures that each layer can be developed, tested, and maintained independently, re- ducing coupling and improving system maintainability. Additionally, the Repository Pattern is applied in the data access layer to abstract Firestore operations from the business logic, and the Observer Pattern is utilized through Firebase real-time listeners to propagate live updates across the application.
+Layer Definition
+The MazdoorLink AI platform is structured around a four-layer architecture, where each layer is responsible for a distinct set of functions. This separation ensures that changes in one layer do not directly affect the others, improving maintainability, testability, and scalability of the overall system.
+Table 3.1: Layers Definition
+Layers
+Description
+Presentation Layer
+This layer is responsible for interaction with the user through a graphical user interface. It consists of the Flutter Mobile Application serving three role-specific interfaces: Customer UI, Worker UI,
+and Admin UI.
+ApplicationLogic Layer
+This layer contains the business logic of the plat- form. All constraints and the majority of the sys- tem functions reside here, implemented through Firebase Cloud Functions with Node.js. It handles job logic, bookings, payments, complaints, notifi-
+cations, and rating management.
+AI Services Layer
+This layer hosts the Python-based microservices responsible for intelligent platform features, in- cluding AI job matching, speech-to-text process- ing, and real-time chat translation. These services are exposed as REST APIs and communicate with
+the Application Logic Layer via API calls.
+Data Layer
+This layer contains the data storage infrastruc- ture of the application. It includes Cloud Fire- store (NoSQL), Cloud Storage (GCS), Firebase Authentication (OTP/SMS), and FCM Push No- tifications. Data in this tier is kept independent of
+application servers and business logic.
+Presentation Layer
+The Presentation Layer occupies the top level of the MazdoorLink AI architecture and is built using the Flutter framework, targeting both Android and iOS platforms from a single codebase. This layer renders three distinct role-specific interfaces: the Customer UI, the Worker UI, and the Admin UI. It communicates with the Applica- tion Logic Layer through REST API calls and Firebase SDK methods. The Worker UI is specifically designed for low-literacy users, featuring large one-tap buttons, Urdu language support, and voice input integration.
+Application Logic Layer
+The Application Logic Layer, also referred to as the middle tier or business logic layer, is implemented using Firebase Cloud Functions with Node.js. This layer is pulled from the Presentation Layer via REST API and Firebase SDK calls and controls the core application functionality by performing detailed processing. It manages all major workflows including job posting and matching triggers, booking lifecycle management, payment processing, complaint handling, push notification dispatch, and monthly se- curity deposit refund processing. It also interfaces with the AI Services Layer through REST API calls to invoke intelligent features.
+AI Services Layer
+The AI Services Layer consists of Python-based microservices deployed as indepen- dent REST API endpoints using the Flask or FastAPI framework. This layer handles the three core intelligent features of the platform: the AI Job Matching module, which recommends suitable workers based on skills, location, availability, and ratings; the Speech-to-Text module, which converts Urdu voice input from workers into process- able text using the Google Cloud Speech-to-Text API; and the Real-Time Translation module, which performs English-to-Urdu and Urdu-to-English chat message trans- lation using the Google Cloud Translation API. These services communicate with external AI and NLP APIs and return results to the Application Logic Layer.
+Data Layer
+The Data Layer includes all persistent storage infrastructure used by the Mazdoor- Link AI platform and is kept fully independent of the application servers and business
+logic above it. It consists of four components: Cloud Firestore, the primary NoSQL database that provides real-time synchronization and offline persistence for all applica- tion data; Cloud Storage (GCS), used for storing user-uploaded files including CNIC images, police clearance certificates, and before-and-after service photos; Firebase Authentication, which manages OTP and SMS-based user verification; and Firebase Cloud Messaging (FCM), which handles the delivery of push notifications to both Android and iOS devices.
+Software Architecture
+Software architecture is described as the organization or structure of a system, where the system represents a collection of components that accomplish a specific function or set of functions. The architecture of the MazdoorLink AI platform has been designed with careful consideration of five major architectural decisions: the application type, the deployment strategy, the appropriate technologies, the quality attributes, and the crosscutting concerns.
+Application Type: MazdoorLink AI is a cross-platform mobile application devel- oped using the Flutter framework, targeting both Android and iOS operating systems from a single codebase. The application follows a client-server architecture where the Flutter frontend communicates with Firebase backend services and Python-based AI microservices through well-defined REST APIs and Firebase SDKs.
+Deployment Strategy: The system is deployed entirely on cloud infrastructure. The mobile application is distributed through the Google Play Store and Apple App Store. The backend logic is deployed as serverless Firebase Cloud Functions, and the AI microservices are deployed as independent REST API services hosted on cloud platforms such as Google Cloud Run. This serverless and cloud-native deployment strategy eliminates the need for on-premises infrastructure and enables automatic scaling.
+Appropriate Technologies: The technology stack is composed of Flutter and Dart for the mobile frontend, Firebase Authentication for OTP-based user verifica- tion, Cloud Firestore as the primary NoSQL database, Firebase Cloud Storage for document and image storage, Firebase Cloud Messaging for push notifications, Fire- base Cloud Functions with Node.js for backend business logic, and Python-based microservices for AI job matching, speech-to-text processing, and chat translation.
+Quality Attributes: The architecture addresses the following quality attributes. Scalability is achieved through Firebase’s automatic horizontal scaling and the state- less design of Cloud Functions. Security is enforced through Firebase Security Rules, OTP-based authentication, and encrypted data transmission over HTTPS. Perfor- mance is ensured through Firestore’s real-time synchronization and efficient indexing. Reliability is provided through Firebase’s managed infrastructure with high availabil- ity guarantees. Usability is addressed through role-specific interfaces designed for different literacy levels.
+Crosscutting Concerns: The system addresses logging through Firebase An- alytics and Cloud Function logs, error handling through structured exception man- agement in Cloud Functions, security through Firebase Authentication and Security Rules applied uniformly across all data access points, and internationalization through Flutter’s localization framework supporting English and Urdu languages.
+The architecture follows the Layered Architecture design pattern, organizing the system into four distinct layers as illustrated in Figure 3.1. The Presentation Layer handles all user interface rendering and user interaction. The Application Logic Layer processes business rules through Firebase Cloud Functions. The AI Services Layer handles intelligent features through Python microservices exposed as REST APIs. The Data Layer manages persistent storage through Firestore and Cloud Storage. This pattern was chosen because it provides clear separation of concerns, enables in- dependent testing of each layer, and allows modifications to one layer without affecting others.
+Figure 3.1: MazdoorLink AI – Software Architecture Diagram
+Class Diagram
+The class diagram provides an overview of the MazdoorLink AI system by describ- ing the objects and classes inside the system and the relationships between them. It models the domain-specific data structure and provides the foundation for the de- tailed design of the target system. The class diagram serves as a blueprint for the Firestore document collections and the Flutter data model classes used throughout the application.
+The primary classes identified in the MazdoorLink AI system are as follows. The User class serves as the base class from which the Customer and Worker classes inherit, capturing shared attributes such as user identifier, phone number, name, profile picture URL, and account status. This inheritance relationship reflects the Generalization design pattern. The Admin class is an independent actor class with its own set of responsibilities.
+The JobRequest class represents a job posted by a customer and contains at- tributes including job identifier, service category, description, location coordinates, scheduled date and time, status, and associated customer reference. The Booking class captures the confirmed assignment of a worker to a job request and contains references to both the customer and the worker, along with booking status and times- tamp information. The Payment class records transaction details associated with each completed booking.
+The Review class captures ratings and feedback submitted by customers after job completion and is associated with both the booking and the worker. The Complaint class records issues raised by customers regarding service quality or property damage and is linked to the relevant booking. The SecurityDeposit class tracks the deposit amount paid by each worker, its current status, and any deductions applied. The ChatMessage class represents individual messages exchanged between customers and workers, with attributes for sender, receiver, content, timestamp, and translated content.
+The Notification class captures push notification records sent to users through Firebase Cloud Messaging, including notification type, recipient, and delivery status. The ServicePhoto class stores references to before-and-after photographs uploaded by workers upon job completion.
+The class diagram reflects the Association, Aggregation, and Composition
+relationships between these classes. For example, a Customer aggregates multiple Jo- bRequests, a Booking composes a Payment, and a Worker is associated with multiple Reviews and ServicePhotos. The Repository Pattern is applied at the data access layer, where each major class has a corresponding repository class that encapsulates all Firestore read and write operations, abstracting data access from the business logic layer.
+Figure 3.2: MazdoorLink AI – Class Diagram
+Sequence Diagrams
+Sequence diagrams, when used in conjunction with class diagrams, provide an ex- tremely effective communication mechanism for the MazdoorLink AI system. UML sequence diagrams illustrate how objects interact in a given situation by showing the messages sent among the instances of these classes and the order in which they are sent. When an object sends a message to another object, it implies that the two classes have a relationship that must be shown on the class diagram. The follow- ing sequence diagrams describe the key interaction flows within the MazdoorLink AI platform.
+The sequence diagrams for the MazdoorLink AI system follow the Facade Pat- tern in their representation of system interactions. The MazdoorLink system bound- ary acts as a facade that simplifies the complex interactions between the Flutter frontend, Firebase services, and Python AI microservices, presenting a unified inter- face to the actors. This design choice reduces the complexity visible to each actor and decouples the frontend from the internal service implementations.
+Sequence Diagram 1: Customer Login and Registration
+Figure 3.4 illustrates the sequence of interactions that occur when a customer registers or logs in to the MazdoorLink AI platform using OTP-based phone number verifi- cation. The customer initiates the process by submitting a phone number through the Flutter application. The system forwards the request to Firebase Authentication, which dispatches an OTP to the customer’s mobile number. Upon successful OTP verification, the system checks whether a user profile already exists in Firestore. If no profile exists, a new customer document is created and the customer is redirected to the home screen.
+Figure 3.3: Sequence Diagram – Customer Login and Registration
+Sequence Diagram 2: Customer Posts Job Request
+Figure ?? illustrates the sequence of interactions that occur when a customer posts a job request on the MazdoorLink AI platform. The customer selects a service category and provides job details through the application interface. The Flutter application submits the job data to a Firebase Cloud Function, which stores the job request document in Firestore and triggers the AI job matching microservice. The AI service processes the request parameters, identifies suitable available workers, and returns a ranked list of recommendations. The system then sends push notifications to the recommended workers through Firebase Cloud Messaging.
+                            Figure 3.4: Sequence Diagram – Customer Posts Job Request
+Sequence Diagram 3: Worker Accepts Job Request
+Figure 3.5 illustrates the sequence of interactions that occur when a worker receives and responds to a job request notification. Upon receiving a push notification from Firebase Cloud Messaging, the worker opens the application and views the job details. The worker taps the accept button, which triggers a Cloud Function to update the job request status in Firestore to accepted and create a new Booking document. The customer is then notified of the worker’s acceptance through a push notification, and the worker’s location becomes visible to the customer through the GPS tracking feature.
+Figure 3.5: Sequence Diagram – Worker Accepts Job Request
+Sequence Diagram 4: Real-Time Chat with Automatic Trans- lation
+Figure 3.6 illustrates the sequence of interactions that occur during a real-time chat session between a customer and a worker with automatic language translation. When a user sends a message, the Flutter application submits the message content to a Cloud Function. The Cloud Function detects the source language and invokes the Google Cloud Translation API to produce a translated version of the message. Both the original and translated messages are stored as ChatMessage documents in Firestore. Firestore’s real-time listeners on the recipient’s device immediately deliver the new message, displaying the translated content to the recipient in their preferred language.
+Figure 3.6: Sequence Diagram – Real-Time Chat with Automatic Translation
+Sequence Diagram 5: Admin Verifies Worker Documents
+Figure 3.7 illustrates the sequence of interactions that occur when an administrator reviews and verifies a worker’s registration documents. The administrator logs in to the platform and navigates to the pending worker verification queue. The system re- trieves the list of workers with pending verification status from Firestore and displays their submitted documents, including CNIC images, police clearance certificates, and security deposit confirmation. The administrator reviews the documents and either approves or rejects the application. A Cloud Function updates the worker’s verifica- tion status in Firestore and dispatches a push notification to the worker informing them of the decision.
+Figure 3.7: Sequence Diagram – Admin Verifies Worker Documents
+Sequence Diagram 6: Customer Reports Complaint and Admin Resolves Claim
+Figure 3.8 illustrates the sequence of interactions that occur when a customer reports a damage complaint and the administrator resolves the claim. The customer submits a complaint through the application, uploading photographic evidence and providing a description of the incident. A Cloud Function stores the complaint document in Firestore and notifies the administrator. The administrator reviews evidence from both the customer and the worker, including any before-and-after service photos up- loaded by the worker. Upon reaching a decision, the administrator approves or rejects the damage claim. If approved, a Cloud Function deducts the compensation amount from the worker’s security deposit balance in Firestore and notifies both parties of the resolution.
+Figure 3.8: Sequence Diagram – Customer Reports Complaint and Admin Resolves Claim
+Entity Relationship Diagram
+An entity relationship diagram (ERD) is a conceptual representation of the data stored in the MazdoorLink AI system. The ERD identifies the primary entities of the system, their attributes, and the relationships that exist between them. Although the MazdoorLink AI platform uses Firebase Firestore, a NoSQL document database, the entity relationship model is presented here to provide a technology-independent conceptual view of the data domain. During physical design, this model is mapped into Firestore collections and document structures.
+The primary entities identified in the MazdoorLink AI data model are Customer, Worker, Admin, JobRequest, Booking, Payment, Review, Complaint, Secu- rityDeposit, ChatMessage, Notification, and ServicePhoto.
+The Customer entity has a one-to-many relationship with JobRequest, as a single customer may post multiple job requests over time. A JobRequest has a one- to-one relationship with a Booking, as each accepted job request results in exactly one booking. A Booking has a one-to-one relationship with Payment and a one- to-one relationship with Review. A Worker entity has a one-to-many relationship with Review, Complaint, and ServicePhoto. Each Worker has exactly one Se- curityDeposit record, representing a one-to-one relationship. The ChatMessage entity has a many-to-one relationship with both Customer and Worker, as multiple messages may be exchanged within a single conversation. The Notification entity has a many-to-one relationship with both Customer and Worker.
+Figure 3.9: MazdoorLink AI – Entity Relationship Diagram
+Database Schema
+The database schema of the MazdoorLink AI platform defines the logical structure of all data stored within Firebase Firestore. Firestore organizes data as collections of documents, where each document contains key-value pairs representing the attributes of a data entity. The schema described in this section defines the primary Firestore collections, their document structures, field types, and the relationships maintained through document references.
+The users collection stores documents for all registered users of the platform. Each user document contains the fields: uid (string, primary identifier assigned by Firebase Authentication), role (string, enumerated as “customer”, “worker”, or “admin”), name (string), phone (string), profileImageUrl (string), status (string, enumerated as “active”, “suspended”, or “banned”), and createdAt (timestamp).
+The workers collection stores extended profile information for registered workers, including the fields: uid (string, foreign reference to the users collection), serviceCategory (string), cnicFrontUrl (string), cnicBackUrl (string), policeClearanceUrl (string), verificationStatus (string, enumerated as “pending”, “approved”, or “rejected”),
+isAvailable (boolean), rating (number), totalJobsCompleted (number), and locationCoordina (geopoint).
+The jobRequests collection stores documents representing service requests posted
+by customers, with fields: jobId (string), customerId (string, reference), serviceCategory (string), description (string), locationCoordinates (geopoint), scheduledDateTime (timestamp), status (string, enumerated as “open”, “accepted”, “inProgress”, “com- pleted”, or “cancelled”), and createdAt (timestamp).
+The bookings collection stores confirmed job assignments with fields: bookingId (string), jobRequestId (string, reference), customerId (string, reference), workerId (string, reference), startTime (timestamp), endTime (timestamp), totalDuration (number, in minutes), and status (string).
+The payments collection records payment transactions with fields: paymentId (string), bookingId (string, reference), amount (number), method (string), status (string), and transactionTimestamp (timestamp).
+The reviews collection stores customer feedback with fields: reviewId (string), bookingId (string, reference), customerId (string, reference), workerId (string, ref- erence), rating (number, 1–5), comment (string), and createdAt (timestamp).
+The complaints collection records damage or service issue reports with fields: complaintId (string), bookingId (string, reference), customerId (string, reference), workerId (string, reference), description (string), evidenceUrls (array of strings), status (string, enumerated as “open”, “underReview”, “resolved”, or “rejected”), adminDecision (string), and deductionAmount (number).
+The securityDeposits collection tracks worker deposit records with fields: depositId (string), workerId (string, reference), amount (number), balance (number), depositDate (timestamp), and lastRefundDate (timestamp).
+The chatMessages collection stores individual chat messages with fields: messageId
+(string), bookingId (string, reference), senderId (string), receiverId (string), originalContent (string), translatedContent (string), sourceLanguage (string), and timestamp (times-
+tamp).
+Figure 3.10: MazdoorLink AI – Database Schema
+User Interface Design
+User Interface (UI) design for the MazdoorLink AI platform focuses on anticipating what each category of user needs to accomplish and ensuring that the interface pro- vides elements that are easy to access, understand, and use to facilitate those actions. The UI design brings together concepts from interaction design, visual design, and information architecture. The design philosophy of the MazdoorLink AI platform is guided by two primary principles: simplicity for low-literacy workers and comprehen- siveness for technically proficient customers and administrators.
+The customer-facing interface follows a clean, card-based material design language with clear visual hierarchy, intuitive navigation through a bottom navigation bar, and prominent call-to-action buttons. The worker-facing interface is intentionally simpli- fied, featuring large one-tap action buttons, high-contrast colors, Urdu as the default language, prominent toggle switches for availability management, and voice input support to minimize the need for typing. The administrator interface provides a data-dense dashboard with list views, status badges, and action buttons for managing users, verifying documents, and resolving complaints. All interfaces maintain a consistent color scheme, typography, and spacing throughout the application to ensure visual coherence.
+The following subsections describe the UI design of each primary screen of the MazdoorLink AI application.
+UI Screen 1: Welcome and Authentication Screen
+The Welcome Screen is the entry point of the MazdoorLink AI application for all user types. It displays the application logo and name prominently at the top, followed by two primary action buttons labeled “Register” and “Login”. The phone number entry form contains a single text field for mobile number input with a Pakistani country code prefix (+92) pre-populated. A “Send OTP” button submits the form. The OTP verification screen displays six individual digit input boxes for OTP entry. A “Resend OTP” link is displayed below the input with a 30-second countdown timer. All text fields display inline validation messages when invalid input is detected.
+UI Screen 2: Customer Home Screen
+The Customer Home Screen serves as the primary dashboard for customers after successful login. It displays a top navigation bar containing the application logo, a notification bell icon, and a user profile icon. A prominent search bar is positioned below the navigation bar, allowing customers to search for services by keyword or category. Below the search bar, a horizontal scrollable row of service category chips (Plumber, Electrician, Carpenter, Painter, and others) enables quick category filter- ing. The main content area displays a grid of AI-recommended worker cards, each showing the worker’s profile photo, name, service category, star rating, and a “Book Now” button. A floating action button at the bottom right provides quick access to posting a custom job request. A bottom navigation bar provides access to Home, My Bookings, Chat, and Profile sections.
+UI Screen 3: Worker Home Screen
+The Worker Home Screen is designed with a simplified layout optimized for low- literacy users. The screen displays a large availability toggle switch prominently at the top with the label “Available for Jobs” rendered in both English and Urdu. Below the toggle, a notification card displays the most recent job alert, showing the service category, customer location distance, and two large action buttons labeled “Accept” and “Reject” in high-contrast green and red colors respectively. A summary section displays the worker’s earnings for the current day, week, and month using large, clearly readable numbers. A bottom navigation bar provides access to Home, My Jobs, Earnings, and Profile sections. A floating microphone button is visible at the bottom right for voice-based interaction.
+UI Screen 4: Job Request Posting Screen
+The Job Request Posting Screen allows customers to create a new service request. The screen contains the following elements: a dropdown selector for service category with pre-defined options, a multi-line text field for job description with a maximum character limit of 500 characters and a minimum of 20 characters, a date and time picker for scheduled service with a default value of the current date and time, an auto-populated location field using GPS with an option for manual address override, and a “Post Job” submission button. The screen also provides access to pre-defined job templates through a “Use Template” button, which populates the form fields with default values for common tasks such as pipe repair, wiring check, or room painting.
+UI Screen 5: Chat Screen with Translation
+The Chat Screen provides a standard messaging interface with additional translation functionality. The screen displays a conversation thread with message bubbles for sent and received messages. Each message bubble displays the original message text and, directly below it, the translated version in a lighter font color, clearly labeled with a translation icon. A language indicator at the top of the screen shows the active language pair (for example, English to Urdu). At the bottom, a message input field accepts text input with a maximum length of 300 characters. A microphone icon adjacent to the input field enables voice input through the speech-to-text feature. A send button submits the message. The input field minimum length is one character.
+UI Screen 6: View Worker Profile Screen
+The Customer can view the profile of a worker.
+Capital University of Science and Te
+Software COTS
+This section lists all third-party software components, libraries, frameworks, and APIs used in the development of the MazdoorLink AI platform. These components are categorized as COTS (Components Off the Shelf) and are described in terms of their identification, purpose, source, and maintenance status.
+Table 3.2: Software COTS Components
+No.
+Component
+Version
+Purpose
+Source /
+Vendor
+1
+Flutter SDK
+3.19.x
+Cross-platform mobile application development framework for Android
+and iOS
+Google LLC – open source (BSD License)
+2
+Firebase Authentication
+Latest
+OTP-based phone number authentication and session
+management
+Google LLC – managed cloud service
+3
+Cloud Firestore
+Latest
+NoSQL real-time cloud database for storing all
+application data
+Google LLC – managed cloud
+service
+4
+Firebase Cloud Storage
+Latest
+Secure object storage for user-uploaded images and documents
+(CNIC, photos)
+Google LLC – managed cloud service
+5
+Firebase Cloud Functions
+Latest
+Serverless backend logic execution using
+Node.js runtime
+Google LLC – managed cloud
+service
+6
+Firebase Cloud Messaging
+Latest
+Push notification
+delivery to Android and iOS devices
+Google LLC –
+managed cloud service
+Continued on next page
+Table 3.2 – Continued from previous page
+No.
+Component
+Version
+Purpose
+Source /
+Vendor
+7
+Google Maps Flutter Plugin
+2.5.x
+Embedded map display, GPS location tracking, and route
+visualization
+Google LLC – open source (BSD License)
+8
+Google Cloud Speech-to-Text API
+v1p1beta1
+Voice-to-text conversion supporting Urdu language for
+worker voice input
+Google LLC – commercial API service
+9
+Google Cloud Translation API
+v2 / v3
+Real-time
+English-to-Urdu and Urdu-to-English chat message translation
+Google LLC – commercial API service
+10
+scikit-learn
+1.4.x
+Machine learning library used for
+AI-based job matching
+recommendation model
+Community open source – BSD License
+11
+Flask
+3.0.x
+Lightweight Python web framework used to expose AI microservices as REST
+APIs
+Pallets Projects – open source (BSD License)
+12
+Provider (Flutter)
+6.1.x
+State management solution for Flutter application following
+the Observer pattern
+Remi Rousselet – open source (MIT License)
+13
+image picker (Flutter)
+1.0.x
+Plugin for accessing device camera and gallery for photo
+upload functionality
+Flutter Community – open source
+(BSD License)
+Continued on next page
+Table 3.2 – Continued from previous page
+No.
+Component
+Version
+Purpose
+Source /
+Vendor
+14
+intl (Flutter)
+0.19.x
+Internationalization and localization package supporting English and Urdu text
+rendering
+Dart Team – open source (BSD License)
+15
+Node.js
+20.x LTS
+JavaScript runtime environment for executing Firebase
+Cloud Functions
+OpenJS Foundation – open source
+(MIT License)
+All Firebase services listed above are maintained by Google LLC and are accessed through Google’s managed cloud infrastructure. These services are insulated from the application layer through Firebase SDK abstractions, ensuring that changes to underlying Firebase implementations do not directly affect the application business logic. The Python-based AI microservices are deployed as independent containerized services and communicate with the Firebase Cloud Functions layer exclusively through REST API calls, providing full isolation between the AI processing components and the core application infrastructure. This architectural isolation ensures that any third- party component can be replaced or upgraded with minimal impact on the remaining system components.
+The Flutter Provider package follows the Observer Pattern by maintaining a reactive state management mechanism where UI components automatically re-render in response to state changes, eliminating the need for manual UI refresh calls. The scikit-learn library is used exclusively within the Python AI microservice layer and has no direct dependency on the mobile frontend or Firebase services, ensuring clean architectural boundaries. The Flask framework exposes the AI models as HTTP end- points, allowing Firebase Cloud Functions to invoke AI capabilities through standard REST calls without any tight coupling to the Python runti
+Bibliography
+International Labour Organization, “Women and Men in the Informal Economy: A
+ Statistical Update,” ILO Geneva, 3rd Edition, 2022.
+Pakistan Bureau of Statistics, “Labour Force Survey 2022–2023 – Annual Re-port,” Government of Pakistan, 2023.
+S. Ahmed, M. Hassan, and A. Khan, “Digital Divide and Technology Adop-tion Barriers among Blue-Collar Workers in South Asia: A Systematic Review,” Journal of Information Technology for Development, vol. 27, no. 4, pp. 512–530, 2021.
+https:https:Karsaaz, “Karsaaz – Home Services On Demand,” [Online]. Available:
+https:
+https:
+//karsaaz.app/. [Accessed:  10-Apr-2025].
+https:https:Kam Kaaj, “Kam Kaaj – Home Services Platform,” [Online]. Available:
+https:
+https:
+//kamkaaj.com/. [Accessed: 10-Apr-2025].
+HomeServices.pk, “HomeServices.pk – Find Home Service Providers in Pak-istan,” [Online]. Available: https://homeservices.pk/. [Accessed: 10-Apr-2025].
+https:https:TaskBid, “TaskBid – Task-Based Hiring Platform,” [Online]. Available:
+https:
+https:
+//taskbid.com/. [Accessed: 10-Apr-2025].
+World Bank Group, “The Gig Economy in Developing Countries: Opportunities and Challenges,” World Bank Policy Research Working Paper, 2023.
+Google Cloud, “Cloud Speech-to-Text API Documentation,” [Online]. Available: https://cloud.google.com/speech-to-text. [Accessed: 10-Apr-2025].
+Google Cloud, “Cloud Translation API Documentation,” [Online]. Available: https://cloud.google.com/translate. [Accessed: 10-Apr

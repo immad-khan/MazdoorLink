@@ -760,7 +760,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _next() {
-    if (_isForgotPassword ?? false) {
+    if (_isForgotPassword) {
       if (step == 0) {
         if (_phone.text.trim().isEmpty) return;
         setState(() => step = 1);
@@ -848,7 +848,7 @@ class _AuthScreenState extends State<AuthScreen> {
     return MzScaffold(
       showBottomNav: false,
       showBack: true,
-      title: (_isForgotPassword ?? false)
+      title: (_isForgotPassword)
           ? 'Reset Password'
           : (widget.isSignup ? 'Sign up' : 'Login'),
       child: Padding(
@@ -857,7 +857,7 @@ class _AuthScreenState extends State<AuthScreen> {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 260),
             transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-            child: (_isForgotPassword ?? false)
+            child: (_isForgotPassword)
                 ? _forgotPasswordFlow()
                 : (widget.isSignup ? _signupFlow() : _loginScreen()),
           ),
@@ -1010,12 +1010,12 @@ class _AuthScreenState extends State<AuthScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _password,
-            obscureText: _obscurePassword ?? true,
+            obscureText: _obscurePassword,
             decoration: InputDecoration(
               hintText: 'Enter new password',
               suffixIcon: IconButton(
-                icon: Icon((_obscurePassword ?? true) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscurePassword = !(_obscurePassword ?? true)),
+                icon: Icon((_obscurePassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                onPressed: () => setState(() => _obscurePassword = !(_obscurePassword)),
               ),
             ),
           ),
@@ -1027,12 +1027,12 @@ class _AuthScreenState extends State<AuthScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _confirmPassword,
-            obscureText: _obscureConfirmPassword ?? true,
+            obscureText: _obscureConfirmPassword,
             decoration: InputDecoration(
               hintText: 'Re-enter new password',
               suffixIcon: IconButton(
-                icon: Icon((_obscureConfirmPassword ?? true) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscureConfirmPassword = !(_obscureConfirmPassword ?? true)),
+                icon: Icon((_obscureConfirmPassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                onPressed: () => setState(() => _obscureConfirmPassword = !(_obscureConfirmPassword)),
               ),
             ),
           ),
@@ -1092,12 +1092,12 @@ class _AuthScreenState extends State<AuthScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: _password,
-          obscureText: _obscurePassword ?? true,
+          obscureText: _obscurePassword,
           decoration: InputDecoration(
             hintText: 'Enter your password',
             suffixIcon: IconButton(
-              icon: Icon((_obscurePassword ?? true) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-              onPressed: () => setState(() => _obscurePassword = !(_obscurePassword ?? true)),
+              icon: Icon((_obscurePassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+              onPressed: () => setState(() => _obscurePassword = !(_obscurePassword)),
             ),
           ),
         ),
@@ -1283,12 +1283,12 @@ class _AuthScreenState extends State<AuthScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _password,
-            obscureText: _obscurePassword ?? true,
+            obscureText: _obscurePassword,
             decoration: InputDecoration(
               hintText: 'Enter password',
               suffixIcon: IconButton(
-                icon: Icon((_obscurePassword ?? true) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscurePassword = !(_obscurePassword ?? true)),
+                icon: Icon((_obscurePassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                onPressed: () => setState(() => _obscurePassword = !(_obscurePassword)),
               ),
             ),
           ),
@@ -1300,12 +1300,12 @@ class _AuthScreenState extends State<AuthScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _confirmPassword,
-            obscureText: _obscureConfirmPassword ?? true,
+            obscureText: _obscureConfirmPassword,
             decoration: InputDecoration(
               hintText: 'Re-enter password',
               suffixIcon: IconButton(
-                icon: Icon((_obscureConfirmPassword ?? true) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscureConfirmPassword = !(_obscureConfirmPassword ?? true)),
+                icon: Icon((_obscureConfirmPassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                onPressed: () => setState(() => _obscureConfirmPassword = !(_obscureConfirmPassword)),
               ),
             ),
           ),
@@ -2549,7 +2549,7 @@ class ServiceTrackingScreen extends StatelessWidget {
                     ),
                     title: Text(worker.name),
                     subtitle: Text(
-                      '${worker.category} • ${bilingual(context, job?.descriptionEn ?? "Service", job?.descriptionUr ?? "سروس")} • ${worker.price}'
+                      '${worker.category} • ${bilingual(context, job.descriptionEn, job.descriptionUr)} • ${worker.price}'
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -3660,7 +3660,7 @@ class _SmartChatScreenState extends State<SmartChatScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          (showUrdu ?? false) ? m.ur : m.en, 
+                          (showUrdu) ? m.ur : m.en, 
                           style: TextStyle(color: own ? Colors.white : Colors.black87, fontSize: 15),
                         ),
                         const SizedBox(height: 5),
@@ -3685,7 +3685,7 @@ class _SmartChatScreenState extends State<SmartChatScreen> {
                 GestureDetector(
                   onTap: () {
                     setState(() {
-                      showUrdu = !(showUrdu ?? false);
+                      showUrdu = !(showUrdu);
                     });
                   },
                   child: Container(
@@ -3697,7 +3697,7 @@ class _SmartChatScreenState extends State<SmartChatScreen> {
                       border: Border.all(color: const Color(0xFFBFDBFE)),
                     ),
                     child: Text(
-                      (showUrdu ?? false) ? 'UR ➔ EN' : 'EN ➔ UR',
+                      (showUrdu) ? 'UR ➔ EN' : 'EN ➔ UR',
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -4492,7 +4492,7 @@ class _WorkerAcceptanceSimulatorScreenState extends State<WorkerAcceptanceSimula
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
-                                                bilingual(context, job.descriptionEn ?? 'Service', job.descriptionUr ?? 'سروس'),
+                                                bilingual(context, job.descriptionEn, job.descriptionUr),
                                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
                                               ),
                                             ],

@@ -2662,6 +2662,18 @@ class _MapPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+enum PostJobStep {
+  chooseAction,
+  complaintForm,
+  paymentMethod,
+  workerConfirmationWaiting,
+  paymentSuccessTick,
+  onlinePaymentSelect,
+  onlinePaymentForm,
+  ratingForm,
+  completed
+}
+
 class RatingReviewScreen extends StatefulWidget {
   const RatingReviewScreen({super.key});
 
@@ -2670,31 +2682,347 @@ class RatingReviewScreen extends StatefulWidget {
 }
 
 class _RatingReviewScreenState extends State<RatingReviewScreen> {
+  PostJobStep _step = PostJobStep.chooseAction;
+
+  // Complaint
+  final _claimDesc = TextEditingController();
+  final _claimAmount = TextEditingController();
+  bool _img1Added = false;
+  bool _img2Added = false;
+
+  // Online Payment
+  String? _selectedProvider;
+  final _senderName = TextEditingController();
+  final _mobileNumber = TextEditingController();
+  final _payAmount = TextEditingController(text: '1050');
+
+  // Rating
   int rating = 0;
-  bool submitted = false;
   final review = TextEditingController();
 
   @override
   void dispose() {
+    _claimDesc.dispose();
+    _claimAmount.dispose();
+    _senderName.dispose();
+    _mobileNumber.dispose();
+    _payAmount.dispose();
     review.dispose();
     super.dispose();
+  }
+
+  String _getTitle(BuildContext context) {
+    if (_step == PostJobStep.chooseAction) return bilingual(context, 'Service Summary', 'سروس کا خلاصہ');
+    if (_step == PostJobStep.complaintForm) return bilingual(context, 'Lodge Complaint', 'شکایت درج کریں');
+    if (_step == PostJobStep.paymentMethod || _step == PostJobStep.onlinePaymentSelect || _step == PostJobStep.onlinePaymentForm) {
+      return bilingual(context, 'Payment', 'ادائیگی');
+    }
+    return bilingual(context, 'Rate Service', 'درجہ بندی کریں');
   }
 
   @override
   Widget build(BuildContext context) {
     return MzScaffold(
       showBottomNav: false,
-      title: bilingual(context, 'Rate Service', 'سروس کی درجہ بندی کریں'),
+      title: _getTitle(context),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 250),
-        child: submitted ? _success(context) : _form(context),
+        child: _buildCurrentStep(context),
       ),
     );
   }
 
-  Widget _form(BuildContext context) {
+  Widget _buildCurrentStep(BuildContext context) {
+    switch (_step) {
+      case PostJobStep.chooseAction:
+        return _buildChooseAction(context);
+      case PostJobStep.complaintForm:
+        return _buildComplaintForm(context);
+      case PostJobStep.paymentMethod:
+        return _buildPaymentMethod(context);
+      case PostJobStep.workerConfirmationWaiting:
+        return _buildCashWaiting(context);
+      case PostJobStep.paymentSuccessTick:
+        return _buildTickSuccess(context);
+      case PostJobStep.onlinePaymentSelect:
+        return _buildOnlineSelect(context);
+      case PostJobStep.onlinePaymentForm:
+        return _buildOnlineForm(context);
+      case PostJobStep.ratingForm:
+        return _buildRatingForm(context);
+      case PostJobStep.completed:
+        return _buildCompleted(context);
+    }
+  }
+
+  Widget _buildChooseAction(BuildContext context) {
     return ListView(
-      key: const ValueKey('form'),
+      key: const ValueKey('choose'),
+      padding: const EdgeInsets.all(24),
+      children: [
+        const Icon(Icons.task_alt, color: Color(0xFF059669), size: 64),
+        const SizedBox(height: 16),
+        Text(bilingual(context, 'Job Completed!', 'کام مکمل ہو گیا!'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 24),
+        const Card(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _BillRow('Service Fee', 'Rs. 1,000'),
+                _BillRow('Platform Fee', 'Rs. 50'),
+                Divider(),
+                _BillRow('Total Paid', 'Rs. 1,050', bold: true),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 32),
+        FilledButton(
+          onPressed: () => setState(() => _step = PostJobStep.paymentMethod),
+          child: Text(bilingual(context, 'Proceed to Payment', 'ادائیگی کریں')),
+        ),
+        const SizedBox(height: 16),
+        OutlinedButton(
+          onPressed: () => setState(() => _step = PostJobStep.complaintForm),
+          child: Text(bilingual(context, 'Lodge a Complaint', 'شکایت درج کریں')),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComplaintForm(BuildContext context) {
+    return ListView(
+      key: const ValueKey('complaint'),
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(bilingual(context, 'File a Complaint', 'ایک شکایت درج کریں'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _claimDesc,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: bilingual(context, 'Description / Issue', 'تفصیل / مسئلہ'),
+            alignLabelWithHint: true,
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _claimAmount,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: bilingual(context, 'Money Claim Amount', 'رقم کے دعوے کی رقم'),
+            prefixText: 'Rs. '
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(bilingual(context, 'Add Photos (Optional)', 'تصاویر شامل کریں (اختیاری)')),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: () => setState(() => _img1Added = !_img1Added),
+                child: Container(
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300)
+                  ),
+                  child: Icon(_img1Added ? Icons.image : Icons.add_a_photo, color: _img1Added ? Colors.green : Colors.grey, size: 32),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: InkWell(
+                onTap: () => setState(() => _img2Added = !_img2Added),
+                child: Container(
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300)
+                  ),
+                  child: Icon(_img2Added ? Icons.image : Icons.add_a_photo, color: _img2Added ? Colors.green : Colors.grey, size: 32),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        FilledButton(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(bilingual(context, 'Complaint Submitted', 'شکایت جمع کر دی گئی'))));
+            setState(() => _step = PostJobStep.ratingForm);
+          },
+          child: Text(bilingual(context, 'Submit Complaint', 'شکایت جمع کریں')),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentMethod(BuildContext context) {
+    return ListView(
+      key: const ValueKey('paymentMethod'),
+      padding: const EdgeInsets.all(24),
+      children: [
+        Text(bilingual(context, 'Select Payment Method', 'ادائیگی کا طریقہ منتخب کریں'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 24),
+        ListTile(
+          leading: const Icon(Icons.money, size: 36, color: Colors.green),
+          title: Text(bilingual(context, 'Cash by Hand', 'نقد ادا کریں')),
+          subtitle: Text(bilingual(context, 'Pay directly to worker', 'براہ راست ورکر کو ادائیگی کریں')),
+          tileColor: Colors.white,
+          shape: RoundedRectangleBorder(side: BorderSide(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+          onTap: () {
+            setState(() => _step = PostJobStep.workerConfirmationWaiting);
+            Future.delayed(const Duration(seconds: 4), () {
+              if (mounted && _step == PostJobStep.workerConfirmationWaiting) {
+                setState(() => _step = PostJobStep.paymentSuccessTick);
+              }
+            });
+          },
+        ),
+        const SizedBox(height: 16),
+        ListTile(
+          leading: const Icon(Icons.account_balance_wallet, size: 36, color: Colors.blue),
+          title: Text(bilingual(context, 'Pay Online', 'آن لائن ادائیگی')),
+          subtitle: Text(bilingual(context, 'JazzCash, EasyPaisa, etc.', 'جاز کیش، ایزی پیسہ وغیرہ')),
+          tileColor: Colors.white,
+          shape: RoundedRectangleBorder(side: BorderSide(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+          onTap: () {
+            setState(() => _step = PostJobStep.onlinePaymentSelect);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCashWaiting(BuildContext context) {
+    return Center(
+      key: const ValueKey('cashWait'),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 24),
+            Text(bilingual(context, 'Message sent to worker...', 'ورکر کو پیغام بھیجا گیا...'), style: const TextStyle(fontSize: 16, color: Colors.grey)),
+            const SizedBox(height: 8),
+            Text(bilingual(context, 'Waiting for worker to confirm payment received', 'ورکر کی جانب سے ادائیگی کی وصولی کی تصدیق کا انتظار ہے'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTickSuccess(BuildContext context) {
+    return Center(
+      key: const ValueKey('tickSuccess'),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.check_circle, color: Colors.green, size: 100),
+          const SizedBox(height: 20),
+          Text(bilingual(context, 'Payment Successful!', 'ادائیگی کامیاب!'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+          const SizedBox(height: 30),
+          FilledButton(
+            onPressed: () => setState(() => _step = PostJobStep.ratingForm),
+            child: Text(bilingual(context, 'Continue to Rating', 'درجہ بندی پر جائیں')),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnlineSelect(BuildContext context) {
+    return Padding(
+      key: const ValueKey('onlineSelect'),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(bilingual(context, 'Choose Provider', 'فراہم کنندہ منتخب کریں'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 30),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () => setState(() {
+                    _selectedProvider = 'JazzCash';
+                    _step = PostJobStep.onlinePaymentForm;
+                  }),
+                  child: Container(
+                    height: 120,
+                    decoration: BoxDecoration(border: Border.all(color: Colors.red), borderRadius: BorderRadius.circular(8)),
+                    child: const Center(child: Text('JazzCash', style: TextStyle(color: Colors.red, fontSize: 20, fontWeight: FontWeight.bold))),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: InkWell(
+                  onTap: () => setState(() {
+                    _selectedProvider = 'EasyPaisa';
+                    _step = PostJobStep.onlinePaymentForm;
+                  }),
+                  child: Container(
+                    height: 120,
+                    decoration: BoxDecoration(border: Border.all(color: Colors.green), borderRadius: BorderRadius.circular(8)),
+                    child: const Center(child: Text('EasyPaisa', style: TextStyle(color: Colors.green, fontSize: 20, fontWeight: FontWeight.bold))),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnlineForm(BuildContext context) {
+    return ListView(
+      key: const ValueKey('onlineForm'),
+      padding: const EdgeInsets.all(24),
+      children: [
+        Text('${bilingual(context, 'Pay via', 'ذریعے ادائیگی کریں')} $_selectedProvider', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 30),
+        TextField(
+          controller: _senderName,
+          decoration: InputDecoration(labelText: bilingual(context, 'Sender Name', 'بھیجنے والے کا نام')),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _mobileNumber,
+          keyboardType: TextInputType.phone,
+          decoration: InputDecoration(labelText: bilingual(context, 'Mobile Number', 'موبائل نمبر')),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _payAmount,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: bilingual(context, 'Amount', 'رقم')),
+        ),
+        const SizedBox(height: 30),
+        FilledButton(
+          onPressed: () {
+            setState(() => _step = PostJobStep.workerConfirmationWaiting);
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted) setState(() => _step = PostJobStep.paymentSuccessTick);
+            });
+          },
+          child: Text(bilingual(context, 'Send Payment', 'ادائیگی بھیجیں')),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRatingForm(BuildContext context) {
+    return ListView(
+      key: const ValueKey('ratingForm'),
       padding: const EdgeInsets.all(16),
       children: [
         CircleAvatar(radius: 32, backgroundImage: NetworkImage(workers.first.image)),
@@ -2718,32 +3046,18 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           maxLines: 3,
           decoration: InputDecoration(hintText: bilingual(context, 'Write your review', 'اپنا جائزہ لکھیں')),
         ),
-        const SizedBox(height: 16),
-        const Card(
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Column(
-              children: [
-                _BillRow('Service Fee', 'Rs. 1,000'),
-                _BillRow('Platform Fee', 'Rs. 50'),
-                Divider(),
-                _BillRow('Total Paid', 'Rs. 1,050', bold: true),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
         FilledButton(
-          onPressed: rating == 0 ? null : () => setState(() => submitted = true),
+          onPressed: rating == 0 ? null : () => setState(() => _step = PostJobStep.completed),
           child: Text(bilingual(context, 'Submit Review', 'جائزہ جمع کریں')),
         )
       ],
     );
   }
 
-  Widget _success(BuildContext context) {
+  Widget _buildCompleted(BuildContext context) {
     return Center(
-      key: const ValueKey('success'),
+      key: const ValueKey('completed'),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

@@ -263,3 +263,26 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
     );
   }
 }
+
+class _MapPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = Colors.white.withOpacity(0.8)..strokeWidth = 8;
+    for (var i = 0.0; i < size.height; i += 90) {
+      canvas.drawLine(Offset(0, i + 10), Offset(size.width, i + 40), p);
+    }
+
+    final routePaint = Paint()
+      ..color = const Color(0xFF0D9488)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    final path = Path()
+      ..moveTo(100, 130)
+      ..quadraticBezierTo(170, 170, 190, 220)
+      ..quadraticBezierTo(210, 240, 250, 260);
+    canvas.drawPath(path, routePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

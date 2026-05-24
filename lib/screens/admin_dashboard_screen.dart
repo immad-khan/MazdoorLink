@@ -1575,6 +1575,8 @@ class _StatsSheet extends StatelessWidget {
                 _StatsCard(
                     label: 'Total Users', value: '1,842', icon: Icons.people_outline,
                     color: const Color(0xFF0D9488)),
+                const SizedBox(width: 12),
+                const Expanded(child: SizedBox()),
               ],
             ),
             const SizedBox(height: 24),

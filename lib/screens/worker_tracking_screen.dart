@@ -89,22 +89,46 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
       ),
       body: Stack(
         children: [
-          // Map Placeholder
+          // Map Viewer
           Positioned.fill(
             child: Container(
-              color: Colors.grey.shade200,
-              child: Stack(
+              color: const Color(0xFFE5E3DF),
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: _MapPainter(),
+              ),
+            ),
+          ),
+          if (_status == 0) ...[
+            Positioned(
+              top: 110,
+              left: 80,
+              child: Column(
                 children: [
-                  const Center(child: Icon(Icons.map, size: 100, color: Colors.black12)),
-                  Positioned(
-                    top: 150,
-                    left: 100,
-                    child: Icon(Icons.person_pin_circle, size: 48, color: const Color(0xFF0D9488)),
+                   const CircleAvatar(radius: 18, backgroundColor: Colors.black87, child: Icon(Icons.person, color: Colors.white)),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text('You', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
             ),
-          ),
+            Positioned(
+              top: 240,
+              right: 70,
+              child: Column(
+                children: [
+                  const CircleAvatar(radius: 18, backgroundColor: Color(0xFF0D9488), child: Icon(Icons.location_on, color: Colors.white)),
+                  Text(isUrdu ? 'گاہک' : 'Customer'),
+                ],
+              ),
+            ),
+          ],
           
           Positioned(
             left: 0,

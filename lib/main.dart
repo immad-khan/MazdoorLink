@@ -71,7 +71,7 @@ class _ServiceAppState extends State<ServiceApp> {
             cardTheme: CardThemeData(
               color: AppTheme.white,
               elevation: 2,
-              shadowColor: AppTheme.grey.withOpacity(0.08),
+              shadowColor: AppTheme.grey.withValues(alpha:0.08),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               margin: EdgeInsets.zero,
             ),

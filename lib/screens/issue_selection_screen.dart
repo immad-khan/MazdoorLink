@@ -215,7 +215,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
                             },
                           ),
                           CircleAvatar(
-                            backgroundColor: const Color(0xFF0D9488).withOpacity(0.08),
+                            backgroundColor: const Color(0xFF0D9488).withValues(alpha:0.08),
                             child: Icon(issuesList[index].icon, color: const Color(0xFF0D9488)),
                           ),
                           const SizedBox(width: 14),
@@ -298,7 +298,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
                           child: Row(
                             children: [
                               CircleAvatar(
-                                backgroundColor: const Color(0xFFF59E0B).withOpacity(0.08),
+                                backgroundColor: const Color(0xFFF59E0B).withValues(alpha:0.08),
                                 child: const Icon(Icons.add_circle_outline, color: Color(0xFFF59E0B)),
                               ),
                               const SizedBox(width: 14),

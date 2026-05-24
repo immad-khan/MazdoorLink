@@ -139,7 +139,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         border: Border.all(color: AppTheme.spacer),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha:0.03),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -205,10 +205,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(booking.status).withOpacity(0.1),
+                          color: _getStatusColor(booking.status).withValues(alpha:0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _getStatusColor(booking.status).withOpacity(0.3),
+                            color: _getStatusColor(booking.status).withValues(alpha:0.3),
                           ),
                         ),
                         child: Text(

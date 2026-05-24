@@ -155,9 +155,9 @@ class VerificationBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: bgColor.withOpacity(0.1),
+        color: bgColor.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: bgColor.withOpacity(0.3)),
+        border: Border.all(color: bgColor.withValues(alpha:0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -80,7 +80,7 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen>
                       gradient: LinearGradient(
                         colors: [
                           Theme.of(context).primaryColor,
-                          Theme.of(context).primaryColor.withOpacity(0.7),
+                          Theme.of(context).primaryColor.withValues(alpha:0.7),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -97,7 +97,7 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen>
                     child: Container(
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withValues(alpha:0.7),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -221,11 +221,11 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen>
                                     horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
                                   color:
-                                      Theme.of(context).primaryColor.withOpacity(0.1),
+                                      Theme.of(context).primaryColor.withValues(alpha:0.1),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
                                     color: Theme.of(context).primaryColor
-                                        .withOpacity(0.3),
+                                        .withValues(alpha:0.3),
                                   ),
                                 ),
                                 child: Text(
@@ -358,7 +358,7 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen>
         border: Border.all(color: AppTheme.spacer),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha:0.03),
             blurRadius: 4,
             offset: Offset(0, 1),
           ),
@@ -433,9 +433,9 @@ class VerificationBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: bgColor.withOpacity(0.1),
+        color: bgColor.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: bgColor.withOpacity(0.3), width: 1.5),
+        border: Border.all(color: bgColor.withValues(alpha:0.3), width: 1.5),
       ),
       child: Column(
         children: [

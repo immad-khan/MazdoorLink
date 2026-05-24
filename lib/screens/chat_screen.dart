@@ -145,7 +145,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha:0.08),
                     blurRadius: 8,
                     offset: Offset(0, 2),
                   ),
@@ -171,7 +171,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                         decoration: BoxDecoration(
                           color: message.isFromMe
-                              ? Colors.white.withOpacity(0.2)
+                              ? Colors.white.withValues(alpha:0.2)
                               : (isRtl
                                   ? AppTheme.spacer
                                   : Colors.transparent),
@@ -182,7 +182,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           style: TextStyle(
                             fontSize: 13,
                             color: message.isFromMe
-                                ? Colors.white.withOpacity(0.9)
+                                ? Colors.white.withValues(alpha:0.9)
                                 : AppTheme.lightText,
                             fontStyle: FontStyle.italic,
                             fontWeight: FontWeight.w400,
@@ -245,7 +245,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               'Plumber • Online',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha:0.7),
                 fontWeight: FontWeight.w400,
               ),
             ),

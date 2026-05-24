@@ -76,15 +76,15 @@ class _PriceEstimationScreenState extends State<PriceEstimationScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
+                      Theme.of(context).primaryColor.withValues(alpha:0.1),
+                      Theme.of(context).primaryColor.withValues(alpha:0.05),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                   ),
                 ),
                 child: Column(
@@ -96,7 +96,7 @@ class _PriceEstimationScreenState extends State<PriceEstimationScreen>
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withOpacity(0.2),
+                            color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(Icons.price_check,
@@ -166,7 +166,7 @@ class _PriceEstimationScreenState extends State<PriceEstimationScreen>
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          color: Theme.of(context).primaryColor.withValues(alpha:0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -294,19 +294,19 @@ class _PriceEstimationScreenState extends State<PriceEstimationScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.08),
-                      Color(0xFFF59E0B).withOpacity(0.08),
+                      Theme.of(context).primaryColor.withValues(alpha:0.08),
+                      Color(0xFFF59E0B).withValues(alpha:0.08),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      color: Theme.of(context).primaryColor.withValues(alpha:0.1),
                       blurRadius: 20,
                       offset: Offset(0, 8),
                     ),

@@ -137,7 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha:0.05),
               blurRadius: 10,
               offset: Offset(0, -2),
             ),
@@ -157,7 +157,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
               activeIcon: Container(
                 padding: EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.home, size: 20),
@@ -169,7 +169,7 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
               activeIcon: Container(
                 padding: EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.person, size: 20),

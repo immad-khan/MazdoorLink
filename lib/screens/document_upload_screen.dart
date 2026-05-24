@@ -89,7 +89,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen>
             boxShadow: [
               if (isUploaded)
                 BoxShadow(
-                  color: Color(0xFF059669).withOpacity(0.1),
+                  color: Color(0xFF059669).withValues(alpha:0.1),
                   blurRadius: 12,
                   offset: Offset(0, 4),
                 ),
@@ -136,7 +136,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen>
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Color(0xFF059669).withOpacity(0.2),
+                      color: Color(0xFF059669).withValues(alpha:0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -202,15 +202,15 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
+                      Theme.of(context).primaryColor.withValues(alpha:0.1),
+                      Theme.of(context).primaryColor.withValues(alpha:0.05),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                   ),
                 ),
                 child: Row(
@@ -219,7 +219,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen>
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.2),
+                        color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(Icons.card_membership,

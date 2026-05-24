@@ -147,7 +147,7 @@ class _TrackingMapScreenState extends State<TrackingMapScreen>
                               decoration: BoxDecoration(
                                 color: Theme.of(context)
                                     .primaryColor
-                                    .withOpacity(0.2),
+                                    .withValues(alpha:0.2),
                                 borderRadius: BorderRadius.circular(30),
                               ),
                             ),
@@ -205,15 +205,15 @@ class _TrackingMapScreenState extends State<TrackingMapScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      _getStatusColor(_currentStatus).withOpacity(0.1),
-                      _getStatusColor(_currentStatus).withOpacity(0.05),
+                      _getStatusColor(_currentStatus).withValues(alpha:0.1),
+                      _getStatusColor(_currentStatus).withValues(alpha:0.05),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: _getStatusColor(_currentStatus).withOpacity(0.3),
+                    color: _getStatusColor(_currentStatus).withValues(alpha:0.3),
                   ),
                 ),
                 child: Column(
@@ -226,7 +226,7 @@ class _TrackingMapScreenState extends State<TrackingMapScreen>
                           height: 48,
                           decoration: BoxDecoration(
                             color: _getStatusColor(_currentStatus)
-                                .withOpacity(0.2),
+                                .withValues(alpha:0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
@@ -304,7 +304,7 @@ class _TrackingMapScreenState extends State<TrackingMapScreen>
                               height: 40,
                               decoration: BoxDecoration(
                                 color: _getStatusColor(index)
-                                    .withOpacity(0.2),
+                                    .withValues(alpha:0.2),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: _getStatusColor(index),
@@ -361,7 +361,7 @@ class _TrackingMapScreenState extends State<TrackingMapScreen>
                               width: 2,
                               height: 24,
                               color: _getStatusColor(index + 1)
-                                  .withOpacity(0.3),
+                                  .withValues(alpha:0.3),
                             ),
                           ),
                       ],

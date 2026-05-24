@@ -77,7 +77,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
             color: Theme.of(context).primaryColor,
             boxShadow: [
               BoxShadow(
-                color: Theme.of(context).primaryColor.withOpacity(0.2),
+                color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                 blurRadius: 12,
                 offset: Offset(0, 4),
               ),
@@ -93,7 +93,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                     height: 48,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                      border: Border.all(color: Colors.white.withValues(alpha:0.3), width: 1),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
@@ -113,7 +113,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                       ),
                       Text(
                         'Plumber',
-                        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                        style: TextStyle(color: Colors.white.withValues(alpha:0.7), fontSize: 12),
                       ),
                     ],
                   ),
@@ -125,7 +125,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha:0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(Icons.notifications_outlined, color: Colors.white, size: 20),
@@ -162,7 +162,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                 gradient: LinearGradient(
                   colors: [
                     _online ? Theme.of(context).primaryColor : AppTheme.deactivatedText,
-                    _online ? Theme.of(context).primaryColor.withOpacity(0.8) : Color(0xFFC4B5FD).withOpacity(0.3),
+                    _online ? Theme.of(context).primaryColor.withValues(alpha:0.8) : Color(0xFFC4B5FD).withValues(alpha:0.3),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -171,7 +171,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                 boxShadow: [
                   if (_online)
                     BoxShadow(
-                      color: Theme.of(context).primaryColor.withOpacity(0.3),
+                      color: Theme.of(context).primaryColor.withValues(alpha:0.3),
                       blurRadius: 16,
                       offset: Offset(0, 6),
                     ),
@@ -193,7 +193,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                           width: 56,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha:0.3),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Stack(
@@ -210,7 +210,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
+                                        color: Colors.black.withValues(alpha:0.2),
                                         blurRadius: 4,
                                       ),
                                     ],
@@ -226,7 +226,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                   SizedBox(height: 12),
                   Text(
                     _online ? 'You are receiving new job requests' : 'Go online to get job requests',
-                    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
+                    style: TextStyle(color: Colors.white.withValues(alpha:0.9), fontSize: 14),
                   ),
                 ],
               ),
@@ -248,7 +248,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppTheme.spacer, width: 1),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: Offset(0, 2))],
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 8, offset: Offset(0, 2))],
                   ),
                   child: Column(
                     children: [
@@ -277,7 +277,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppTheme.spacer, width: 1),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: Offset(0, 2))],
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 8, offset: Offset(0, 2))],
                   ),
                   child: Column(
                     children: [
@@ -312,7 +312,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.spacer, width: 1),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: Offset(0, 2))],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 8, offset: Offset(0, 2))],
             ),
             child: Column(
               children: [

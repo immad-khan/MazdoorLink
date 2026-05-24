@@ -268,7 +268,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                   border: Border.all(color: const Color(0xFF86EFAC), width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF059669).withOpacity(0.1),
+                      color: const Color(0xFF059669).withValues(alpha:0.1),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     )
@@ -373,7 +373,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF0D9488).withOpacity(0.25),
+                        color: const Color(0xFF0D9488).withValues(alpha:0.25),
                         blurRadius: 15,
                         offset: const Offset(0, 8),
                       )
@@ -387,7 +387,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha:0.2),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(Icons.engineering, color: Colors.white, size: 24),
@@ -398,7 +398,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                             children: [
                               Text(
                                 isUrdu ? 'آپ کا پیشہ' : 'Your Profession',
-                                style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 12),
+                                style: TextStyle(color: Colors.white.withValues(alpha:0.75), fontSize: 12),
                               ),
                               Text(
                                 isUrdu ? categoryNameUr : categoryNameEn,
@@ -413,7 +413,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                         isUrdu
                             ? 'اپنی پیش کردہ سروسز کو نشان زد کریں اور اپنی قیمت درج کریں۔ کسٹمرز کو یہ ریٹس براہ راست نظر آئیں گے۔'
                             : 'Check the services you perform and define your custom rates. Customers will see these rates directly.',
-                        style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, height: 1.4),
+                        style: TextStyle(color: Colors.white.withValues(alpha:0.9), fontSize: 13, height: 1.4),
                       ),
                     ],
                   ),
@@ -565,7 +565,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                                 child: Row(
                                   children: [
                                     CircleAvatar(
-                                      backgroundColor: const Color(0xFF0D9488).withOpacity(0.08),
+                                      backgroundColor: const Color(0xFF0D9488).withValues(alpha:0.08),
                                       child: const Icon(Icons.add, color: Color(0xFF0D9488)),
                                     ),
                                     const SizedBox(width: 14),
@@ -669,7 +669,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha:0.04),
                         blurRadius: 10,
                         offset: const Offset(0, -3),
                       )

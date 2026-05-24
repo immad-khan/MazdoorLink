@@ -61,7 +61,7 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
                 border: Border.all(color: AppTheme.spacer, width: 1),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha:0.04),
                     blurRadius: 8,
                     offset: Offset(0, 2),
                   ),
@@ -73,7 +73,7 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: bgColor.withOpacity(0.1),
+                      color: bgColor.withValues(alpha:0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(icon, color: Theme.of(context).primaryColor, size: 24),
@@ -103,14 +103,14 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
           padding: EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Theme.of(context).primaryColor, Theme.of(context).primaryColor.withOpacity(0.8)],
+              colors: [Theme.of(context).primaryColor, Theme.of(context).primaryColor.withValues(alpha:0.8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Theme.of(context).primaryColor.withOpacity(0.2),
+                color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                 blurRadius: 12,
                 offset: Offset(0, 4),
               ),
@@ -127,7 +127,7 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
                     children: [
                       Text(
                         AppLocalizations.of(context).t('current_location'),
-                        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                        style: TextStyle(color: Colors.white.withValues(alpha:0.7), fontSize: 12),
                       ),
                       SizedBox(height: 4),
                       Row(
@@ -146,9 +146,9 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha:0.2),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                      border: Border.all(color: Colors.white.withValues(alpha:0.3)),
                     ),
                     child: Center(
                       child: Text('AR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -164,7 +164,7 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha:0.08),
                       blurRadius: 8,
                       offset: Offset(0, 2),
                     ),
@@ -229,7 +229,7 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppTheme.spacer, width: 1),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: Offset(0, 2)),
+              BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 8, offset: Offset(0, 2)),
             ],
           ),
           child: Column(

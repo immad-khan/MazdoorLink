@@ -59,7 +59,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
             border: Border.all(color: AppTheme.spacer),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha:0.02),
                 blurRadius: 6,
                 offset: Offset(0, 1),
               ),
@@ -94,7 +94,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                color: Theme.of(context).primaryColor.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon,
@@ -169,15 +169,15 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
+                      Theme.of(context).primaryColor.withValues(alpha:0.1),
+                      Theme.of(context).primaryColor.withValues(alpha:0.05),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                   ),
                 ),
                 child: Row(

@@ -93,7 +93,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Theme.of(context).primaryColor.withOpacity(0.3),
+                Theme.of(context).primaryColor.withValues(alpha:0.3),
                 Theme.of(context).primaryColor,
               ],
               begin: Alignment.topCenter,
@@ -143,15 +143,15 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.1),
-                      Theme.of(context).primaryColor.withOpacity(0.05),
+                      Theme.of(context).primaryColor.withValues(alpha:0.1),
+                      Theme.of(context).primaryColor.withValues(alpha:0.05),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                   ),
                 ),
                 child: Row(
@@ -160,7 +160,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.2),
+                        color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(IconHelper.microphone,
@@ -201,15 +201,15 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).primaryColor.withOpacity(0.05),
-                      Theme.of(context).primaryColor.withOpacity(0.1),
+                      Theme.of(context).primaryColor.withValues(alpha:0.05),
+                      Theme.of(context).primaryColor.withValues(alpha:0.1),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    color: Theme.of(context).primaryColor.withValues(alpha:0.2),
                   ),
                 ),
                 child: Column(
@@ -244,7 +244,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
                               color: (_listening
                                       ? Color(0xFFDC2626)
                                       : Theme.of(context).primaryColor)
-                                  .withOpacity(0.3),
+                                  .withValues(alpha:0.3),
                               blurRadius: 24,
                               offset: Offset(0, 8),
                             ),
@@ -423,7 +423,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.mic,

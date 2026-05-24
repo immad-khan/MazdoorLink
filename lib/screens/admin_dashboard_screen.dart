@@ -1544,6 +1544,19 @@ class _StatsSheet extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
                     color: Color(0xFF1E293B))),
+            const SizedBox(height: 16),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _FilterChip(label: 'Today', isSelected: true),
+                  _FilterChip(label: 'Weekly', isSelected: false),
+                  _FilterChip(label: 'Monthly', isSelected: false),
+                  _FilterChip(label: 'Yearly: 2025', isSelected: false),
+                  _FilterChip(label: 'Yearly: 2026', isSelected: false),
+                ],
+              ),
+            ),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -1562,14 +1575,10 @@ class _StatsSheet extends StatelessWidget {
                 _StatsCard(
                     label: 'Total Users', value: '1,842', icon: Icons.people_outline,
                     color: const Color(0xFF0D9488)),
-                const SizedBox(width: 12),
-                _StatsCard(
-                    label: 'Avg Rating', value: '4.7★', icon: Icons.star_outline,
-                    color: const Color(0xFFF59E0B)),
               ],
             ),
             const SizedBox(height: 24),
-            const Text('Monthly Bookings',
+            const Text('Bookings Trend',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -1591,9 +1600,6 @@ class _StatsSheet extends StatelessWidget {
             ...[
               ('Plumbing', 0.82, const Color(0xFF0D9488)),
               ('Electrical', 0.70, const Color(0xFF6366F1)),
-              ('Painting', 0.55, const Color(0xFFF59E0B)),
-              ('Carpentry', 0.40, const Color(0xFFEF4444)),
-              ('AC Repair', 0.60, const Color(0xFF10B981)),
             ].map((e) => _CategoryBar(label: e.$1, fraction: e.$2, color: e.$3)),
           ],
         ),

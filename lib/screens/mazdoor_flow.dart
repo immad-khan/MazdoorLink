@@ -72,6 +72,7 @@ class AppRoutes {
   static const sharedChat = '/shared/chat';
   static const sharedHistory = '/shared/history';
   static const sharedSettings = '/shared/settings';
+  static const customerSupport = '/customer/support';
   static const matchingSimulator = '/customer/matching-simulator';
 }
 
@@ -4103,6 +4104,11 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => Navigator.pushNamed(context, AppRoutes.privacySettings),
             child: _SettingsItem(icon: Icons.lock, color: Colors.green, title: bilingual(context, 'Privacy', 'پرائیویسی')),
           ),
+          if (!isWorker)
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, '/customer/support'),
+              child: _SettingsItem(icon: Icons.help_outline, color: const Color(0xFF0D9488), title: bilingual(context, 'Customer Support', 'کسٹمر سپورٹ')),
+            ),
           const SizedBox(height: 14),
           OutlinedButton.icon(
             onPressed: () {

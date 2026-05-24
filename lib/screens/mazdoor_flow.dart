@@ -8,7 +8,6 @@ import '../app_theme.dart';
 import '../data/mock_data.dart';
 import 'admin_login_screen.dart';
 import 'admin_dashboard_screen.dart';
-import 'auth_login_screen.dart';
 import 'biometric_verification_screen.dart';
 import 'document_upload_screen.dart';
 import 'notification_preferences_screen.dart';
@@ -684,6 +683,7 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = AppScope.of(context).isUrdu;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),

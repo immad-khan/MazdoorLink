@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../app_state.dart';
 import 'mazdoor_flow.dart';
 
 class PrivacySettingsScreen extends StatefulWidget {

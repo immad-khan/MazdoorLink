@@ -19,6 +19,7 @@ import 'voice_navigation_screen.dart';
 import 'issue_selection_screen.dart';
 import 'worker_services_setup_screen.dart';
 import 'recommendation_arguments.dart';
+import 'cancel_job_screen.dart';
 
 class ProfileArguments {
   final WorkerModel worker;
@@ -2593,7 +2594,10 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.customerHome),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CancelJobScreen()),
+                        ),
                         child: Text(bilingual(context, 'Cancel Job', 'کام منسوخ کریں')),
                       ),
                     )

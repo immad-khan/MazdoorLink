@@ -2016,23 +2016,21 @@ class WorkerRecommendationsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF7ED),
+                          color: const Color(0xFFF3F4F6),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFFED7AA)),
                         ),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Icon(Icons.info_outline, size: 16, color: Color(0xFFD97706)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                isUrdu
-                                    ? 'ورکر اپنی قیمت پیشکش قبول ہونے کے بعد بتائے گا'
-                                    : 'Worker will share their price after your offer',
-                                style: const TextStyle(fontSize: 12, color: Color(0xFFD97706), fontWeight: FontWeight.w500),
-                              ),
+                            Text(
+                              isUrdu ? 'ورکر کی مقرر کردہ قیمت:' : 'Worker\'s Preset Price:',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
+                            ),
+                            Text(
+                              matchedWorkers[i].price,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
                             ),
                           ],
                         ),

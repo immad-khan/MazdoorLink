@@ -185,6 +185,43 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () {
+                          final isUrdu = AppScope.of(context).isUrdu;
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text(isUrdu ? 'گاہک کو ریٹ کریں' : 'Rate Customer'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(isUrdu ? 'اس گاہک کے ساتھ آپ کا تجربہ کیسا رہا؟' : 'How was your experience with this customer?'),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: List.generate(5, (index) => const Icon(Icons.star_border, color: Colors.amber, size: 36)),
+                                  )
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    Navigator.pop(context);
+                                  },
+                                  child: Text(isUrdu ? 'جمع کروائیں' : 'Submit'),
+                                )
+                              ],
+                            ),
+                          );
+                        },
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                        child: Text(isUrdu ? 'گاہک کو ریٹ کریں' : 'Rate Customer'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
                       child: OutlinedButton(
                         onPressed: () {
                           Navigator.pop(context);

@@ -370,7 +370,11 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
                                 keyboardType: TextInputType.number,
                                 textDirection: TextDirection.ltr,
                                 decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.currency_rupee, size: 18),
+                                  prefixIcon: Container(
+                                    width: 40,
+                                    alignment: Alignment.center,
+                                    child: const Text('PKR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  ),
                                   hintText: 'E.g., 600',
                                   hintStyle: TextStyle(color: Colors.grey.shade400),
                                 ),

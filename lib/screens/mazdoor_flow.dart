@@ -2170,7 +2170,11 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       keyboardType: TextInputType.number,
                       textDirection: TextDirection.ltr,
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.currency_rupee, size: 18, color: Color(0xFF0D9488)),
+                        prefixIcon: Container(
+                          width: 48,
+                          alignment: Alignment.center,
+                          child: const Text('PKR', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                        ),
                         hintText: isUrdu ? 'مثلاً 500' : 'E.g., 500',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                         focusedBorder: OutlineInputBorder(
@@ -2623,9 +2627,8 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
             child: Column(
               children: [
                 _BillRow('Service Fee', 'Rs. 1,000'),
-                _BillRow('Platform Fee', 'Rs. 50'),
                 Divider(),
-                _BillRow('Total Paid', 'Rs. 1,050', bold: true),
+                _BillRow('Total Paid', 'Rs. 1,000', bold: true),
               ],
             ),
           ),
@@ -3397,7 +3400,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                 textDirection: TextDirection.ltr,
                                 decoration: InputDecoration(
                                   labelText: isUrdu ? 'پیشکش قیمت' : 'Offer Price (Rs.)',
-                                  prefixIcon: const Icon(Icons.currency_rupee, size: 16),
+                                  prefixIcon: Container(
+                                    width: 40,
+                                    alignment: Alignment.center,
+                                    child: const Text('PKR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  ),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 ),
                               ),

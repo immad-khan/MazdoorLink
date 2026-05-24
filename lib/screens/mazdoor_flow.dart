@@ -20,6 +20,8 @@ import 'worker_services_setup_screen.dart';
 import 'recommendation_arguments.dart';
 import 'cancel_job_screen.dart';
 
+import 'worker_tracking_screen.dart';
+
 class ProfileArguments {
   final WorkerModel worker;
   final JobPostingArguments job;
@@ -3532,11 +3534,32 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                             Expanded(
                               flex: 2,
                               child: FilledButton(
-                                onPressed: () => Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.workerNotification,
-                                  arguments: _negotiatedPrice ?? 1000.0,
-                                ),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => AlertDialog(
+                                      title: Text(isUrdu ? 'تصدیق کریں' : 'Confirm?'),
+                                      content: Text(isUrdu ? 'کیا آپ اس کام کو قبول کرنا چاہتے ہیں؟' : 'Are you sure you want to accept this job?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: Text(isUrdu ? 'نہیں' : 'No', style: const TextStyle(color: Colors.red)),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            Navigator.push(context, MaterialPageRoute(
+                                              builder: (_) => WorkerTrackingScreen(
+                                                jobPrice: _negotiatedPrice ?? 1000.0,
+                                              ),
+                                            ));
+                                          },
+                                          child: Text(isUrdu ? 'جی ہاں' : 'Yes'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                                 style: FilledButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                 ),

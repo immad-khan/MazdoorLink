@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../l10n/app_localizations.dart';
-import '../widgets/icon_helper.dart';
 
 class DocumentUploadScreen extends StatefulWidget {
   @override
@@ -166,7 +165,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen>
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
     final bothUploaded = _cnicFrontUploaded && _cnicBackUploaded;
 
     return Scaffold(

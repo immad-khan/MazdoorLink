@@ -18,8 +18,6 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scope = AppScope.of(context);
-
     return MzScaffold(
       showBottomNav: false,
       showBack: true,

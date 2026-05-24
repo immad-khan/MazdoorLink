@@ -89,19 +89,6 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
     super.dispose();
   }
 
-  void _onIssueSelected(IssueItem item, String categoryKey) {
-    Navigator.pushNamed(
-      context,
-      '/customer/job-posting',
-      arguments: JobPostingArguments(
-        descriptionEn: item.titleEn,
-        descriptionUr: item.titleUr,
-        price: item.price,
-        categoryKey: categoryKey,
-      ),
-    );
-  }
-
   void _submitCustomIssue(String categoryKey, bool isUrdu) {
     final desc = _customDescController.text.trim();
     final priceText = _customPriceController.text.trim();

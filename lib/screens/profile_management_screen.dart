@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../l10n/app_localizations.dart';
-import '../widgets/icon_helper.dart';
 
 class ProfileManagementScreen extends StatefulWidget {
   @override

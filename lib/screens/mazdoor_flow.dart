@@ -675,14 +675,12 @@ class _RoleCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.isUrdu = false,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final bool isUrdu;
 
   @override
   Widget build(BuildContext context) {
@@ -742,8 +740,6 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isForgotPassword = false;
-  int _selectedSkillIndex = 0;
-  final _skillsList = const ['Plumber', 'Electrician', 'Carpenter', 'AC Mechanic', 'Painter', 'Cleaner'];
   
   bool _idFrontUploaded = false;
   bool _idBackUploaded = false;
@@ -1849,120 +1845,6 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
 
 class WorkerRecommendationsScreen extends StatelessWidget {
   const WorkerRecommendationsScreen({super.key});
-
-  void _showOfferModal(BuildContext context, WorkerModel worker, String categoryKey) {
-    final offerController = TextEditingController();
-    final isUrdu = AppScope.of(context).isUrdu;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 44, height: 4,
-                    decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(99)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(worker.image, width: 48, height: 48, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const CircleAvatar(child: Icon(Icons.person)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(worker.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(worker.category, style: const TextStyle(color: Colors.black54, fontSize: 13)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  isUrdu ? 'اپنی قیمت پیش کریں' : 'Make Your Offer',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  isUrdu ? 'ورکر آپ کی قیمت قبول یا مذاکرہ کر سکتا ہے' : 'The worker can accept or negotiate your price',
-                  style: const TextStyle(color: Colors.black54, fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: offerController,
-                  keyboardType: TextInputType.number,
-                  textDirection: TextDirection.ltr,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.currency_rupee, size: 18, color: Color(0xFF0D9488)),
-                    hintText: isUrdu ? 'مثلاً 500' : 'E.g., 500',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
-                    ),
-                    labelText: isUrdu ? 'پیشکش قیمت (روپے میں)' : 'Offer Price (Rs.)',
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488), padding: const EdgeInsets.symmetric(vertical: 14)),
-                    onPressed: () {
-                      final offerText = offerController.text.trim();
-                      final offerPrice = double.tryParse(offerText);
-                      if (offerPrice == null || offerPrice <= 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(isUrdu ? 'براہ کرم درست رقم درج کریں' : 'Please enter a valid amount'), backgroundColor: Colors.redAccent),
-                        );
-                        return;
-                      }
-                      Navigator.pop(ctx);
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.workerProfile,
-                        arguments: ProfileArguments(
-                          worker: worker,
-                          job: JobPostingArguments(
-                            descriptionEn: worker.skillsEn.first,
-                            descriptionUr: worker.skillsUr.first,
-                            price: offerPrice,
-                            categoryKey: categoryKey,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Text(isUrdu ? 'پیشکش بھیجیں' : 'Send Offer', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

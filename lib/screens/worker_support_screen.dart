@@ -17,19 +17,19 @@ class _WorkerSupportScreenState extends State<WorkerSupportScreen> {
     {
       'title': 'Plumbing Repair',
       'date': '24 May 2025',
-      'worker': 'Ali Khan',
+      'customer': 'Ahmad',
       'status': 'Completed',
     },
     {
       'title': 'Electrical Wiring',
       'date': '12 May 2025',
-      'worker': 'Usman Ahmed',
+      'customer': 'Sana',
       'status': 'Completed',
     },
     {
       'title': 'AC Installation',
       'date': '01 Apr 2025',
-      'worker': 'Raza',
+      'customer': 'Kamran',
       'status': 'Completed',
     },
   ];
@@ -96,7 +96,7 @@ class _WorkerSupportScreenState extends State<WorkerSupportScreen> {
                             children: [
                               Text(order['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                               const SizedBox(height: 4),
-                              Text('${order['worker']} • ${order['date']}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                              Text('${order['customer']} • ${order['date']}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                             ],
                           ),
                         ),

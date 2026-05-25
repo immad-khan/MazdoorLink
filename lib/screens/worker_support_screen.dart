@@ -45,7 +45,7 @@ class _WorkerSupportScreenState extends State<WorkerSupportScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(isUrdu ? 'کسٹمر سپورٹ' : 'Customer Support'),
+        title: Text(isUrdu ? 'ورکر سپورٹ' : 'Worker Support'),
         backgroundColor: Colors.white,
         scrolledUnderElevation: 0,
       ),

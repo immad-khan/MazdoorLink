@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'admin_jobs_screen.dart';
 
 // ─────────────────────────────────────────────
 // Entry point routed from /admin/dashboard

@@ -3653,8 +3653,7 @@ class JobNotificationScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          SizedBox(
-                            width: 86,
+                          Expanded(
                             child: OutlinedButton(
                               onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard),
                               child: const Text('رد'),
@@ -3670,6 +3669,39 @@ class JobNotificationScreen extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade200)
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+                                SizedBox(width: 8),
+                                Expanded(child: Text('ایڈمن نوٹس (جرمانہ)', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            const Text('ایڈمن نے پچھلے کام کی شکایت پر 10% کٹوتی کی ہے۔', style: TextStyle(color: Colors.red, fontSize: 13)),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 36,
+                              child: OutlinedButton.icon(
+                                onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedChat),
+                                icon: const Icon(Icons.chat_bubble_outline, size: 16, color: Colors.red),
+                                label: const Text('ایڈمن سے بات کریں', style: TextStyle(color: Colors.red, fontSize: 12)),
+                                style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red)),
+                              ),
+                            )
+                          ],
+                        )
                       )
                     ],
                   ),

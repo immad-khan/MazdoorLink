@@ -74,6 +74,7 @@ class AppRoutes {
   static const sharedHistory = '/shared/history';
   static const sharedSettings = '/shared/settings';
   static const customerSupport = '/customer/support';
+  static const workerSupport = '/worker/support';
   static const matchingSimulator = '/customer/matching-simulator';
 }
 
@@ -4152,6 +4153,11 @@ class SettingsScreen extends StatelessWidget {
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, '/customer/support'),
               child: _SettingsItem(icon: Icons.help_outline, color: const Color(0xFF0D9488), title: bilingual(context, 'Customer Support', 'کسٹمر سپورٹ')),
+            ),
+          if (isWorker)
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, '/worker/support'),
+              child: _SettingsItem(icon: Icons.help_outline, color: const Color(0xFF0D9488), title: bilingual(context, 'Worker Support', 'ورکر سپورٹ')),
             ),
           const SizedBox(height: 14),
           OutlinedButton.icon(

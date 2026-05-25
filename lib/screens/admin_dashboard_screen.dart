@@ -41,8 +41,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   final List<Widget> _pages = const [
     _HomeTab(),
     _WorkerRegistrationsTab(),
+    JobsTab(),
     _ComplaintsTab(),
-    _UserManagementTab(),
   ];
 
   void _onNavTap(int index) {

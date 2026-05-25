@@ -154,11 +154,46 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                   const SizedBox(height: 20),
                   
                   if (_status == 0) ...[
-                    Text(
-                      isUrdu ? 'گاہک کے مقام کی طرف جا رہے ہیں...' : 'Heading to customer location...',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            isUrdu ? '12 منٹ میں پہنچ رہے ہیں' : 'Arriving in 12 min',
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.explore),
+                      ],
                     ),
-                    const SizedBox(height: 24),
+                    Text(isUrdu ? '2.5 کلومیٹر دور' : '2.5 km away'),
+                    const SizedBox(height: 10),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: const CircleAvatar(radius: 24, child: Icon(Icons.person)),
+                      ),
+                      title: Text(isUrdu ? 'عمر فاروق' : 'Omer Farooq'),
+                      subtitle: Text(
+                        isUrdu ? 'کچن لیکیج • Rs. 1500' : 'Kitchen Leakage • Rs. 1500',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(onPressed: () => Navigator.pushNamed(context, '/shared/chat'), icon: const Icon(Icons.chat)),
+                          IconButton(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Calling customer...')),
+                              );
+                            }, 
+                            icon: const Icon(Icons.call, color: Colors.green)
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(

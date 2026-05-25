@@ -3824,8 +3824,6 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
             subtitle: Text('08 May, 1:15 PM • Usman (PKR 1500)', style: const TextStyle(fontSize: 12)),
             trailing: const Text('+1,500', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
           ),
-            trailing: const Text('+1,500', style: TextStyle(color: Colors.green)),
-          ),
         ],
       ),
     );

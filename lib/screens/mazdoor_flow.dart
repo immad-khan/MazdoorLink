@@ -20,6 +20,7 @@ import 'worker_services_setup_screen.dart';
 import 'recommendation_arguments.dart';
 import 'cancel_job_screen.dart';
 import 'customer_support_screen.dart';
+import 'worker_support_screen.dart';
 
 import 'worker_tracking_screen.dart';
 
@@ -136,6 +137,8 @@ Route<dynamic> buildRoute(RouteSettings settings) {
       return _page(const SettingsScreen(), settings);
     case AppRoutes.customerSupport:
       return _page(const CustomerSupportScreen(), settings);
+    case AppRoutes.workerSupport:
+      return _page(const WorkerSupportScreen(), settings);
     case AppRoutes.matchingSimulator:
       return _page(const WorkerAcceptanceSimulatorScreen(), settings);
     default:

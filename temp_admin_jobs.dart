@@ -37,46 +37,42 @@ class _JobsTabState extends State<JobsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF1F5FA),
-      appBar: AppBar(
-        title: const Text('Jobs', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF006B5E),
-        automaticallyImplyLeading: false,
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: _jobs.length,
-        itemBuilder: (context, index) {
-          final job = _jobs[index];
-          final isCompleted = job['status'] == 'Completed';
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
-            ),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: isCompleted ? Colors.green.shade100 : Colors.orange.shade100,
-                child: Icon(isCompleted ? Icons.check_circle : Icons.handyman, color: isCompleted ? Colors.green : Colors.orange),
+    return SliverPadding(
+      padding: const EdgeInsets.all(20),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final job = _jobs[index];
+            final isCompleted = job['status'] == 'Completed';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
               ),
-              title: Text(job['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('Worker: ${job['worker']} • Customer: ${job['customer']}\nDate: ${job['date']}'),
-              isThreeLine: true,
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('Rs. ${job['amount']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  Text(job['status'], style: TextStyle(color: isCompleted ? Colors.green : Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
-                ],
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: isCompleted ? Colors.green.shade100 : Colors.orange.shade100,
+                  child: Icon(isCompleted ? Icons.check_circle : Icons.handyman, color: isCompleted ? Colors.green : Colors.orange),
+                ),
+                title: Text(job['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('Worker: ${job['worker']} • Customer: ${job['customer']}\nDate: ${job['date']}'),
+                isThreeLine: true,
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('Rs. ${job['amount']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(job['status'], style: TextStyle(color: isCompleted ? Colors.green : Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                onTap: isCompleted ? () => _showJobDetails(context, job) : null,
               ),
-              onTap: isCompleted ? () => _showJobDetails(context, job) : null,
-            ),
-          );
-        },
+            );
+          },
+          childCount: _jobs.length,
+        ),
       ),
     );
   }
@@ -146,4 +142,3 @@ class _JobsTabState extends State<JobsTab> {
     );
   }
 }
-

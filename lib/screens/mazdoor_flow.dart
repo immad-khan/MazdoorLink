@@ -842,7 +842,11 @@ class _AuthScreenState extends State<AuthScreen> {
 
     final role = AppScope.of(context).role;
     if (role == UserRole.worker) {
-      Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
+      if (widget.isSignup) {
+        Navigator.pushReplacementNamed(context, AppRoutes.workerOnboarding);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
+      }
     } else {
       Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
     }
@@ -2985,301 +2989,99 @@ class WorkerOnboardingScreen extends StatefulWidget {
 }
 
 class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
-  int step = 0;
   int selectedSkill = 0;
-  bool _cnicFrontUploaded = false;
-  bool _cnicBackUploaded = false;
 
   final skills = const ['پلمبر', 'الیکٹریشن', 'کارپینٹر', 'اے سی مکینک', 'پینٹر', 'صفائی'];
-
-  void _simulateFrontUpload() {
-    setState(() {
-      _cnicFrontUploaded = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white, size: 20),
-            SizedBox(width: 8),
-            Text('شناختی کارڈ کی سامنے کی تصویر کامیابی سے اپ لوڈ ہو گئی ہے۔'),
-          ],
-        ),
-        backgroundColor: Color(0xFF0D9488),
-      ),
-    );
-  }
-
-  void _simulateBackUpload() {
-    setState(() {
-      _cnicBackUploaded = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white, size: 20),
-            SizedBox(width: 8),
-            Text('شناختی کارڈ کی پیچھے کی تصویر کامیابی سے اپ لوڈ ہو گئی ہے۔'),
-          ],
-        ),
-        backgroundColor: Color(0xFF0D9488),
-      ),
-    );
-  }
+  final skillsEn = const ['Plumber', 'Electrician', 'Carpenter', 'AC Mechanic', 'Painter', 'Cleaner'];
 
   @override
   Widget build(BuildContext context) {
+    final isUrdu = AppScope.of(context).isUrdu;
+    
     return MzScaffold(
       showBottomNav: false,
       showBack: true,
-      title: 'ورکر آن بورڈنگ',
+      title: isUrdu ? 'ورکر آن بورڈنگ' : 'Worker Onboarding',
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                for (var i = 0; i < 3; i++)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    margin: const EdgeInsets.only(right: 6),
-                    width: i <= step ? 30 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: i <= step ? const Color(0xFF0D9488) : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(6),
+            Text(isUrdu ? 'اپنا ہنر منتخب کریں' : 'Choose Your Category', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text(isUrdu ? 'براہ کرم اپنا پیشہ منتخب کریں تاکہ سروسز کا سیٹ اپ ہو سکے' : 'Please select your profession to set up services', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+            const SizedBox(height: 24),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.2,
+                ),
+                itemCount: skills.length,
+                itemBuilder: (context, i) {
+                  final selected = i == selectedSkill;
+                  return InkWell(
+                    onTap: () => setState(() => selectedSkill = i),
+                    borderRadius: BorderRadius.circular(16),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      decoration: BoxDecoration(
+                        color: selected ? const Color(0xFFE6FFFA) : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: selected ? const Color(0xFF0D9488) : Colors.grey.shade300,
+                          width: selected ? 2 : 1,
+                        ),
+                        boxShadow: selected ? [
+                          BoxShadow(
+                            color: const Color(0xFF0D9488).withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          )
+                        ] : [],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.engineering, // Generic icon for now
+                            color: selected ? const Color(0xFF0D9488) : Colors.grey.shade600,
+                            size: 32,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            isUrdu ? skills[i] : skillsEn[i],
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                              color: selected ? const Color(0xFF0F766E) : AppTheme.darkerText,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard),
-                  child: const Text('Skip'),
-                )
-              ],
+                  );
+                },
+              ),
             ),
-            const SizedBox(height: 12),
-            Expanded(child: AnimatedSwitcher(duration: const Duration(milliseconds: 260), child: _step())),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
                 onPressed: () {
-                  if (step == 1 && (!_cnicFrontUploaded || !_cnicBackUploaded)) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Row(
-                          children: [
-                            Icon(Icons.warning_amber_rounded, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text('براہ کرم شناختی کارڈ کی دونوں تصویریں شامل کریں'),
-                          ],
-                        ),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
-                    return;
-                  }
-                  if (step < 2) {
-                    setState(() => step++);
-                  } else {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.workerServicesSetup,
-                      arguments: selectedSkill,
-                    );
-                  }
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.workerServicesSetup,
+                    arguments: selectedSkill,
+                  );
                 },
-                child: Text(step < 2 ? 'آگے بڑھیں' : 'آگے بڑھیں (سروسز کا انتخاب)'),
+                child: Text(isUrdu ? 'آگے بڑھیں (سروسز کا انتخاب)' : 'Continue to Services'),
               ),
             )
           ],
         ),
       ),
-    );
-  }
-
-  Widget _step() {
-    if (step == 0) {
-      return Column(
-        key: const ValueKey(0),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('ذاتی معلومات', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          const TextField(decoration: InputDecoration(labelText: 'پورا نام')),
-          const SizedBox(height: 10),
-          // Keep CNIC input LTR for readability in RTL onboarding flow.
-          const Directionality(
-            textDirection: TextDirection.ltr,
-            child: TextField(decoration: InputDecoration(labelText: 'XXXXX-XXXXXXX-X')),
-          ),
-        ],
-      );
-    }
-    if (step == 1) {
-      return Column(
-        key: const ValueKey(1),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('شناختی کارڈ کی تصویر', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          const Text('تصدیق کے لیے اپنے شناختی کارڈ کے دونوں اطراف کی تصویر اپ لوڈ کریں۔', style: TextStyle(fontSize: 14, color: Colors.black54)),
-          const SizedBox(height: 16),
-          // Front Side Card
-          InkWell(
-            onTap: _simulateFrontUpload,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _cnicFrontUploaded ? const Color(0xFFF0FDFA) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _cnicFrontUploaded ? const Color(0xFF0D9488) : Colors.grey.shade300,
-                  width: _cnicFrontUploaded ? 2 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  )
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: _cnicFrontUploaded ? const Color(0xFFCCFBF1) : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _cnicFrontUploaded ? Icons.check_circle : Icons.camera_alt,
-                      color: _cnicFrontUploaded ? const Color(0xFF0D9488) : Colors.grey,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'سامنے کی تصویر',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkerText),
-                        ),
-                        Text(
-                          _cnicFrontUploaded ? 'تصویر اپ لوڈ ہو گئی ہے' : 'ٹیپ کر کے تصویر اپ لوڈ کریں',
-                          style: TextStyle(fontSize: 13, color: _cnicFrontUploaded ? const Color(0xFF0D9488) : Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_cnicFrontUploaded)
-                    const Icon(Icons.verified, color: Color(0xFF0D9488), size: 24),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Back Side Card
-          InkWell(
-            onTap: _simulateBackUpload,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _cnicBackUploaded ? const Color(0xFFF0FDFA) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _cnicBackUploaded ? const Color(0xFF0D9488) : Colors.grey.shade300,
-                  width: _cnicBackUploaded ? 2 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  )
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: _cnicBackUploaded ? const Color(0xFFCCFBF1) : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _cnicBackUploaded ? Icons.check_circle : Icons.camera_alt,
-                      color: _cnicBackUploaded ? const Color(0xFF0D9488) : Colors.grey,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'پیچھے کی تصویر',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkerText),
-                        ),
-                        Text(
-                          _cnicBackUploaded ? 'تصویر اپ لوڈ ہو گئی ہے' : 'ٹیپ کر کے تصویر اپ لوڈ کریں',
-                          style: TextStyle(fontSize: 13, color: _cnicBackUploaded ? const Color(0xFF0D9488) : Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_cnicBackUploaded)
-                    const Icon(Icons.verified, color: Color(0xFF0D9488), size: 24),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: const [
-              Icon(Icons.shield, color: Color(0xFF0D9488), size: 20),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'آپ کی معلومات محفوظ ہیں اور کسی کے ساتھ شیئر نہیں کی جائیں گی',
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-              )
-            ],
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      key: const ValueKey(2),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('اپنا ہنر منتخب کریں', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: List.generate(skills.length, (i) {
-            final selected = i == selectedSkill;
-            return ChoiceChip(
-              selected: selected,
-              onSelected: (_) => setState(() => selectedSkill = i),
-              label: Text(skills[i], style: const TextStyle(fontSize: 18)),
-            );
-          }),
-        )
-      ],
     );
   }
 }

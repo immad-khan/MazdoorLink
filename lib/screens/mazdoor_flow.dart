@@ -1453,6 +1453,37 @@ class CustomerHomeScreen extends StatelessWidget {
             ),
           ),
           Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: InkWell(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoriteWorkersScreen())),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDFA),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF99F6E4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.favorite, color: Colors.redAccent),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(bilingual(context, 'Favorite Workers', 'پسندیدہ ورکرز'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(bilingual(context, 'Hire your preferred providers directly.', 'اپنے پسندیدہ کاریگروں کو تیزی سے ہائر کریں۔'), style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF0D9488)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.all(16),
             child: Text(bilingual(context, 'Categories', 'زمرہ جات'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
           ),

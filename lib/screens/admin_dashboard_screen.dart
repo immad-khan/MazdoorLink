@@ -342,6 +342,14 @@ class _HomeTab extends StatelessWidget {
                   badgeCount: null,
                   onTap: () => _openStatsSheet(context),
                 ),
+                const SizedBox(height: 12),
+                _DashboardActionCard(
+                  icon: Icons.people_outline,
+                  title: 'Manage Users',
+                  subtitle: 'Customers & Workers',
+                  color: const Color(0xFF64748B),
+                  onTap: () => _openUserManagement(context),
+                ),
                 const SizedBox(height: 28),
 
                 // Recent Activity
@@ -380,6 +388,10 @@ class _HomeTab extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (_) => const _StatsSheet(),
     );
+  }
+
+  static void _openUserManagement(BuildContext context) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const _UserManagementTab()));
   }
 }
 
@@ -1025,6 +1037,54 @@ class _UserManagementTabState extends State<_UserManagementTab> {
 
   String _searchQuery = '';
 
+  void _showDeductDepositDialog(BuildContext context, String workerName) {
+    final amountController = TextEditingController();
+    final reasonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Deduct Security Deposit: $workerName'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Current Top-up Balance: Rs. 500', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Amount to Deduct (Rs.)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Reason',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _snack(context, 'Deducted Rs. ${amountController.text} from $workerName');
+            },
+            child: const Text('Deduct'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _users
@@ -1164,11 +1224,20 @@ class _UserManagementTabState extends State<_UserManagementTab> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                           onSelected: (value) {
+                            if (value == 'DeductDeposit') {
+                              _showDeductDepositDialog(context, u['name'] as String);
+                              return;
+                            }
                             setState(() => filtered[i]['status'] = value);
                             _snack(context,
                                 '${u['name']} has been $value');
                           },
                           itemBuilder: (_) => [
+                            if (isWorker)
+                              const PopupMenuItem(
+                                value: 'DeductDeposit',
+                                child: Text('Deduct Security Deposit'),
+                              ),
                             const PopupMenuItem(
                                 value: 'Active',
                                 child: Text('Restore / Activate')),

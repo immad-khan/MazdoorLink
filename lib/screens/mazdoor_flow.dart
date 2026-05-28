@@ -5154,3 +5154,55 @@ class _WorkerAcceptanceSimulatorScreenState extends State<WorkerAcceptanceSimula
     );
   }
 }
+
+class FavoriteWorkersScreen extends StatelessWidget {
+  const FavoriteWorkersScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // A mock representation of favorited workers (simulating a filtered list)
+    final favWorkers = workers.take(2).toList(); 
+
+    return MzScaffold(
+      showBack: true,
+      title: bilingual(context, 'Favorite Workers', 'پسندیدہ ورکرز'),
+      showBottomNav: false,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: favWorkers.length,
+        itemBuilder: (context, i) {
+          final w = favWorkers[i];
+          return ListTile(
+            leading: CircleAvatar(backgroundImage: NetworkImage(w.image)),
+            title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('${w.category} • ⭐ ${w.rating}'),
+            trailing: IconButton.filledTonal(
+              onPressed: () {
+                Navigator.pushNamed(
+                  context, 
+                  AppRoutes.workerProfile,
+                  arguments: ProfileArguments(
+                    worker: w,
+                    job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.arrow_forward_ios, size: 14),
+              color: const Color(0xFF0D9488),
+            ),
+            onTap: () {
+              Navigator.pushNamed(
+                context, 
+                AppRoutes.workerProfile,
+                arguments: ProfileArguments(
+                  worker: w,
+                  job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}

@@ -244,6 +244,12 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
               Divider(height: 12, color: AppTheme.notWhite),
               _featureButton(Icons.verified_user, AppLocalizations.of(context).t('worker_profile_view'), () => Navigator.pushNamed(context, '/customer/worker-profile')),
               Divider(height: 12, color: AppTheme.notWhite),
+              _featureButton(Icons.favorite, Localizations.localeOf(context).languageCode == 'ur' ? 'پسندیدہ ورکرز' : 'Favorite Workers', () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(Localizations.localeOf(context).languageCode == 'ur' ? 'آپ کے 2 پسندیدہ ورکرز ہیں' : 'You have 2 Favorite Workers')),
+                );
+              }),
+              Divider(height: 12, color: AppTheme.notWhite),
               _featureButton(Icons.price_check, AppLocalizations.of(context).t('ai_price_tool'), () => Navigator.pushNamed(context, '/shared/price-estimation')),
               Divider(height: 12, color: AppTheme.notWhite),
               _featureButton(Icons.map, AppLocalizations.of(context).t('tracking_map'), () => Navigator.pushNamed(context, '/customer/tracking')),

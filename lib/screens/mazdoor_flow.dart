@@ -2353,6 +2353,59 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
             ),
           ),
           Positioned(
+            top: 20,
+            right: 20,
+            child: FloatingActionButton.extended(
+              heroTag: 'customer_sos',
+              backgroundColor: Colors.red,
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(bilingual(context, 'Emergency SOS', 'ہنگامی صورتحال (SOS)')),
+                    content: Text(bilingual(context, 'Are you in danger? Calling Admin/Police.', 'کیا آپ خطرے میں ہیں؟ پولیس کو کال کی جا رہی ہے۔')),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: Text(bilingual(context, 'Cancel', 'منسوخ کریں'))),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                        icon: const Icon(Icons.call),
+                        label: const Text('15 / Admin'),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SOS Triggered!')));
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: const Icon(Icons.local_police, color: Colors.white),
+              label: const Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          if (_trackingState == 0 || _trackingState == 1)
+            Positioned(
+              top: 20,
+              left: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock, color: Colors.white, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${bilingual(context, 'PIN', 'پِن')}: 4921',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          Positioned(
             top: 110,
             left: 80,
             child: Column(
@@ -3633,6 +3686,84 @@ class EarningsDashboardScreen extends StatefulWidget {
 class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
   bool weekly = true;
 
+  void _showWithdrawDialog(BuildContext context, bool isUrdu) {
+    String selectedMethod = 'EasyPaisa';
+    final amountController = TextEditingController();
+    final accountController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(isUrdu ? 'رقم نکلوائیں' : 'Withdraw Earnings', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(isUrdu ? 'دستیاب رقم: 12,500 روپے' : 'Available Balance: Rs. 12,500', style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedMethod,
+                  decoration: InputDecoration(
+                    labelText: isUrdu ? 'فراہم کنندہ' : 'Provider',
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'JazzCash', child: Text('JazzCash')),
+                    DropdownMenuItem(value: 'EasyPaisa', child: Text('EasyPaisa')),
+                    DropdownMenuItem(value: 'Bank Transfer', child: Text('Bank Transfer (IBAN)')),
+                  ],
+                  onChanged: (val) => setModalState(() => selectedMethod = val!),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: accountController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: isUrdu ? 'اکاؤنٹ نمبر' : 'Account Number',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: isUrdu ? 'نکلوانے کی رقم (Rs)' : 'Amount to withdraw (Rs)',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: () {
+                    final amount = int.tryParse(amountController.text) ?? 0;
+                    if (amount > 0 && amount <= 12500) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(isUrdu ? 'آپ کی درخواست موصول ہو گئی ہے' : 'Withdrawal Request Submitted Successfully!')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(isUrdu ? 'درست رقم درج کریں' : 'Please enter a valid amount within balance'), backgroundColor: Colors.red),
+                      );
+                    }
+                  },
+                  style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                  child: Text(isUrdu ? 'درخواست بھیجیں' : 'Submit Withdrawal'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isUrdu = AppScope.of(context).isUrdu;
@@ -3708,6 +3839,23 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
             ),
           ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _showWithdrawDialog(context, isUrdu),
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: Text(isUrdu ? 'رقم نکلوائیں (Withdraw)' : 'Withdraw Earnings'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D9488),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           ListTile(
             leading: const Icon(Icons.south_west, color: Colors.green),
             title: Text(isUrdu ? 'کچن پلمبنگ' : 'Kitchen Plumbing'),

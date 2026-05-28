@@ -15,9 +15,60 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   bool _isLoading = false;
 
   void _onArrived() {
-    setState(() {
-      _status = 1;
-    });
+    final isUrdu = AppScope.of(context).isUrdu;
+    final otpController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text(isUrdu ? 'گاہک سے تصدیق' : 'Customer Verification'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(isUrdu ? 'کام شروع کرنے کے لیے گاہک سے 4 ہندسوں کا پِن طلب کریں:' : 'Ask the customer for the 4-digit PIN to start the service:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: otpController,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
+              decoration: InputDecoration(
+                hintText: '----',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(isUrdu ? 'منسوخ' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (otpController.text == '4921') {
+                Navigator.pop(ctx);
+                setState(() {
+                  _status = 1;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(isUrdu ? 'پِن درست ہے! کام شروع ہو گیا ہے۔' : 'PIN Verified! Job Started.'),
+                  backgroundColor: Colors.green,
+                ));
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(isUrdu ? 'غلط پِن!' : 'Invalid PIN! Please try again.'),
+                  backgroundColor: Colors.red,
+                ));
+              }
+            },
+            child: Text(isUrdu ? 'تصدیق کریں' : 'Verify'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onWorkCompleted() {
@@ -130,6 +181,38 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
             ),
           ],
           
+          Positioned(
+            top: 40,
+            right: 20,
+            child: FloatingActionButton.extended(
+              heroTag: 'worker_sos',
+              backgroundColor: Colors.red,
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(isUrdu ? 'ہنگامی صورتحال (SOS)' : 'Emergency SOS'),
+                    content: Text(isUrdu ? 'کیا آپ خطرے میں ہیں؟ پولیس کو کال کی جا رہی ہے۔' : 'Are you in danger? Calling Admin/Police.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isUrdu ? 'منسوخ کریں' : 'Cancel')),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                        icon: const Icon(Icons.call),
+                        label: const Text('15 / Admin'),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SOS Triggered!')));
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: const Icon(Icons.local_police, color: Colors.white),
+              label: const Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ),
+
           Positioned(
             left: 0,
             right: 0,

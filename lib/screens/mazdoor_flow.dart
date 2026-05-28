@@ -1466,7 +1466,7 @@ class CustomerHomeScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.favorite, color: Colors.redAccent),
+                    const Icon(Icons.favorite, color: Color(0xFF0D9488)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

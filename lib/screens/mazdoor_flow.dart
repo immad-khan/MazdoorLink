@@ -2970,6 +2970,33 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           decoration: InputDecoration(hintText: bilingual(context, 'Write your review', 'اپنا جائزہ لکھیں')),
         ),
         const SizedBox(height: 24),
+        Text(bilingual(context, 'Add a Tip for the Worker', 'ورکر کے لیے ٹپ شامل کریں'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(bilingual(context, 'Rs. 50 Tip Added', '50 روپے کی ٹپ شامل کر دی گئی')))),
+                child: const Text('Rs. 50'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(bilingual(context, 'Rs. 100 Tip Added', '100 روپے کی ٹپ شامل کر دی گئی')))),
+                child: const Text('Rs. 100'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(bilingual(context, 'Rs. 200 Tip Added', '200 روپے کی ٹپ شامل کر دی گئی')))),
+                child: const Text('Rs. 200'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
         FilledButton(
           onPressed: rating == 0 ? null : () => setState(() => _step = PostJobStep.completed),
           child: Text(bilingual(context, 'Submit Review', 'جائزہ جمع کریں')),

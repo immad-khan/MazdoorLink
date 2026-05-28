@@ -2139,6 +2139,21 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                     ),
                   ),
                   Positioned(
+                    top: 18,
+                    right: 14,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.white24,
+                      child: IconButton(
+                        icon: const Icon(Icons.favorite_border, color: Colors.white),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(bilingual(context, 'Added to Favorites! You will ping this worker first next time.', 'پسندیدہ میں شامل کر دیا گیا! اگلی بار یہ ورکر کو سب سے پہلے درخواست دی جائے گی'))),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  Positioned(
                     left: 16,
                     right: 16,
                     bottom: 16,

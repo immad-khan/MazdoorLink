@@ -168,28 +168,55 @@ class _CancelJobScreenState extends State<CancelJobScreen>
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Text(_bilingual(context,
-                'Job cancelled successfully.', 'کام کامیابی سے منسوخ ہو گیا۔')),
-          ],
-        ),
-        backgroundColor: const Color(0xFF059669),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+    // Show cancel confirmation with penalty details
+    final penaltyMessage = _bilingual(
+      context, 
+      'Note: Cancelling after the worker is en route may apply a small cancellation fee to your next bill.',
+      'نوٹ: کام کے آغاز کے بعد منسوخ کرنے پر آپ سے منسوخی کی فیس وصول کی جا سکتی ہے۔'
     );
+      
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text(_bilingual(context, 'Confirm Cancellation', 'منسوخی کی تصدیق کریں')),
+        content: Text('${_bilingual(context, 'Are you sure you want to cancel?', 'کیا آپ واقعی اس کام کو منسوخ کرنا چاہتے ہیں؟')}\n\n$penaltyMessage'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(_bilingual(context, 'Keep Job', 'واپس جائیں'))),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            icon: const Icon(Icons.close),
+            label: Text(_bilingual(context, 'Confirm & Cancel', 'منسوخ کریں')),
+            onPressed: () {
+              Navigator.pop(ctx);
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                      const SizedBox(width: 12),
+                      Text(_bilingual(context,
+                          'Job cancelled successfully.', 'کام کامیابی سے منسوخ ہو گیا۔')),
+                    ],
+                  ),
+                  backgroundColor: const Color(0xFF059669),
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              );
 
-    // Pop back to customer home (adjust route name to match your AppRoutes).
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/customer/home',
-      (route) => false,
+              // Pop back to customer home (adjust route name to match your AppRoutes).
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/customer/home',
+                (route) => false,
+              );
+            },
+          )
+        ],
+      )
     );
   }
 

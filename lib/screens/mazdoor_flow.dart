@@ -2221,11 +2221,55 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
             bottom: 14,
             child: Row(
               children: [
+                IconButton.outlined(
+                  onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedChat),
+                  icon: const Icon(Icons.chat_bubble_outline),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedChat),
-                    icon: const Icon(Icons.chat_bubble_outline),
-                    label: Text(bilingual(context, 'Chat', 'چیٹ')),
+                    onPressed: () async {
+                      final date = await showDatePicker(
+                        context: context, 
+                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 30)),
+                      );
+                      if (date != null && context.mounted) {
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (time != null && context.mounted) {
+                           final priceText = _offerController.text.trim();
+                           final offerPrice = double.tryParse(priceText);
+                           if (offerPrice == null || offerPrice <= 0) {
+                             ScaffoldMessenger.of(context).showSnackBar(
+                               SnackBar(
+                                 content: Text(bilingual(context, 'Please enter a valid amount to make an offer.', 'براہ کرم پیشکش کرنے کے لئے ایک درست رقم درج کریں۔')),
+                                 backgroundColor: Colors.redAccent,
+                               ),
+                             );
+                             return;
+                           }
+                           Navigator.pushNamed(
+                             context,
+                             AppRoutes.matchingSimulator,
+                             arguments: SimulatorArguments(
+                               worker: worker,
+                               job: args?.job ?? JobPostingArguments(
+                                 descriptionEn: 'Scheduled Service',
+                                 descriptionUr: 'شیڈولڈ سروس',
+                                 price: offerPrice,
+                                 categoryKey: worker.category.toLowerCase(),
+                               ),
+                             ),
+                           );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.calendar_month),
+                    label: Text(bilingual(context, 'Schedule', 'شیڈول کریں')),
                   ),
                 ),
                 const SizedBox(width: 10),

@@ -1,8 +1,6 @@
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' hide TextDirection;
-
 import '../app_state.dart';
 import '../app_theme.dart';
 import '../data/mock_data.dart';
@@ -2816,11 +2814,6 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           },
           child: Text(bilingual(context, 'Proceed to Payment', 'ادائیگی کریں')),
         ),
-        const SizedBox(height: 16),
-        OutlinedButton(
-          onPressed: () => setState(() => _step = PostJobStep.complaintForm),
-          child: Text(bilingual(context, 'Lodge a Complaint', 'شکایت درج کریں')),
-        ),
       ],
     );
   }
@@ -3343,12 +3336,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 Switch(value: online, onChanged: (v) => setState(() => online = v)),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          _ColorStatCard(
-            color: const Color(0xFFDCFCE7),
-            label: isUrdu ? 'مکمل' : 'Completed',
-            value: isUrdu ? '2 کام' : '2 jobs',
           ),
           const SizedBox(height: 14),
           if (online)

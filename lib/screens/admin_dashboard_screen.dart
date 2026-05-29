@@ -1323,9 +1323,9 @@ class _ListDetailSheetState extends State<_ListDetailSheet> {
                 itemBuilder: (context, i) {
                   final item = widget.items[i];
                   final status = _statuses[i];
-                  final statusColor = status == 'Approved'
+                  final statusColor = (status == 'Approved' || status == 'Active')
                       ? const Color(0xFF10B981)
-                      : status == 'Rejected'
+                      : (status == 'Rejected' || status == 'Low Balance')
                           ? const Color(0xFFEF4444)
                           : const Color(0xFFF59E0B);
 
@@ -2023,10 +2023,10 @@ final List<Map<String, String>> _damageClaimsData = [
 ];
 
 final List<Map<String, String>> _depositsData = [
-  {'title': 'Deposit – Ali Raza', 'sub': 'Worker · Plumbing', 'amount': 'Rs 5,000', 'status': 'Pending'},
-  {'title': 'Refund – Hassan Elec.', 'sub': 'Refund Request · Completed job', 'amount': 'Rs 5,000', 'status': 'Approved'},
-  {'title': 'Deduction – Bilal Ahmed', 'sub': 'Damage claim deduction', 'amount': 'Rs 3,200', 'status': 'Pending'},
-  {'title': 'Deposit – Umar Farooq', 'sub': 'Worker · Carpentry', 'amount': 'Rs 5,000', 'status': 'Approved'},
+  {'title': 'Ali Raza (Plumber)', 'sub': 'Total Deposited', 'amount': 'Rs 5,000  •  Current Balance: Rs 5,000', 'status': 'Active'},
+  {'title': 'Hassan Elec. (Electrician)', 'sub': 'Total Deposited', 'amount': 'Rs 5,000  •  Current Balance: Rs 3,500', 'status': 'Active'},
+  {'title': 'Bilal Ahmed (Mason)', 'sub': 'Total Deposited', 'amount': 'Rs 4,000  •  Current Balance: Rs 800', 'status': 'Low Balance'},
+  {'title': 'Umar Farooq (Carpenter)', 'sub': 'Total Deposited', 'amount': 'Rs 5,000  •  Current Balance: Rs 5,000', 'status': 'Active'},
 ];
 
 final List<Map<String, dynamic>> _recentActivity = [

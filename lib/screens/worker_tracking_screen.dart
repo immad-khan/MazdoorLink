@@ -11,7 +11,7 @@ class WorkerTrackingScreen extends StatefulWidget {
 }
 
 class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
-  int _status = 0; // 0: tracking, 1: arrived, 2: completing, 3: completed, 4: payment received
+  int _status = 0; // 0: tracking, 1: arrived/working, 2: completing, 3: completed
   bool _isLoading = false;
 
   void _onArrived() {
@@ -128,6 +128,55 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
     });
   }
 
+  Widget _buildCustomerInfoTile(bool isUrdu) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDFA),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF99F6E4)),
+      ),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            radius: 24,
+            backgroundColor: Color(0xFF0D9488),
+            child: Icon(Icons.person, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isUrdu ? 'عمر فاروق' : 'Omer Farooq',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Kitchen Leakage • Rs. 1500',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.pushNamed(context, '/shared/chat'),
+            icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF0D9488)),
+          ),
+          IconButton(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Calling customer...')),
+              );
+            },
+            icon: const Icon(Icons.call, color: Colors.green),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isUrdu = AppScope.of(context).isUrdu;
@@ -140,50 +189,113 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
       ),
       body: Stack(
         children: [
-          // Map Viewer
+          // Map background
           Positioned.fill(
             child: Container(
-              color: const Color(0xFFE5E3DF),
+              color: const Color(0xFFE8EDDF),
               child: CustomPaint(
                 size: Size.infinite,
-                painter: _MapPainter(),
+                painter: _MapPainter(status: _status),
               ),
             ),
           ),
-          if (_status == 0) ...[
+
+          // Worker pin (en-route)
+          if (_status == 0)
             Positioned(
-              top: 110,
-              left: 80,
+              top: 90,
+              left: 60,
               child: Column(
                 children: [
-                   const CircleAvatar(radius: 18, backgroundColor: Colors.black87, child: Icon(Icons.person, color: Colors.white)),
-                  const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: Colors.black87,
-                      borderRadius: BorderRadius.circular(4),
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: const Offset(0, 3))],
                     ),
-                    child: const Text('You', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    child: const Icon(Icons.handyman, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(isUrdu ? 'آپ' : 'You', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
             ),
+
+          // Customer pin (en-route)
+          if (_status == 0)
             Positioned(
-              top: 240,
-              right: 70,
+              top: 200,
+              right: 50,
               child: Column(
                 children: [
-                  const CircleAvatar(radius: 18, backgroundColor: Color(0xFF0D9488), child: Icon(Icons.location_on, color: Colors.white)),
-                  Text(isUrdu ? 'گاہک' : 'Customer'),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D9488),
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: const Color(0xFF0D9488).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                    ),
+                    child: const Icon(Icons.location_on, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D9488),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(isUrdu ? 'گاہک' : 'Customer', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
                 ],
               ),
             ),
-          ],
+
+          // At location pin (after arrived)
+          if (_status >= 1)
+            Positioned(
+              top: 140,
+              left: 0,
+              right: 0,
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D9488),
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: const Color(0xFF0D9488).withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
+                    ),
+                    child: const Icon(Icons.location_on, color: Colors.white, size: 28),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
+                    ),
+                    child: Text(
+                      isUrdu ? '📍 آپ گاہک کے پاس ہیں' : '📍 At Customer Location',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           
+          // SOS button
           Positioned(
-            top: 40,
-            right: 20,
+            top: 16,
+            right: 16,
             child: FloatingActionButton.extended(
               heroTag: 'worker_sos',
               backgroundColor: Colors.red,
@@ -213,15 +325,16 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
             ),
           ),
 
+          // Bottom sheet
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 boxShadow: [
                   BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -5))
                 ],
@@ -234,8 +347,9 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                     height: 5,
                     decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   
+                  // Status 0: En-route
                   if (_status == 0) ...[
                     Row(
                       children: [
@@ -246,37 +360,29 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Icon(Icons.explore),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0D9488).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.directions_walk, size: 16, color: Color(0xFF0D9488)),
+                              const SizedBox(width: 4),
+                              Text(
+                                isUrdu ? '2.5 کلومیٹر' : '2.5 km',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                    Text(isUrdu ? '2.5 کلومیٹر دور' : '2.5 km away'),
-                    const SizedBox(height: 10),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: const CircleAvatar(radius: 24, child: Icon(Icons.person)),
-                      ),
-                      title: Text(isUrdu ? 'عمر فاروق' : 'Omer Farooq'),
-                      subtitle: Text(
-                        isUrdu ? 'کچن لیکیج • Rs. 1500' : 'Kitchen Leakage • Rs. 1500',
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(onPressed: () => Navigator.pushNamed(context, '/shared/chat'), icon: const Icon(Icons.chat)),
-                          IconButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Calling customer...')),
-                              );
-                            }, 
-                            icon: const Icon(Icons.call, color: Colors.green)
-                          ),
-                        ],
-                      ),
-                    ),
                     const SizedBox(height: 12),
+                    _buildCustomerInfoTile(isUrdu),
+                    const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
@@ -288,12 +394,31 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                         child: Text(isUrdu ? 'کیا آپ پہنچ گئے ہیں؟' : 'Have you arrived?', style: const TextStyle(fontSize: 16)),
                       ),
                     ),
-                  ] else if (_status == 1) ...[
-                    Text(
-                      isUrdu ? 'کام جاری ہے...' : 'Work in progress...',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ]
+                  // Status 1: Working (PIN verified)
+                  else if (_status == 1) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.verified, color: Color(0xFF059669), size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              isUrdu ? 'پِن تصدیق شدہ — کام جاری ہے' : 'PIN Verified — Work in progress',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF059669)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
+                    _buildCustomerInfoTile(isUrdu),
+                    const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
@@ -305,14 +430,18 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                         child: Text(isUrdu ? 'کیا کام مکمل ہو گیا ہے؟' : 'Is work completed?', style: const TextStyle(fontSize: 16)),
                       ),
                     ),
-                  ] else if (_status == 2) ...[
+                  ]
+                  // Status 2: Waiting for confirmation
+                  else if (_status == 2) ...[
                     const CircularProgressIndicator(color: Color(0xFF0D9488)),
                     const SizedBox(height: 16),
                     Text(
                       isUrdu ? 'تصدیق کا انتظار ہے...' : 'Waiting for confirmation...',
                       style: const TextStyle(fontSize: 16, color: Colors.black54),
                     ),
-                  ] else if (_status == 3) ...[
+                  ]
+                  // Status 3: Completed
+                  else if (_status == 3) ...[
                     const Icon(Icons.task_alt, color: Color(0xFF059669), size: 64),
                     const SizedBox(height: 16),
                     Text(
@@ -383,24 +512,89 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
 }
 
 class _MapPainter extends CustomPainter {
+  final int status;
+  _MapPainter({this.status = 0});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = Colors.white.withOpacity(0.8)..strokeWidth = 8;
-    for (var i = 0.0; i < size.height; i += 90) {
-      canvas.drawLine(Offset(0, i + 10), Offset(size.width, i + 40), p);
+    // Background
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = const Color(0xFFE8EDDF),
+    );
+
+    // Draw road grid (horizontal roads)
+    final roadFill = Paint()..color = const Color(0xFFF5F5F0);
+    final roadLine = Paint()..color = const Color(0xFFD1D5C8)..strokeWidth = 1;
+    for (var y = 60.0; y < size.height; y += 100) {
+      canvas.drawRect(Rect.fromLTWH(0, y - 14, size.width, 28), roadFill);
+      canvas.drawLine(Offset(0, y - 14), Offset(size.width, y - 14), roadLine);
+      canvas.drawLine(Offset(0, y + 14), Offset(size.width, y + 14), roadLine);
+      // Center dashes
+      final dashPaint = Paint()..color = const Color(0xFFCCD2C5)..strokeWidth = 1;
+      for (var dx = 0.0; dx < size.width; dx += 20) {
+        canvas.drawLine(Offset(dx, y), Offset(dx + 10, y), dashPaint);
+      }
     }
 
-    final routePaint = Paint()
-      ..color = const Color(0xFF0D9488)
+    // Draw road grid (vertical roads)
+    for (var x = 80.0; x < size.width; x += 120) {
+      canvas.drawRect(Rect.fromLTWH(x - 14, 0, 28, size.height), roadFill);
+      canvas.drawLine(Offset(x - 14, 0), Offset(x - 14, size.height), roadLine);
+      canvas.drawLine(Offset(x + 14, 0), Offset(x + 14, size.height), roadLine);
+      // Center dashes
+      final dashPaint = Paint()..color = const Color(0xFFCCD2C5)..strokeWidth = 1;
+      for (var dy = 0.0; dy < size.height; dy += 20) {
+        canvas.drawLine(Offset(x, dy), Offset(x, dy + 10), dashPaint);
+      }
+    }
+
+    // Draw blocks (buildings/houses)
+    final blockPaint = Paint()..color = const Color(0xFFCCD5C0);
+    final blockBorder = Paint()
+      ..color = const Color(0xFFB8C1AD)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    final path = Path()
-      ..moveTo(100, 130)
-      ..quadraticBezierTo(170, 170, 190, 220)
-      ..quadraticBezierTo(210, 240, 250, 260);
-    canvas.drawPath(path, routePaint);
+      ..strokeWidth = 1;
+
+    for (var y = 80.0; y < size.height - 60; y += 100) {
+      for (var x = 100.0; x < size.width - 40; x += 120) {
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(x - 40, y, 80, 68),
+          const Radius.circular(4),
+        );
+        canvas.drawRRect(rect, blockPaint);
+        canvas.drawRRect(rect, blockBorder);
+      }
+    }
+
+    // Draw route line (only when en-route)
+    if (status == 0) {
+      final routeGlow = Paint()
+        ..color = const Color(0xFF0D9488).withOpacity(0.2)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 14
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+
+      final routePaint = Paint()
+        ..color = const Color(0xFF0D9488)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+
+      final path = Path()
+        ..moveTo(85, 120)
+        ..lineTo(85, 160)
+        ..lineTo(200, 160)
+        ..lineTo(200, 230)
+        ..lineTo(size.width - 70, 230);
+      
+      canvas.drawPath(path, routeGlow);
+      canvas.drawPath(path, routePaint);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _MapPainter oldDelegate) => oldDelegate.status != status;
 }

@@ -44,6 +44,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
   final _customPriceController = TextEditingController();
   final Set<int> _selectedIndices = <int>{};
   bool _showCustomFields = false;
+  String _paymentMethod = 'Cash';
   late AnimationController _animationController;
   late Animation<double> _expandAnimation;
   final List<IssueItem> _electricalIssues = const [
@@ -122,6 +123,75 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
         descriptionUr: desc,
         price: price,
         categoryKey: categoryKey,
+      ),
+    );
+  }
+
+  void _showPaymentOptions(bool isUrdu) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isUrdu ? 'ادائیگی کا طریقہ منتخب کریں' : 'Select Payment Method',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: AppTheme.fontName),
+                ),
+                const SizedBox(height: 16),
+                _buildPaymentTile('Cash', Icons.money, isUrdu),
+                _buildPaymentTile('Easypaisa', Icons.phone_android, isUrdu),
+                _buildPaymentTile('JazzCash', Icons.account_balance_wallet, isUrdu),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentTile(String method, IconData icon, bool isUrdu) {
+    final title = method == 'Cash' ? (isUrdu ? 'کیش' : 'Cash') : method;
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFF0D9488)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontFamily: AppTheme.fontName)),
+      trailing: _paymentMethod == method ? const Icon(Icons.check_circle, color: Color(0xFF0D9488)) : null,
+      onTap: () {
+        setState(() => _paymentMethod = method);
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  Widget _buildPaymentSelectorButton(bool isUrdu) {
+    IconData icon = Icons.money;
+    if (_paymentMethod == 'Easypaisa') icon = Icons.phone_android;
+    if (_paymentMethod == 'JazzCash') icon = Icons.account_balance_wallet;
+
+    return InkWell(
+      onTap: () => _showPaymentOptions(isUrdu),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 52,
+        width: 56,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: const Color(0xFF0D9488), size: 28),
       ),
     );
   }
@@ -232,21 +302,34 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
                 if (_selectedIndices.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: ElevatedButton(
-                      onPressed: () {
-                          final selectedIssues = _selectedIndices.map((i) => issuesList[i]).toList();
-                          Navigator.pushNamed(
-                            context,
-                            AppRoutes.recommendations,
-                            arguments: RecommendationArguments(selectedIssues: selectedIssues, categoryKey: categoryKey),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0D9488),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+                    child: Row(
+                      children: [
+                        _buildPaymentSelectorButton(isUrdu),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              final selectedIssues = _selectedIndices.map((i) => issuesList[i]).toList();
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.recommendations,
+                                arguments: RecommendationArguments(selectedIssues: selectedIssues, categoryKey: categoryKey),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFC0D72F), // Bright Indrive-like Green/Yellow
+                              foregroundColor: Colors.black87,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(
+                              isUrdu ? 'منتخب کریں اور ورکر تلاش کریں' : 'Find Workers', 
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: AppTheme.fontName)
+                            ),
+                          ),
                         ),
-                        child: Text(isUrdu ? 'منتخب کریں اور جاری رکھیں' : 'Select and Continue'),
+                      ],
                     ),
                   ),
 
@@ -380,23 +463,31 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
                                 ),
                               ),
                               const SizedBox(height: 18),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () => _submitCustomIssue(categoryKey, isUrdu),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF0D9488),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                  ),
-                                  child: Text(
-                                    isUrdu ? 'بجٹ کے ساتھ جاری رکھیں' : 'Continue with Budget',
-                                    style: const TextStyle(
-                                      fontFamily: AppTheme.fontName,
-                                      fontWeight: FontWeight.bold,
+                              Row(
+                                children: [
+                                  _buildPaymentSelectorButton(isUrdu),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () => _submitCustomIssue(categoryKey, isUrdu),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFFC0D72F), // Bright Indrive-like Green/Yellow
+                                        foregroundColor: Colors.black87,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                      child: Text(
+                                        isUrdu ? 'بجٹ کے ساتھ ورکر تلاش کریں' : 'Find Workers',
+                                        style: const TextStyle(
+                                          fontFamily: AppTheme.fontName,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),

@@ -1383,7 +1383,7 @@ class _ListDetailSheetState extends State<_ListDetailSheet> {
                               ),
                             ),
                           ),
-                        if (status == 'Pending') ...[
+                        if (status == 'Pending' && widget.title != 'Security Deposits') ...[
                           const SizedBox(height: 10),
                           Row(
                             children: [

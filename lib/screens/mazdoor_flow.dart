@@ -3268,92 +3268,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   bool _isEditingPrice = false;
   double? _negotiatedPrice;
   late TextEditingController _negotiatePriceController;
-  int _topupBalance = 500;
 
   @override
   void initState() {
     super.initState();
     _negotiatePriceController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _negotiatePriceController.dispose();
-    super.dispose();
-  }
-
-  void _showTopUpDialog(BuildContext context, bool isUrdu) {
-    String selectedMethod = 'JazzCash';
-    final amountController = TextEditingController();
-    final phoneController = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          return Padding(
-            padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(isUrdu ? 'ٹاپ اپ کریں' : 'Add Top-up', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: selectedMethod,
-                  decoration: InputDecoration(
-                    labelText: isUrdu ? 'طریقہ منتخب کریں' : 'Select Method',
-                    border: const OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'JazzCash', child: Text('JazzCash')),
-                    DropdownMenuItem(value: 'EasyPaisa', child: Text('EasyPaisa')),
-                  ],
-                  onChanged: (val) => setModalState(() => selectedMethod = val!),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: isUrdu ? 'اکاؤنٹ نمبر' : 'Account Number',
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: amountController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: isUrdu ? 'رقم' : 'Amount (Rs)',
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: () {
-                    final amount = int.tryParse(amountController.text) ?? 0;
-                    if (amount > 0) {
-                      setState(() {
-                        _topupBalance += amount;
-                      });
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(isUrdu ? 'ٹاپ اپ کامیاب ہو گیا' : 'Top-up Successful!')),
-                      );
-                    }
-                  },
-                  style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                  child: Text(isUrdu ? 'رقم بھیجیں' : 'Send Money'),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
   }
 
   @override
@@ -3405,51 +3324,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _ColorStatCard(
-                  color: const Color(0xFFFEF3C7),
-                  label: isUrdu ? 'آمدنی' : 'Earnings',
-                  value: isUrdu ? '2,500 روپے' : 'Rs. 2,500',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _ColorStatCard(
-                  color: const Color(0xFFDCFCE7),
-                  label: isUrdu ? 'مکمل' : 'Completed',
-                  value: isUrdu ? '2 کام' : '2 jobs',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0E7FF),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(isUrdu ? 'ٹاپ اپ بیلنس' : 'Top-up Balance', style: const TextStyle(fontSize: 18)),
-                    const SizedBox(height: 6),
-                    Text(isUrdu ? '$_topupBalance روپے' : 'Rs. $_topupBalance', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                  ],
-                ),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
-                  icon: const Icon(Icons.add_card),
-                  label: Text(isUrdu ? 'ٹاپ اپ کریں' : 'Top-up'),
-                  onPressed: () => _showTopUpDialog(context, isUrdu),
-                ),
-              ],
-            ),
+          _ColorStatCard(
+            color: const Color(0xFFDCFCE7),
+            label: isUrdu ? 'مکمل' : 'Completed',
+            value: isUrdu ? '2 کام' : '2 jobs',
           ),
           const SizedBox(height: 14),
           if (online)
@@ -3802,11 +3680,12 @@ class EarningsDashboardScreen extends StatefulWidget {
 
 class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
   bool weekly = true;
+  int _topupBalance = 500;
 
-  void _showWithdrawDialog(BuildContext context, bool isUrdu) {
-    String selectedMethod = 'EasyPaisa';
+  void _showTopUpDialog(BuildContext context, bool isUrdu) {
+    String selectedMethod = 'JazzCash';
     final amountController = TextEditingController();
-    final accountController = TextEditingController();
+    final phoneController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -3820,26 +3699,23 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(isUrdu ? 'رقم نکلوائیں' : 'Withdraw Earnings', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text(isUrdu ? 'دستیاب رقم: 12,500 روپے' : 'Available Balance: Rs. 12,500', style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
+                Text(isUrdu ? 'ٹاپ اپ کریں' : 'Add Top-up', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: selectedMethod,
                   decoration: InputDecoration(
-                    labelText: isUrdu ? 'فراہم کنندہ' : 'Provider',
+                    labelText: isUrdu ? 'طریقہ منتخب کریں' : 'Select Method',
                     border: const OutlineInputBorder(),
                   ),
                   items: const [
                     DropdownMenuItem(value: 'JazzCash', child: Text('JazzCash')),
                     DropdownMenuItem(value: 'EasyPaisa', child: Text('EasyPaisa')),
-                    DropdownMenuItem(value: 'Bank Transfer', child: Text('Bank Transfer (IBAN)')),
                   ],
                   onChanged: (val) => setModalState(() => selectedMethod = val!),
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  controller: accountController,
+                  controller: phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
                     labelText: isUrdu ? 'اکاؤنٹ نمبر' : 'Account Number',
@@ -3851,7 +3727,7 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                   controller: amountController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: isUrdu ? 'نکلوانے کی رقم (Rs)' : 'Amount to withdraw (Rs)',
+                    labelText: isUrdu ? 'رقم' : 'Amount (Rs)',
                     border: const OutlineInputBorder(),
                   ),
                 ),
@@ -3859,19 +3735,18 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                 FilledButton(
                   onPressed: () {
                     final amount = int.tryParse(amountController.text) ?? 0;
-                    if (amount > 0 && amount <= 12500) {
+                    if (amount > 0) {
+                      setState(() {
+                        _topupBalance += amount;
+                      });
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(isUrdu ? 'آپ کی درخواست موصول ہو گئی ہے' : 'Withdrawal Request Submitted Successfully!')),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(isUrdu ? 'درست رقم درج کریں' : 'Please enter a valid amount within balance'), backgroundColor: Colors.red),
+                        SnackBar(content: Text(isUrdu ? 'ٹاپ اپ کامیاب ہو گیا' : 'Top-up Successful!')),
                       );
                     }
                   },
                   style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                  child: Text(isUrdu ? 'درخواست بھیجیں' : 'Submit Withdrawal'),
+                  child: Text(isUrdu ? 'رقم بھیجیں' : 'Send Money'),
                 ),
               ],
             ),
@@ -3951,25 +3826,39 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0E7FF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(isUrdu ? 'ٹاپ اپ بیلنس' : 'Top-up Balance', style: const TextStyle(fontSize: 18)),
+                      const SizedBox(height: 6),
+                      Text(isUrdu ? '$_topupBalance روپے' : 'Rs. $_topupBalance', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
+                    icon: const Icon(Icons.add_card),
+                    label: Text(isUrdu ? 'ٹاپ اپ کریں' : 'Top-up'),
+                    onPressed: () => _showTopUpDialog(context, isUrdu),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               isUrdu ? 'حالیہ لین دین' : 'Recent Transactions',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => _showWithdrawDialog(context, isUrdu),
-                icon: const Icon(Icons.account_balance_wallet_outlined),
-                label: Text(isUrdu ? 'رقم نکلوائیں (Withdraw)' : 'Withdraw Earnings'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D9488),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
             ),
           ),
           const SizedBox(height: 12),

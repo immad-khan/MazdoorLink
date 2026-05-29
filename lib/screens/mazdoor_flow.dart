@@ -1898,12 +1898,15 @@ class WorkerRecommendationsScreen extends StatelessWidget {
 
     List<IssueItem> selectedIssues = [];
     String categoryKey = 'electrical';
+    String paymentMethod = 'Cash';
 
     if (rawArgs is RecommendationArguments) {
       selectedIssues = rawArgs.selectedIssues;
       categoryKey = rawArgs.categoryKey;
+      paymentMethod = rawArgs.paymentMethod;
     } else if (rawArgs is JobPostingArguments) {
       categoryKey = rawArgs.categoryKey;
+      paymentMethod = rawArgs.paymentMethod;
       selectedIssues = [
         IssueItem(
           titleEn: rawArgs.descriptionEn,
@@ -2095,6 +2098,7 @@ class WorkerRecommendationsScreen extends StatelessWidget {
                                   descriptionUr: selectedIssues[i].titleUr,
                                   price: 0,
                                   categoryKey: categoryKey,
+                                  paymentMethod: paymentMethod,
                                 ),
                               ),
                             );
@@ -2623,7 +2627,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         Expanded(
                           child: FilledButton(
                             onPressed: () {
-                               Navigator.pushReplacementNamed(context, AppRoutes.rating);
+                               Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: args);
                             },
                             style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
                             child: Text(bilingual(context, 'Yes', 'ہاں')),
@@ -2792,7 +2796,24 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         ),
         const SizedBox(height: 32),
         FilledButton(
-          onPressed: () => setState(() => _step = PostJobStep.paymentMethod),
+          onPressed: () {
+            final args = ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
+            final paymentMethod = args?.job?.paymentMethod ?? 'Cash';
+            if (paymentMethod == 'Cash') {
+              setState(() => _step = PostJobStep.workerConfirmationWaiting);
+              Future.delayed(const Duration(seconds: 4), () {
+                if (mounted && _step == PostJobStep.workerConfirmationWaiting) {
+                  setState(() => _step = PostJobStep.paymentSuccessTick);
+                  Future.delayed(const Duration(seconds: 2), () {
+                    if (mounted) setState(() => _step = PostJobStep.ratingForm);
+                  });
+                }
+              });
+            } else {
+              _selectedProvider = paymentMethod;
+              setState(() => _step = PostJobStep.onlinePaymentForm);
+            }
+          },
           child: Text(bilingual(context, 'Proceed to Payment', 'ادائیگی کریں')),
         ),
         const SizedBox(height: 16),
@@ -3349,6 +3370,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                       const SizedBox(height: 6),
                       Text(isUrdu ? 'کچن کے سنک کی لیکیج' : 'Kitchen sink leakage'),
                       Text(isUrdu ? '📍 گلبرگ 3 (2.5 کلومیٹر)' : '📍 Gulberg III (2.5 km)'),
+                      const SizedBox(height: 4),
+                      Text(
+                        isUrdu ? 'ادائیگی بذریعہ: کیش' : 'Payment Method: Cash',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                      ),
                       const SizedBox(height: 8),
                       
                       // Negotiation / Price display area
@@ -3604,6 +3630,11 @@ class JobNotificationScreen extends StatelessWidget {
                       const Text('کچن کے سنک کی لیکیج'),
                       const Text('📍 مکان 42، سیکٹر F-8/4'),
                       const Text('🕐 ابھی'),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Payment Method: Cash',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                      ),
                       const SizedBox(height: 8),
                       Text('Rs. ${price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700)),
                       const SizedBox(height: 8),

@@ -9,12 +9,14 @@ class JobPostingArguments {
   final String descriptionUr;
   final double price;
   final String categoryKey;
+  final String paymentMethod;
 
   JobPostingArguments({
     required this.descriptionEn,
     required this.descriptionUr,
     required this.price,
     required this.categoryKey,
+    this.paymentMethod = 'Cash',
   });
 }
 
@@ -123,6 +125,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
         descriptionUr: desc,
         price: price,
         categoryKey: categoryKey,
+        paymentMethod: _paymentMethod,
       ),
     );
   }
@@ -313,7 +316,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
                               Navigator.pushNamed(
                                 context,
                                 AppRoutes.recommendations,
-                                arguments: RecommendationArguments(selectedIssues: selectedIssues, categoryKey: categoryKey),
+                                arguments: RecommendationArguments(selectedIssues: selectedIssues, categoryKey: categoryKey, paymentMethod: _paymentMethod),
                               );
                             },
                             style: ElevatedButton.styleFrom(

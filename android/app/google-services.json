@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "182267491420",
+    "project_id": "mazdoorlink-30879",
+    "storage_bucket": "mazdoorlink-30879.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:182267491420:android:d0e21ef1d5aab6950fe299",
+        "android_client_info": {
+          "package_name": "com.example.service_frontend"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "182267491420-j5lkcgsn0dij9t90sns3h8f6agrsifll.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2lYOMEOx0iboiziHumRKWfa9RWVpMS9E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "182267491420-j5lkcgsn0dij9t90sns3h8f6agrsifll.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

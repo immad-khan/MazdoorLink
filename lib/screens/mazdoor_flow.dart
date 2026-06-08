@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../app_state.dart';
 import '../app_theme.dart';
@@ -769,71 +770,63 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  void _next() {
+  Future<void> _next() async {
     if (_isForgotPassword) {
       if (step == 0) {
-        if (_phone.text.trim().isEmpty) return;
-        setState(() => step = 1);
-        _otpNodes.first.requestFocus();
-        return;
-      } else if (step == 1) {
-        setState(() => step = 2);
-        return;
-      }
-      // Step 2: New password setup
-      if (_password.text.isEmpty || _password.text != _confirmPassword.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Passwords must match and cannot be empty')),
-        );
+        if (_emailController.text.trim().isEmpty) return;
+        try {
+          await FirebaseAuth.instance.sendPasswordResetEmail(email: _emailController.text.trim());
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password reset email sent!')));
+          setState(() {
+            _isForgotPassword = false;
+            _emailController.clear();
+          });
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        }
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password reset successfully!')),
-      );
-      setState(() {
-        _isForgotPassword = false;
-        step = 0;
-        _phone.clear();
-        _password.clear();
-        _confirmPassword.clear();
-      });
-      return;
     }
 
     if (widget.isSignup) {
       if (step == 0) {
-        if (_fullNameController.text.trim().isEmpty || _phone.text.trim().isEmpty || _password.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please fill all required fields')),
-          );
+        if (_fullNameController.text.trim().isEmpty || _emailController.text.trim().isEmpty || _password.text.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all required fields')));
           return;
         }
         if (_password.text != _confirmPassword.text) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Passwords must match')),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Passwords must match')));
           return;
         }
         final role = AppScope.of(context).role;
         if (role == UserRole.worker && (!_idFrontUploaded || !_idBackUploaded)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please upload both front and back of your ID card')),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please upload both front and back of your ID card')));
           return;
         }
 
-        setState(() => step = 1);
-        _otpNodes.first.requestFocus();
-        return;
-      } else if (step == 1) {
-        // OTP done, proceed to navigation at the end
-      }
+        try {
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _password.text,
+          );
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+          return;
+        }
+      } 
     } else {
-      // Login flow: check phone and password
-      if (_phone.text.trim().isEmpty || _password.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter your mobile number and password')),
+      // Login flow
+      if (_emailController.text.trim().isEmpty || _password.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter your email and password')));
+        return;
+      }
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _password.text,
         );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
         return;
       }
     }
@@ -1072,22 +1065,18 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
         const SizedBox(height: 24),
         const Text(
-          'Mobile number',
+          'Email',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
         ),
         const SizedBox(height: 8),
         Directionality(
           textDirection: TextDirection.ltr,
           child: TextField(
-            controller: _phone,
-            keyboardType: TextInputType.phone,
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
-              prefixIcon: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Text('+92', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-              ),
-              prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-              hintText: '300 1234567',
+              prefixIcon: Icon(Icons.email_outlined),
+              hintText: 'john@example.com',
             ),
           ),
         ),

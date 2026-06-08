@@ -4,8 +4,11 @@ import 'app_state.dart';
 import 'l10n/app_localizations.dart';
 import 'app_theme.dart';
 import 'screens/mazdoor_flow.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   print('App starting...');
   runApp(ServiceApp());
 }

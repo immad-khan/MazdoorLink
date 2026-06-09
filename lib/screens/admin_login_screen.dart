@@ -21,15 +21,15 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   }
 
   void _login() {
-    // Implement login logic here
-    if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
+    if (_emailController.text == 'admin@mazdoorlink' && _passwordController.text == 'mazdoorlink123') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Logging in...')),
       );
+      AppScope.of(context).selectRole(UserRole.admin);
       Navigator.pushReplacementNamed(context, '/admin/dashboard');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
+        const SnackBar(content: Text('Invalid admin credentials')),
       );
     }
   }

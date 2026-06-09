@@ -239,7 +239,7 @@ class RoleBottomNav extends StatelessWidget {
             _NavItem('/shared/history', Icons.history, Icons.history_toggle_off, 'Bookings', 'بکنگز'),
             _NavItem('/shared/chat', Icons.chat_bubble_outline, Icons.chat_bubble, 'Chat', 'چیٹ'),
             _NavItem('/shared/settings', Icons.settings_outlined, Icons.settings, 'Settings', 'ترتیبات'),
-          ];
+          ];  
 
     int selected = -1;
     for (var i = 0; i < items.length; i++) {

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../app_state.dart';
 import '../app_theme.dart';
@@ -805,12 +806,33 @@ class _AuthScreenState extends State<AuthScreen> {
         }
 
         try {
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
             email: _emailController.text.trim(),
             password: _password.text,
           );
+          
+          await userCredential.user?.sendEmailVerification();
+          
+          await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+            'name': _fullNameController.text.trim(),
+            'email': _emailController.text.trim(),
+            'phone': _phone.text.trim(),
+            'role': role == UserRole.worker ? 'worker' : 'customer',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Account created! Please check your email to verify your account before logging in.'),
+              duration: Duration(seconds: 5),
+            ));
+            Navigator.pushReplacementNamed(context, AppRoutes.login);
+          }
+          return;
         } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+          }
           return;
         }
       } 
@@ -821,25 +843,40 @@ class _AuthScreenState extends State<AuthScreen> {
         return;
       }
       try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
+        final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _password.text,
         );
+        
+        if (!userCredential.user!.emailVerified) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please verify your email first! Check your inbox.')));
+          }
+          return;
+        }
+        
+        // Fetch user data from Firestore
+        final doc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
+        if (doc.exists && mounted) {
+          final data = doc.data()!;
+          if (data['role'] == 'worker') {
+            AppScope.of(context).selectRole(UserRole.worker);
+            Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
+          } else {
+            AppScope.of(context).selectRole(UserRole.customer);
+            Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+          }
+        } else if (mounted) {
+          // Default fallback
+          Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+        }
+        return;
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        }
         return;
       }
-    }
-
-    final role = AppScope.of(context).role;
-    if (role == UserRole.worker) {
-      if (widget.isSignup) {
-        Navigator.pushReplacementNamed(context, AppRoutes.workerOnboarding);
-      } else {
-        Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
-      }
-    } else {
-      Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
     }
   }
 

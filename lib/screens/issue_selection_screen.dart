@@ -64,7 +64,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
     IssueItem(titleEn: 'Water Tap Leakage', titleUr: 'نلکے سے پانی کا رساو', price: 300, icon: Icons.water_drop),
     IssueItem(titleEn: 'Flush Tank Repair', titleUr: 'فلش ٹینک کی مرمت', price: 600, icon: Icons.wash),
     IssueItem(titleEn: 'Sink / Wash Basin Installation', titleUr: 'واش بیسن لگانا', price: 1200, icon: Icons.bathroom),
-    IssueItem(titleEn: 'Motor Pump Installation', titleUr: 'پانی کی موٹر لگانا', price: 2500, icon: Icons.Plumber),
+    IssueItem(titleEn: 'Motor Pump Installation', titleUr: 'پانی کی موٹر لگانا', price: 2500, icon: Icons.plumbing),
     IssueItem(titleEn: 'Geyser Repair & Service', titleUr: 'گیزر کی سروس اور مرمت', price: 1800, icon: Icons.heat_pump),
     IssueItem(titleEn: 'Pipeline Leakage Repair', titleUr: 'پائپ لائن لیکیج مرمت', price: 1000, icon: Icons.healing),
     IssueItem(titleEn: 'Shower Fitting Replacement', titleUr: 'شاور فٹنگ تبدیل کرنا', price: 700, icon: Icons.shower),

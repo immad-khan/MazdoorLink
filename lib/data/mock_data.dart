@@ -58,7 +58,7 @@ class JobModel {
 
 const List<ServiceCategory> categories = [
   ServiceCategory(key: 'electrical', en: 'Electrical', ur: 'الیکٹریشن', icon: Icons.electrical_services),
-  ServiceCategory(key: 'Plumber', en: 'Plumber', ur: 'پلمبنگ', icon: Icons.Plumber),
+  ServiceCategory(key: 'plumber', en: 'Plumber', ur: 'پلمبر', icon: Icons.plumbing),
 ];
 
 const List<WorkerModel> workers = [

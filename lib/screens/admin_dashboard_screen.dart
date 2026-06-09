@@ -573,28 +573,74 @@ class _ActivityTile extends StatelessWidget {
 // ─────────────────────────────────────────────
 // TAB 1 – Worker Registrations
 // ─────────────────────────────────────────────
-class _WorkerRegistrationsTab extends StatefulWidget {
+class _WorkerRegistrationsTab extends StatelessWidget {
   const _WorkerRegistrationsTab();
 
-  @override
-  State<_WorkerRegistrationsTab> createState() =>
-      _WorkerRegistrationsTabState();
-}
+  void _showImages(BuildContext context, String front, String back) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('ID Images'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Front:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Image.network(front),
+              const SizedBox(height: 16),
+              const Text('Back:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Image.network(back),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))
+        ],
+      ),
+    );
+  }
 
-class _WorkerRegistrationsTabState extends State<_WorkerRegistrationsTab> {
-  final List<Map<String, dynamic>> _workers = List.generate(
-    8,
-    (i) => {
-      'name': ['Ali Raza', 'Hassan Khan', 'Bilal Ahmed', 'Umar Farooq',
-          'Kamran Shah', 'Tariq Mehmood', 'Imran Butt', 'Zubair Iqbal'][i],
-      'skill': ['Plumber', 'Electrician', 'Painter', 'Carpenter',
-          'AC Technician', 'Plumber', 'Mason', 'Welder'][i],
-      'date': ['May 22', 'May 22', 'May 21', 'May 21',
-          'May 20', 'May 20', 'May 19', 'May 18'][i],
-      'status': 'Pending',
-      'docs': i % 3 != 0,
-    },
-  );
+  void _rejectWorker(BuildContext context, String docId, String workerName) {
+    final reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Reject $workerName'),
+        content: TextField(
+          controller: reasonController,
+          decoration: const InputDecoration(
+            labelText: 'Reason for rejection',
+            hintText: 'e.g. ID blurry',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              if (reasonController.text.trim().isEmpty) return;
+              await FirebaseFirestore.instance.collection('users').doc(docId).update({
+                'status': 'rejected',
+                'rejectReason': reasonController.text.trim(),
+              });
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Worker rejected')));
+            },
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _approveWorker(BuildContext context, String docId, String workerName) async {
+    await FirebaseFirestore.instance.collection('users').doc(docId).update({
+      'status': 'approved',
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$workerName approved!')));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -602,157 +648,145 @@ class _WorkerRegistrationsTabState extends State<_WorkerRegistrationsTab> {
       backgroundColor: const Color(0xFFF1F5FA),
       appBar: AppBar(
         backgroundColor: const Color(0xFF006B5E),
-        title: const Text('Worker Registrations',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Worker Registrations', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
         automaticallyImplyLeading: false,
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text('${_workers.where((w) => w['status'] == 'Pending').length} Pending',
-                style: const TextStyle(color: Colors.white, fontSize: 12)),
-          ),
-        ],
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: _workers.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (context, i) {
-          final w = _workers[i];
-          final status = w['status'] as String;
-          Color statusColor = status == 'Approved'
-              ? const Color(0xFF10B981)
-              : status == 'Rejected'
-                  ? const Color(0xFFEF4444)
-                  : const Color(0xFFF59E0B);
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .where('role', isEqualTo: 'worker')
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          return Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          final docs = snapshot.data!.docs;
+          if (docs.isEmpty) {
+            return const Center(child: Text('No worker registrations found.'));
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, i) {
+              final w = docs[i].data() as Map<String, dynamic>;
+              final docId = docs[i].id;
+              
+              final name = w['name'] ?? 'Unknown';
+              final email = w['email'] ?? 'No email';
+              final status = w['status'] ?? 'pending';
+              final idFrontUrl = w['idFrontUrl'];
+              final idBackUrl = w['idBackUrl'];
+
+              Color statusColor = status == 'approved'
+                  ? const Color(0xFF10B981)
+                  : status == 'rejected'
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFFF59E0B);
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 22,
-                        backgroundColor: const Color(0xFF006B5E).withOpacity(0.12),
-                        child: Text(
-                          (w['name'] as String)[0],
-                          style: const TextStyle(
-                              color: Color(0xFF006B5E),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(w['name'] as String,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: Color(0xFF1E293B))),
-                            Text('${w['skill']} · Applied ${w['date']}',
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.grey.shade500)),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(status,
-                            style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor)),
-                      ),
-                    ],
-                  ),
-                  if (!(w['docs'] as bool))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Row(
+                      Row(
                         children: [
-                          const Icon(Icons.warning_amber_rounded,
-                              size: 14, color: Color(0xFFF59E0B)),
-                          const SizedBox(width: 4),
-                          Text('Documents incomplete',
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.orange.shade700)),
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: const Color(0xFF006B5E).withOpacity(0.12),
+                            child: Text(
+                              name.toString().isNotEmpty ? name.toString()[0].toUpperCase() : '?',
+                              style: const TextStyle(
+                                  color: Color(0xFF006B5E),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
+                                Text(email, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(status.toString().toUpperCase(),
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor)),
+                          ),
                         ],
                       ),
-                    ),
-                  if (status == 'Pending') ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              setState(() => _workers[i]['status'] = 'Rejected');
-                              _snack(context, '${w['name']} registration rejected');
-                            },
-                            icon: const Icon(Icons.close_rounded, size: 16),
-                            label: const Text('Reject'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFEF4444),
-                              side: const BorderSide(color: Color(0xFFEF4444)),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              setState(() => _workers[i]['status'] = 'Approved');
-                              _snack(context, '${w['name']} approved successfully!');
-                            },
-                            icon: const Icon(Icons.check_rounded, size: 16),
-                            label: const Text('Approve'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF10B981),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              elevation: 0,
-                            ),
-                          ),
+                      if (idFrontUrl != null && idBackUrl != null) ...[
+                        const SizedBox(height: 12),
+                        TextButton.icon(
+                          onPressed: () => _showImages(context, idFrontUrl, idBackUrl),
+                          icon: const Icon(Icons.image),
+                          label: const Text('View ID Images'),
                         ),
                       ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
+                      if (status == 'pending') ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _rejectWorker(context, docId, name),
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                                label: const Text('Reject'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFEF4444),
+                                  side: const BorderSide(color: Color(0xFFEF4444)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _approveWorker(context, docId, name),
+                                icon: const Icon(Icons.check_rounded, size: 16),
+                                label: const Text('Approve'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF10B981),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
           );
         },
       ),

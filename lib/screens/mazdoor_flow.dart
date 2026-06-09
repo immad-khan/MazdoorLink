@@ -1,8 +1,11 @@
-import 'dart:math' as math;
+import 'dart:io';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart' hide TextDirection;
 import '../app_state.dart';
 import '../app_theme.dart';
 import '../data/mock_data.dart';
@@ -764,8 +767,47 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _obscureConfirmPassword = true;
   bool _isForgotPassword = false;
   
-  bool _idFrontUploaded = false;
-  bool _idBackUploaded = false;
+  File? _idFrontImage;
+  File? _idBackImage;
+  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage(bool isFront) async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        if (isFront) _idFrontImage = File(image.path);
+        else _idBackImage = File(image.path);
+      });
+    }
+  }
+
+  Future<String?> _uploadToCloudinary(File imageFile) async {
+    const cloudName = 'dcdhsyj86';
+    const apiKey = '921185953673167';
+    const apiSecret = 'P-Vro4fA8_gF9dnTcHgKnOQ-xGI';
+    final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    
+    final strToSign = "timestamp=$timestamp$apiSecret";
+    final bytes = utf8.encode(strToSign);
+    final digest = sha1.convert(bytes);
+    final signature = digest.toString();
+
+    var uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+    var request = http.MultipartRequest('POST', uri);
+    request.fields['api_key'] = apiKey;
+    request.fields['timestamp'] = timestamp.toString();
+    request.fields['signature'] = signature;
+    request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+    
+    var response = await request.send();
+    if (response.statusCode == 200) {
+      var responseData = await response.stream.bytesToString();
+      var jsonMap = json.decode(responseData);
+      return jsonMap['secure_url'];
+    }
+    return null;
+  }
 
   @override
   void dispose() {
@@ -813,12 +855,26 @@ class _AuthScreenState extends State<AuthScreen> {
           return;
         }
         final role = AppScope.of(context).role;
-        if (role == UserRole.worker && (!_idFrontUploaded || !_idBackUploaded)) {
+        if (role == UserRole.worker && (_idFrontImage == null || _idBackImage == null)) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please upload both front and back of your ID card')));
           return;
         }
 
+        setState(() => _isUploading = true);
+
         try {
+          String? frontUrl;
+          String? backUrl;
+          if (role == UserRole.worker) {
+            frontUrl = await _uploadToCloudinary(_idFrontImage!);
+            backUrl = await _uploadToCloudinary(_idBackImage!);
+            if (frontUrl == null || backUrl == null) {
+              setState(() => _isUploading = false);
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to upload ID images. Try again.')));
+              return;
+            }
+          }
+
           final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
             email: _emailController.text.trim(),
             password: _password.text,
@@ -826,13 +882,23 @@ class _AuthScreenState extends State<AuthScreen> {
           
           await userCredential.user?.sendEmailVerification();
           
-          await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+          final userData = {
             'name': _fullNameController.text.trim(),
             'email': _emailController.text.trim(),
             'phone': _phone.text.trim(),
             'role': role == UserRole.worker ? 'worker' : 'customer',
             'createdAt': FieldValue.serverTimestamp(),
-          });
+          };
+
+          if (role == UserRole.worker) {
+            userData['status'] = 'pending';
+            userData['idFrontUrl'] = frontUrl;
+            userData['idBackUrl'] = backUrl;
+          }
+
+          await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
+          
+          setState(() => _isUploading = false);
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -843,6 +909,7 @@ class _AuthScreenState extends State<AuthScreen> {
           }
           return;
         } catch (e) {
+          setState(() => _isUploading = false);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
           }
@@ -873,6 +940,17 @@ class _AuthScreenState extends State<AuthScreen> {
         if (doc.exists && mounted) {
           final data = doc.data()!;
           if (data['role'] == 'worker') {
+            final status = data['status'] ?? 'pending';
+            if (status == 'pending') {
+              await FirebaseAuth.instance.signOut();
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your account is pending admin approval.'), duration: Duration(seconds: 5)));
+              return;
+            } else if (status == 'rejected') {
+              await FirebaseAuth.instance.signOut();
+              final reason = data['rejectReason'] ?? 'Not specified';
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Account rejected by admin. Reason: $reason'), duration: const Duration(seconds: 5)));
+              return;
+            }
             AppScope.of(context).selectRole(UserRole.worker);
             Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
           } else {
@@ -1295,30 +1373,36 @@ class _AuthScreenState extends State<AuthScreen> {
               children: [
                 Expanded(
                   child: InkWell(
-                    onTap: () => setState(() => _idFrontUploaded = !_idFrontUploaded),
+                    onTap: () => _pickImage(true),
                     child: Container(
                       height: 100,
+                      clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
                         color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey.shade300)
                       ),
-                      child: Icon(_idFrontUploaded ? Icons.image : Icons.add_a_photo, color: _idFrontUploaded ? Colors.green : Colors.grey, size: 32),
+                      child: _idFrontImage != null 
+                          ? Image.file(_idFrontImage!, fit: BoxFit.cover)
+                          : const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
                     ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: InkWell(
-                    onTap: () => setState(() => _idBackUploaded = !_idBackUploaded),
+                    onTap: () => _pickImage(false),
                     child: Container(
                       height: 100,
+                      clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
                         color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey.shade300)
                       ),
-                      child: Icon(_idBackUploaded ? Icons.image : Icons.add_a_photo, color: _idBackUploaded ? Colors.green : Colors.grey, size: 32),
+                      child: _idBackImage != null
+                          ? Image.file(_idBackImage!, fit: BoxFit.cover)
+                          : const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
                     ),
                   ),
                 ),
@@ -1330,9 +1414,11 @@ class _AuthScreenState extends State<AuthScreen> {
             width: double.infinity,
             height: 48,
             child: FilledButton(
-              onPressed: _next,
+              onPressed: _isUploading ? null : _next,
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-              child: const Text('Continue'),
+              child: _isUploading 
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Continue'),
             ),
           ),
           const SizedBox(height: 20),

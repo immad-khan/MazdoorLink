@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import '../app_state.dart';
 import '../app_theme.dart';
 import '../data/mock_data.dart';
@@ -895,8 +897,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
           if (role == UserRole.worker) {
             userData['status'] = 'pending';
-            userData['idFrontUrl'] = frontUrl;
-            userData['idBackUrl'] = backUrl;
+            userData['idFrontUrl'] = frontUrl!;
+            userData['idBackUrl'] = backUrl!;
           }
 
           await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
@@ -3413,7 +3415,7 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
       'key': 'plumber',
       'title': 'Plumber',
       'subtitle': 'Pipes, leaks, drainage & water systems',
-      'icon': Icons.Plumber,
+      'icon': Icons.plumbing,
       'color': Color(0xFF0EA5E9),
     },
     {

@@ -63,6 +63,7 @@ class AppRoutes {
   static const tracking = '/customer/tracking';
   static const rating = '/customer/rating';
   static const workerOnboarding = '/worker/onboarding';
+  static const workerCategorySelect = '/worker/category-select';
   static const workerDashboard = '/worker/dashboard';
   static const workerNotification = '/worker/job-notification';
   static const workerEarnings = '/worker/earnings';
@@ -110,6 +111,8 @@ Route<dynamic> buildRoute(RouteSettings settings) {
       return _page(const RatingReviewScreen(), settings);
     case AppRoutes.workerOnboarding:
       return _page(const WorkerOnboardingScreen(), settings);
+    case AppRoutes.workerCategorySelect:
+      return _page(const WorkerCategorySelectScreen(), settings);
     case AppRoutes.workerDashboard:
       return _page(const WorkerDashboardScreen(), settings);
     case AppRoutes.workerNotification:
@@ -637,7 +640,7 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text('MazdoorConnect', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
+                    const Text('MazdoorLink', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 10),
                 const Text('Connecting verified workers and customers', textAlign: TextAlign.center),
                 const SizedBox(height: 28),
@@ -952,7 +955,13 @@ class _AuthScreenState extends State<AuthScreen> {
               return;
             }
             AppScope.of(context).selectRole(UserRole.worker);
-            Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
+            // Check if worker has selected a category yet
+            final category = data['category'];
+            if (category == null || category.toString().isEmpty) {
+              Navigator.pushReplacementNamed(context, AppRoutes.workerCategorySelect);
+            } else {
+              Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
+            }
           } else {
             AppScope.of(context).selectRole(UserRole.customer);
             Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
@@ -1960,15 +1969,6 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
           ),
         ],
         const SizedBox(height: 14),
-        Text(bilingual(context, 'When do you need it?', 'کب چاہیے؟')),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            ChoiceChip(label: const Text('ASAP'), selected: asap, onSelected: (_) => setState(() => asap = true)),
-            const SizedBox(width: 8),
-            ChoiceChip(label: Text(bilingual(context, 'Schedule', 'شیڈول')), selected: !asap, onSelected: (_) => setState(() => asap = false)),
-          ],
-        )
       ],
     );
   }
@@ -3395,6 +3395,173 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
   }
 }
 
+// ─────────────────────────────────────────────────────
+// Worker Category Selection Screen (shown on first login)
+// ─────────────────────────────────────────────────────
+class WorkerCategorySelectScreen extends StatefulWidget {
+  const WorkerCategorySelectScreen({super.key});
+  @override
+  State<WorkerCategorySelectScreen> createState() => _WorkerCategorySelectScreenState();
+}
+
+class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen> {
+  String? _selected;
+  bool _isSaving = false;
+
+  static const _categories = [
+    {
+      'key': 'plumber',
+      'title': 'Plumber',
+      'subtitle': 'Pipes, leaks, drainage & water systems',
+      'icon': Icons.plumbing,
+      'color': Color(0xFF0EA5E9),
+    },
+    {
+      'key': 'electrician',
+      'title': 'Electrician',
+      'subtitle': 'Wiring, fittings, panels & electrical repairs',
+      'icon': Icons.electrical_services,
+      'color': Color(0xFFF59E0B),
+    },
+  ];
+
+  Future<void> _save() async {
+    if (_selected == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a category to continue')),
+      );
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'category': _selected,
+        });
+      }
+      if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
+    } catch (e) {
+      setState(() => _isSaving = false);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 24),
+              const CircleAvatar(
+                radius: 30,
+                backgroundColor: Color(0xFF0D9488),
+                child: Icon(Icons.construction, color: Colors.white, size: 30),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'What is your specialty?',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Select the category that best describes your profession. This will show you relevant jobs.',
+                style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
+              ),
+              const SizedBox(height: 32),
+              ...(_categories.map((cat) {
+                final key = cat['key'] as String;
+                final isSelected = _selected == key;
+                final color = cat['color'] as Color;
+                return GestureDetector(
+                  onTap: () => setState(() => _selected = key),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: isSelected ? color.withOpacity(0.08) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? color : Colors.grey.shade200,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(cat['icon'] as IconData, color: color, size: 28),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                cat['title'] as String,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? color : const Color(0xFF1E293B),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                cat['subtitle'] as String,
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          Icon(Icons.check_circle_rounded, color: color, size: 24),
+                      ],
+                    ),
+                  ),
+                );
+              })),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton(
+                  onPressed: _isSaving ? null : _save,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9488),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Continue to Dashboard', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class WorkerDashboardScreen extends StatefulWidget {
   const WorkerDashboardScreen({super.key});
 
@@ -3610,25 +3777,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            if (_negotiatedPrice == null) ...[
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _isEditingPrice = true;
-                                      _negotiatePriceController.text = '1000';
-                                    });
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFFF59E0B),
-                                    side: const BorderSide(color: Color(0xFFF59E0B)),
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                  ),
-                                  child: Text(isUrdu ? 'باہمی قیمت' : 'Negotiate'),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                            ],
                             Expanded(
                               flex: 2,
                               child: FilledButton(

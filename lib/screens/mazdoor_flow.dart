@@ -1197,7 +1197,7 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Login to your MazdoorConnect account',
+          'Login to your MazdoorLink account',
           style: TextStyle(fontSize: 15, color: Colors.black54),
         ),
         const SizedBox(height: 24),
@@ -2048,7 +2048,7 @@ class WorkerRecommendationsScreen extends StatelessWidget {
 
       matchedWorkers.add(WorkerModel(
         name: base.name,
-        category: categoryKey == 'plumbing' ? 'Plumber' : 'Electrician',
+        category: categoryKey == 'Plumber' ? 'Plumber' : 'Electrician',
         rating: base.rating,
         reviews: base.reviews,
         distanceKm: (i + 1) * 1.5,
@@ -3413,7 +3413,7 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
       'key': 'plumber',
       'title': 'Plumber',
       'subtitle': 'Pipes, leaks, drainage & water systems',
-      'icon': Icons.plumbing,
+      'icon': Icons.Plumber,
       'color': Color(0xFF0EA5E9),
     },
     {
@@ -4155,7 +4155,7 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
           const SizedBox(height: 12),
           ListTile(
             leading: const Icon(Icons.south_west, color: Colors.green),
-            title: Text(isUrdu ? 'کچن پلمبنگ' : 'Kitchen Plumbing'),
+            title: Text(isUrdu ? 'کچن پلمبنگ' : 'Kitchen Plumber'),
             subtitle: Text('12 May, 2:30 PM • Adnan Ali (PKR 1000 - PKR 0 Penalty)', style: const TextStyle(fontSize: 12)),
             trailing: const Text('+1,000', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
           ),

@@ -35,8 +35,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
 
   final List<BookingItem> _allBookings = [
     BookingItem(
-      title: 'Plumbing repair - Pipe leak fix',
-      category: 'Plumbing',
+      title: 'Plumber repair - Pipe leak fix',
+      category: 'Plumber',
       status: 'Completed',
       date: '2 days ago',
       amount: 2500,
@@ -117,8 +117,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
 
   IconData _getCategoryIcon(String category) {
     switch (category) {
-      case 'Plumbing':
-        return IconHelper.plumbing;
+      case 'Plumber':
+        return IconHelper.Plumber;
       case 'Electrical':
         return IconHelper.electrical;
       case 'Carpentry':

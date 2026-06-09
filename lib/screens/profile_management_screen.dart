@@ -15,8 +15,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
   final _emailController = TextEditingController(text: 'ahmed@example.com');
   late AnimationController _fadeController;
 
-  final List<String> _workerSkills = ['Plumbing', 'Electrical', 'Carpentry'];
-  final List<String> _selectedSkills = ['Plumbing', 'Electrical'];
+  final List<String> _workerSkills = ['Plumber', 'Electrical', 'Carpentry'];
+  final List<String> _selectedSkills = ['Plumber', 'Electrical'];
 
   @override
   void initState() {

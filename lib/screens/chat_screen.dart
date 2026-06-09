@@ -40,7 +40,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     // Sample messages for demo
     _messages = [
       ChatMessage(
-        textEn: 'Hi, I need plumbing repair',
+        textEn: 'Hi, I need Plumber repair',
         textUr: 'السلام علیکم، مجھے پلمبنگ کی مرمت کی ضرورت ہے',
         isFromMe: true,
         timestamp: DateTime.now().subtract(Duration(minutes: 5)),

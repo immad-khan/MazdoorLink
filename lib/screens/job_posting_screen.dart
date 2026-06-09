@@ -16,7 +16,7 @@ class _JobPostingScreenState extends State<JobPostingScreen>
   final _locationController = TextEditingController();
   final _budgetController = TextEditingController();
 
-  String _category = 'plumbing';
+  String _category = 'Plumber';
   bool _urgent = false;
   int _currentStep = 0;
   late AnimationController _fadeController;
@@ -187,14 +187,14 @@ class _JobPostingScreenState extends State<JobPostingScreen>
                   contentPadding:
                       EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
-                items: ['plumbing', 'electrical', 'carpentry']
+                items: ['Plumber', 'electrical', 'carpentry']
                     .map((e) => DropdownMenuItem(
                           value: e,
                           child: Row(
                             children: [
                               Icon(
-                                e == 'plumbing'
-                                    ? IconHelper.plumbing
+                                e == 'Plumber'
+                                    ? IconHelper.Plumber
                                     : e == 'electrical'
                                         ? IconHelper.electrical
                                         : IconHelper.carpentry,

@@ -198,7 +198,7 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
           children: [
-            _buildAnimatedCard(0, Icons.home_repair_service, 'Plumbing', Color(0xFF3B82F6), () => Navigator.pushNamed(context, '/customer/job-posting')),
+            _buildAnimatedCard(0, Icons.home_repair_service, 'Plumber', Color(0xFF3B82F6), () => Navigator.pushNamed(context, '/customer/job-posting')),
             _buildAnimatedCard(1, Icons.bolt, 'Electrical', Color(0xFFFCD34D), () => Navigator.pushNamed(context, '/customer/job-posting')),
             _buildAnimatedCard(2, Icons.handyman, 'Carpentry', Color(0xFF8B5A3C), () => Navigator.pushNamed(context, '/customer/job-posting')),
             _buildAnimatedCard(3, Icons.cleaning_services, 'Cleaning', Color(0xFF06B6D4), () => Navigator.pushNamed(context, '/customer/job-posting')),

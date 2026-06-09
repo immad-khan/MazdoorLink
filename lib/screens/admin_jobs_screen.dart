@@ -10,7 +10,7 @@ class JobsTab extends StatefulWidget {
 class _JobsTabState extends State<JobsTab> {
   final List<Map<String, dynamic>> _jobs = [
     {
-      'title': 'Plumbing Repair',
+      'title': 'Plumber Repair',
       'worker': 'Ali Khan',
       'customer': 'Omer Farooq',
       'status': 'Completed',

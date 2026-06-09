@@ -55,7 +55,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
 
       setState(() {
         _listening = false;
-        _recognizedCommand = 'Post a plumbing job in Lahore';
+        _recognizedCommand = 'Post a Plumber job in Lahore';
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -326,7 +326,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
                 ),
                 SizedBox(height: 12),
                 _buildCommandExample(
-                  'Post a plumbing job',
+                  'Post a Plumber job',
                   'Create a new service request',
                 ),
                 SizedBox(height: 12),

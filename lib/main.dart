@@ -35,7 +35,7 @@ class _ServiceAppState extends State<ServiceApp> {
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) => MaterialApp(
-          title: 'MazdoorConnect',
+          title: 'MazdoorLink',
           locale: _controller.locale,
           debugShowCheckedModeBanner: false,
           supportedLocales: const [Locale('en'), Locale('ur')],

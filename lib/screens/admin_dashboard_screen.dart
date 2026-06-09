@@ -1704,7 +1704,7 @@ class _StatsSheet extends StatelessWidget {
                     color: Color(0xFF1E293B))),
             const SizedBox(height: 12),
             ...[
-              ('Plumbing', 0.82, const Color(0xFF0D9488)),
+              ('Plumber', 0.82, const Color(0xFF0D9488)),
               ('Electrical', 0.70, const Color(0xFF6366F1)),
             ].map((e) => _CategoryBar(label: e.$1, fraction: e.$2, color: e.$3)),
           ],

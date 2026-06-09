@@ -15,7 +15,7 @@ class _WorkerSupportScreenState extends State<WorkerSupportScreen> {
 
   final List<Map<String, dynamic>> _pastOrders = [
     {
-      'title': 'Plumbing Repair',
+      'title': 'Plumber Repair',
       'date': '24 May 2025',
       'customer': 'Ahmad',
       'status': 'Completed',

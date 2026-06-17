@@ -201,14 +201,14 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
 
   @override
   Widget build(BuildContext context) {
-    final categoryKey = ModalRoute.of(context)?.settings.arguments as String? ?? 'electrical';
+    final categoryKey = ModalRoute.of(context)?.settings.arguments as String? ?? 'electrician';
     final controller = AppScope.of(context);
     final isUrdu = controller.isUrdu;
 
-    final issuesList = categoryKey == 'electrical' ? _electricalIssues : _PlumberIssues;
+    final issuesList = categoryKey == 'electrician' ? _electricalIssues : _PlumberIssues;
     
-    final titleEn = categoryKey == 'electrical' ? 'Select Electrical Issue' : 'Select Plumber Issue';
-    final titleUr = categoryKey == 'electrical' ? 'الیکٹریکل مسئلہ منتخب کریں' : 'پلمبنگ مسئلہ منتخب کریں';
+    final titleEn = categoryKey == 'electrician' ? 'Select Electrician Issue' : 'Select Plumber Issue';
+    final titleUr = categoryKey == 'electrician' ? 'الیکٹریکل مسئلہ منتخب کریں' : 'پلمبنگ مسئلہ منتخب کریں';
 
     return Directionality(
       textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,

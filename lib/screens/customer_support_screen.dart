@@ -21,7 +21,7 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
       'status': 'Completed',
     },
     {
-      'title': 'Electrical Wiring',
+      'title': 'Electrician Wiring',
       'date': '12 May 2025',
       'worker': 'Usman Ahmed',
       'status': 'Completed',

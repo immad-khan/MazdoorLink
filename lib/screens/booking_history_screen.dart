@@ -43,8 +43,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       isCompleted: true,
     ),
     BookingItem(
-      title: 'Electrical rewiring - 3 rooms',
-      category: 'Electrical',
+      title: 'Electrician rewiring - 3 rooms',
+      category: 'Electrician',
       status: 'In Progress',
       date: 'Today',
       amount: 5000,
@@ -119,8 +119,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     switch (category) {
       case 'Plumber':
         return IconHelper.Plumber;
-      case 'Electrical':
-        return IconHelper.electrical;
+      case 'Electrician':
+        return IconHelper.electrician;
       case 'Carpentry':
         return IconHelper.carpentry;
       case 'AC Repair':

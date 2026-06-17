@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../app_state.dart';
@@ -759,6 +760,52 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  String? _emailError;
+  String? _passwordError;
+
+  void _validateEmail(String val) {
+    if (val.isEmpty) {
+      setState(() => _emailError = null);
+      return;
+    }
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    setState(() {
+      _emailError = emailRegex.hasMatch(val) ? null : 'Enter a valid email address';
+    });
+  }
+
+  void _validatePassword(String val) {
+    if (val.isEmpty) {
+      setState(() => _passwordError = null);
+      return;
+    }
+    bool hasUppercase = val.contains(RegExp(r'[A-Z]'));
+    bool hasDigits = val.contains(RegExp(r'[0-9]'));
+    bool hasSpecialCharacters = val.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+    if (val.length < 8) {
+      setState(() => _passwordError = 'Must be at least 8 characters');
+    } else if (!hasUppercase) {
+      setState(() => _passwordError = 'Must contain at least 1 uppercase letter');
+    } else if (!hasDigits) {
+      setState(() => _passwordError = 'Must contain at least 1 number');
+    } else if (!hasSpecialCharacters) {
+      setState(() => _passwordError = 'Must contain at least 1 special character');
+    } else {
+      setState(() => _passwordError = null);
+    }
+  }
+
+  void _showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.redAccent,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+  }
+
   final _phone = TextEditingController();
   final _emailController = TextEditingController();
   final _password = TextEditingController();
@@ -837,13 +884,13 @@ class _AuthScreenState extends State<AuthScreen> {
         if (_emailController.text.trim().isEmpty) return;
         try {
           await FirebaseAuth.instance.sendPasswordResetEmail(email: _emailController.text.trim());
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password reset email sent!')));
+          _showToast('Password reset email sent!');
           setState(() {
             _isForgotPassword = false;
             _emailController.clear();
           });
         } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+          _showToast(e.toString());
         }
         return;
       }
@@ -852,16 +899,16 @@ class _AuthScreenState extends State<AuthScreen> {
     if (widget.isSignup) {
       if (step == 0) {
         if (_fullNameController.text.trim().isEmpty || _emailController.text.trim().isEmpty || _password.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all required fields')));
+          _showToast('Please fill all required fields');
           return;
         }
         if (_password.text != _confirmPassword.text) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Passwords must match')));
+          _showToast('Passwords must match');
           return;
         }
         final role = AppScope.of(context).role;
         if (role == UserRole.worker && (_idFrontImage == null || _idBackImage == null)) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please upload both front and back of your ID card')));
+          _showToast('Please upload both front and back of your ID card');
           return;
         }
 
@@ -875,7 +922,7 @@ class _AuthScreenState extends State<AuthScreen> {
             backUrl = await _uploadToCloudinary(_idBackImage!);
             if (frontUrl == null || backUrl == null) {
               setState(() => _isUploading = false);
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to upload ID images. Try again.')));
+              if (mounted) _showToast('Failed to upload ID images. Try again.');
               return;
             }
           }
@@ -916,7 +963,7 @@ class _AuthScreenState extends State<AuthScreen> {
         } catch (e) {
           setState(() => _isUploading = false);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+            _showToast(e.toString());
           }
           return;
         }
@@ -924,7 +971,7 @@ class _AuthScreenState extends State<AuthScreen> {
     } else {
       // Login flow
       if (_emailController.text.trim().isEmpty || _password.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter your email and password')));
+        _showToast('Please enter your email and password');
         return;
       }
       try {
@@ -935,7 +982,7 @@ class _AuthScreenState extends State<AuthScreen> {
         
         if (!userCredential.user!.emailVerified) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please verify your email first! Check your inbox.')));
+            _showToast('Please verify your email first! Check your inbox.');
           }
           return;
         }
@@ -948,12 +995,12 @@ class _AuthScreenState extends State<AuthScreen> {
             final status = data['status'] ?? 'pending';
             if (status == 'pending') {
               await FirebaseAuth.instance.signOut();
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your account is pending admin approval.'), duration: Duration(seconds: 5)));
+              if (mounted) _showToast('Your account is pending admin approval.'), duration: Duration(seconds: 5);
               return;
             } else if (status == 'rejected') {
               await FirebaseAuth.instance.signOut();
               final reason = data['rejectReason'] ?? 'Not specified';
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Account rejected by admin. Reason: $reason'), duration: const Duration(seconds: 5)));
+              if (mounted) _showToast('Account rejected by admin. Reason: $reason'), duration: const Duration(seconds: 5);
               return;
             }
             AppScope.of(context).selectRole(UserRole.worker);
@@ -975,7 +1022,7 @@ class _AuthScreenState extends State<AuthScreen> {
         return;
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+          _showToast(e.toString());
         }
         return;
       }
@@ -1006,186 +1053,65 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _forgotPasswordFlow() {
-    if (step == 0) {
-      return Column(
-        key: const ValueKey('forgotPasswordStep0'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Reset password',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Enter your mobile number to reset your password',
-            style: TextStyle(fontSize: 15, color: Colors.black54),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Mobile number',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-          ),
-          const SizedBox(height: 8),
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: TextField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                prefixIcon: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  child: Text('+92', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                ),
-                prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                hintText: '300 1234567',
-              ),
+    return Column(
+      key: const ValueKey('forgotPasswordStep0'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Reset password',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Enter your email address to reset your password',
+          style: TextStyle(fontSize: 15, color: Colors.black54),
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'Email',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+        ),
+        const SizedBox(height: 8),
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            onChanged: _validateEmail,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.email_outlined),
+              hintText: 'john@example.com',
+              errorText: _emailError,
             ),
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _next,
-              child: const Text('Continue'),
-            ),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _next,
+            child: const Text('Send Reset Link'),
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _isForgotPassword = false;
-                    step = 0;
-                    _phone.clear();
-                  });
-                },
-                child: const Text('Back to Login', style: TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        ],
-      );
-    } else if (step == 1) {
-      return Column(
-        key: const ValueKey('forgotPasswordStep1'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Enter verification code',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'We sent a 4-digit code to +92 ${_phone.text}',
-            style: const TextStyle(fontSize: 15, color: Colors.black54),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            children: List.generate(4, (index) {
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: TextField(
-                    controller: _otpControllers[index],
-                    focusNode: _otpNodes[index],
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    maxLength: 1,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    decoration: const InputDecoration(counterText: ''),
-                    onChanged: (value) {
-                      if (value.isNotEmpty && index < 3) {
-                        _otpNodes[index + 1].requestFocus();
-                      }
-                    },
-                  ),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.center,
-            child: TextButton(
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Verification code resent successfully')),
-                );
+                setState(() {
+                  _isForgotPassword = false;
+                  step = 0;
+                  _emailController.clear();
+                  _emailError = null;
+                });
               },
-              child: const Text('Resend code', style: TextStyle(color: Color(0xFF0D9488))),
+              child: const Text('Back to Login', style: TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
             ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _next,
-              child: const Text('Continue'),
-            ),
-          ),
-        ],
-      );
-    } else {
-      return Column(
-        key: const ValueKey('forgotPasswordStep2'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'New password',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Choose a new strong password for your account',
-            style: TextStyle(fontSize: 15, color: Colors.black54),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'New Password',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _password,
-            obscureText: _obscurePassword,
-            decoration: InputDecoration(
-              hintText: 'Enter new password',
-              suffixIcon: IconButton(
-                icon: Icon((_obscurePassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscurePassword = !(_obscurePassword)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Confirm New Password',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _confirmPassword,
-            obscureText: _obscureConfirmPassword,
-            decoration: InputDecoration(
-              hintText: 'Re-enter new password',
-              suffixIcon: IconButton(
-                icon: Icon((_obscureConfirmPassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscureConfirmPassword = !(_obscureConfirmPassword)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _next,
-              child: const Text('Reset Password'),
-            ),
-          ),
-        ],
-      );
-    }
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _loginScreen() {
@@ -1213,9 +1139,11 @@ class _AuthScreenState extends State<AuthScreen> {
           child: TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.email_outlined),
+            onChanged: _validateEmail,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.email_outlined),
               hintText: 'john@example.com',
+              errorText: _emailError,
             ),
           ),
         ),
@@ -1310,9 +1238,11 @@ class _AuthScreenState extends State<AuthScreen> {
           TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            onChanged: _validateEmail,
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.mail_outline),
               hintText: 'Enter your email address',
+              errorText: _emailError,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
@@ -1345,9 +1275,11 @@ class _AuthScreenState extends State<AuthScreen> {
           TextField(
             controller: _password,
             obscureText: _obscurePassword,
+            onChanged: _validatePassword,
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.lock_outline),
               hintText: 'Enter your password',
+              errorText: _passwordError,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               suffixIcon: IconButton(
                 icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
@@ -1893,7 +1825,7 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
                         descriptionEn: desc.text,
                         descriptionUr: desc.text,
                         price: _selectedPrice > 0 ? _selectedPrice : 1000.0,
-                        categoryKey: _categoryKey.isNotEmpty ? _categoryKey : 'electrical',
+                        categoryKey: _categoryKey.isNotEmpty ? _categoryKey : 'electrician',
                       ),
                     );
                   }
@@ -2022,7 +1954,7 @@ class WorkerRecommendationsScreen extends StatelessWidget {
     final isUrdu = AppScope.of(context).isUrdu;
 
     List<IssueItem> selectedIssues = [];
-    String categoryKey = 'electrical';
+    String categoryKey = 'electrician';
     String paymentMethod = 'Cash';
 
     if (rawArgs is RecommendationArguments) {
@@ -2591,7 +2523,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         label: const Text('15 / Admin'),
                         onPressed: () {
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SOS Triggered!')));
+                          _showToast('SOS Triggered!');
                         },
                       ),
                     ],
@@ -3008,7 +2940,7 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         const SizedBox(height: 32),
         FilledButton(
           onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(bilingual(context, 'Complaint Submitted', 'شکایت جمع کر دی گئی'))));
+            _showToast(bilingual(context, 'Complaint Submitted', 'شکایت جمع کر دی گئی'));
             setState(() => _step = PostJobStep.ratingForm);
           },
           child: Text(bilingual(context, 'Submit Complaint', 'شکایت جمع کریں')),
@@ -3421,7 +3353,7 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
     {
       'key': 'electrician',
       'title': 'Electrician',
-      'subtitle': 'Wiring, fittings, panels & electrical repairs',
+      'subtitle': 'Wiring, fittings, panels & electrician repairs',
       'icon': Icons.electrical_services,
       'color': Color(0xFFF59E0B),
     },
@@ -3445,7 +3377,7 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
       if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
     } catch (e) {
       setState(() => _isSaving = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) _showToast(e.toString());
     }
   }
 
@@ -4163,7 +4095,7 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-            title: Text(isUrdu ? 'الیکٹریکل وائرنگ' : 'Electrical Wiring'),
+            title: Text(isUrdu ? 'الیکٹریکل وائرنگ' : 'Electrician Wiring'),
             subtitle: Text('10 May, 4:00 PM • Raza (10% Damage Penalty)', style: const TextStyle(fontSize: 12)),
             trailing: const Text('+4,500', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
           ),

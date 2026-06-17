@@ -187,7 +187,7 @@ class _JobPostingScreenState extends State<JobPostingScreen>
                   contentPadding:
                       EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
-                items: ['Plumber', 'electrical', 'carpentry']
+                items: ['Plumber', 'electrician', 'carpentry']
                     .map((e) => DropdownMenuItem(
                           value: e,
                           child: Row(
@@ -195,8 +195,8 @@ class _JobPostingScreenState extends State<JobPostingScreen>
                               Icon(
                                 e == 'Plumber'
                                     ? IconHelper.Plumber
-                                    : e == 'electrical'
-                                        ? IconHelper.electrical
+                                    : e == 'electrician'
+                                        ? IconHelper.electrician
                                         : IconHelper.carpentry,
                                 size: 20,
                                 color: Theme.of(context).primaryColor,

@@ -1706,7 +1706,7 @@ class _StatsSheet extends StatelessWidget {
             const SizedBox(height: 12),
             ...[
               ('Plumber', 0.82, const Color(0xFF0D9488)),
-              ('Electrical', 0.70, const Color(0xFF6366F1)),
+              ('Electrician', 0.70, const Color(0xFF6366F1)),
             ].map((e) => _CategoryBar(label: e.$1, fraction: e.$2, color: e.$3)),
           ],
         ),
@@ -2050,7 +2050,7 @@ class _AdminVoiceSheetState extends State<_AdminVoiceSheet>
 final List<Map<String, String>> _damageClaimsData = [
   {'title': 'Broken Kitchen Tap', 'sub': 'Sara Malik · Plumber Ali Raza', 'amount': 'Rs 3,200', 'status': 'Pending'},
   {'title': 'Cracked Wall Tiles', 'sub': 'Ahmed Khan · Mason Bilal', 'amount': 'Rs 8,500', 'status': 'Pending'},
-  {'title': 'Damaged Electrical Panel', 'sub': 'Nida Hussain · Hassan Elec.', 'amount': 'Rs 12,000', 'status': 'Approved'},
+  {'title': 'Damaged Electrician Panel', 'sub': 'Nida Hussain · Hassan Elec.', 'amount': 'Rs 12,000', 'status': 'Approved'},
   {'title': 'Scratched Floor', 'sub': 'Rahul Arif · Carpenter Umar', 'amount': 'Rs 6,000', 'status': 'Rejected'},
   {'title': 'Broken Window Pane', 'sub': 'Fatima Bano · Worker Kamran', 'amount': 'Rs 4,500', 'status': 'Pending'},
   {'title': 'Water Pipe Burst', 'sub': 'Ali Shah · Plumber Tariq', 'amount': 'Rs 9,800', 'status': 'Pending'},

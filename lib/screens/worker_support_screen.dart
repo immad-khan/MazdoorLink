@@ -21,7 +21,7 @@ class _WorkerSupportScreenState extends State<WorkerSupportScreen> {
       'status': 'Completed',
     },
     {
-      'title': 'Electrical Wiring',
+      'title': 'Electrician Wiring',
       'date': '12 May 2025',
       'customer': 'Sana',
       'status': 'Completed',

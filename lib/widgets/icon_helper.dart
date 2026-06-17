@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class IconHelper {
   // Service categories
   static const IconData Plumber = Icons.home_repair_service;
-  static const IconData electrical = Icons.electrical_services;
+  static const IconData electrician = Icons.electrical_services;
   static const IconData carpentry = Icons.handyman;
   static const IconData painting = Icons.brush;
   static const IconData ac = Icons.ac_unit;

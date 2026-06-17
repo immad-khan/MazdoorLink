@@ -18,7 +18,7 @@ class _JobsTabState extends State<JobsTab> {
       'amount': '1500'
     },
     {
-      'title': 'Electrical Wiring',
+      'title': 'Electrician Wiring',
       'worker': 'Usman Ahmed',
       'customer': 'Raza',
       'status': 'On Going',

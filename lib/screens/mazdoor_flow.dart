@@ -6,9 +6,9 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart' hide TextDirection;
+import '../main.dart';
 import '../app_state.dart';
 import '../app_theme.dart';
 import '../data/mock_data.dart';
@@ -31,17 +31,20 @@ import 'worker_support_screen.dart';
 import 'worker_tracking_screen.dart';
 
 void showToast(String message) {
-    Fluttertoast.showToast(
-      msg: message,
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
+  rootScaffoldMessengerKey.currentState?.showSnackBar(
+    SnackBar(
+      content: Text(
+        message,
+        style: const TextStyle(color: Colors.white, fontSize: 16),
+      ),
+      behavior: SnackBarBehavior.floating,
       backgroundColor: Colors.redAccent,
-      textColor: Colors.white,
-      fontSize: 16.0,
-    );
-  }
-
-  
+      duration: const Duration(seconds: 3),
+      margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ),
+  );
+}
 
 class ProfileArguments {
   final WorkerModel worker;

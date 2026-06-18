@@ -6,6 +6,8 @@ import 'app_theme.dart';
 import 'screens/mazdoor_flow.dart';
 import 'package:firebase_core/firebase_core.dart';
 
+final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -35,6 +37,7 @@ class _ServiceAppState extends State<ServiceApp> {
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) => MaterialApp(
+          scaffoldMessengerKey: rootScaffoldMessengerKey,
           title: 'MazdoorLink',
           locale: _controller.locale,
           debugShowCheckedModeBanner: false,

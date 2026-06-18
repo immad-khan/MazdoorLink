@@ -30,6 +30,19 @@ import 'worker_support_screen.dart';
 
 import 'worker_tracking_screen.dart';
 
+void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.redAccent,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+  }
+
+  
+
 class ProfileArguments {
   final WorkerModel worker;
   final JobPostingArguments job;
@@ -795,18 +808,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  void _showToast(String message) {
-    Fluttertoast.showToast(
-      msg: message,
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-      backgroundColor: Colors.redAccent,
-      textColor: Colors.white,
-      fontSize: 16.0,
-    );
-  }
-
-  final _phone = TextEditingController();
+final _phone = TextEditingController();
   final _emailController = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
@@ -884,13 +886,13 @@ class _AuthScreenState extends State<AuthScreen> {
         if (_emailController.text.trim().isEmpty) return;
         try {
           await FirebaseAuth.instance.sendPasswordResetEmail(email: _emailController.text.trim());
-          _showToast('Password reset email sent!');
+          showToast('Password reset email sent!');
           setState(() {
             _isForgotPassword = false;
             _emailController.clear();
           });
         } catch (e) {
-          _showToast(e.toString());
+          showToast(e.toString());
         }
         return;
       }
@@ -899,16 +901,16 @@ class _AuthScreenState extends State<AuthScreen> {
     if (widget.isSignup) {
       if (step == 0) {
         if (_fullNameController.text.trim().isEmpty || _emailController.text.trim().isEmpty || _password.text.isEmpty) {
-          _showToast('Please fill all required fields');
+          showToast('Please fill all required fields');
           return;
         }
         if (_password.text != _confirmPassword.text) {
-          _showToast('Passwords must match');
+          showToast('Passwords must match');
           return;
         }
         final role = AppScope.of(context).role;
         if (role == UserRole.worker && (_idFrontImage == null || _idBackImage == null)) {
-          _showToast('Please upload both front and back of your ID card');
+          showToast('Please upload both front and back of your ID card');
           return;
         }
 
@@ -922,7 +924,7 @@ class _AuthScreenState extends State<AuthScreen> {
             backUrl = await _uploadToCloudinary(_idBackImage!);
             if (frontUrl == null || backUrl == null) {
               setState(() => _isUploading = false);
-              if (mounted) _showToast('Failed to upload ID images. Try again.');
+              if (mounted) showToast('Failed to upload ID images. Try again.');
               return;
             }
           }
@@ -963,7 +965,7 @@ class _AuthScreenState extends State<AuthScreen> {
         } catch (e) {
           setState(() => _isUploading = false);
           if (mounted) {
-            _showToast(e.toString());
+            showToast(e.toString());
           }
           return;
         }
@@ -971,7 +973,7 @@ class _AuthScreenState extends State<AuthScreen> {
     } else {
       // Login flow
       if (_emailController.text.trim().isEmpty || _password.text.isEmpty) {
-        _showToast('Please enter your email and password');
+        showToast('Please enter your email and password');
         return;
       }
       try {
@@ -982,7 +984,7 @@ class _AuthScreenState extends State<AuthScreen> {
         
         if (!userCredential.user!.emailVerified) {
           if (mounted) {
-            _showToast('Please verify your email first! Check your inbox.');
+            showToast('Please verify your email first! Check your inbox.');
           }
           return;
         }
@@ -995,12 +997,12 @@ class _AuthScreenState extends State<AuthScreen> {
             final status = data['status'] ?? 'pending';
             if (status == 'pending') {
               await FirebaseAuth.instance.signOut();
-              if (mounted) _showToast('Your account is pending admin approval.'), duration: Duration(seconds: 5);
+              if (mounted) showToast('Your account is pending admin approval.');
               return;
             } else if (status == 'rejected') {
               await FirebaseAuth.instance.signOut();
               final reason = data['rejectReason'] ?? 'Not specified';
-              if (mounted) _showToast('Account rejected by admin. Reason: $reason'), duration: const Duration(seconds: 5);
+              if (mounted) showToast('Account rejected by admin. Reason: $reason');
               return;
             }
             AppScope.of(context).selectRole(UserRole.worker);
@@ -1022,7 +1024,7 @@ class _AuthScreenState extends State<AuthScreen> {
         return;
       } catch (e) {
         if (mounted) {
-          _showToast(e.toString());
+          showToast(e.toString());
         }
         return;
       }
@@ -2523,7 +2525,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         label: const Text('15 / Admin'),
                         onPressed: () {
                           Navigator.pop(ctx);
-                          _showToast('SOS Triggered!');
+                          showToast('SOS Triggered!');
                         },
                       ),
                     ],
@@ -2940,7 +2942,7 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         const SizedBox(height: 32),
         FilledButton(
           onPressed: () {
-            _showToast(bilingual(context, 'Complaint Submitted', 'شکایت جمع کر دی گئی'));
+            showToast(bilingual(context, 'Complaint Submitted', 'شکایت جمع کر دی گئی'));
             setState(() => _step = PostJobStep.ratingForm);
           },
           child: Text(bilingual(context, 'Submit Complaint', 'شکایت جمع کریں')),
@@ -3377,7 +3379,7 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
       if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
     } catch (e) {
       setState(() => _isSaving = false);
-      if (mounted) _showToast(e.toString());
+      if (mounted) showToast(e.toString());
     }
   }
 

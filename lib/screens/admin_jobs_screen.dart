@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JobsTab extends StatefulWidget {
   const JobsTab({super.key});
@@ -8,38 +9,8 @@ class JobsTab extends StatefulWidget {
 }
 
 class _JobsTabState extends State<JobsTab> {
-  final List<Map<String, dynamic>> _jobs = [
-    {
-      'title': 'Plumber Repair',
-      'worker': 'Ali Khan',
-      'customer': 'Omer Farooq',
-      'status': 'Completed',
-      'date': '12 May 2025',
-      'amount': '1500'
-    },
-    {
-      'title': 'Electrician Wiring',
-      'worker': 'Usman Ahmed',
-      'customer': 'Raza',
-      'status': 'On Going',
-      'date': '14 May 2025',
-      'amount': '4500'
-    },
-    {
-      'title': 'AC Installation',
-      'worker': 'Ahmed',
-      'customer': 'Asad',
-      'status': 'Completed',
-      'date': '01 Apr 2025',
-      'amount': '3500'
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final completedJobs = _jobs.where((job) => job['status'] == 'Completed').toList();
-    final ongoingJobs = _jobs.where((job) => job['status'] == 'On Going').toList();
-
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -58,26 +29,60 @@ class _JobsTabState extends State<JobsTab> {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildJobsList(completedJobs),
-            _buildJobsList(ongoingJobs),
-          ],
+        body: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('jobs')
+              .orderBy('createdAt', descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(child: Text('Error loading jobs'));
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final allDocs = snapshot.data?.docs ?? [];
+            final completedJobs = allDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return data['status'] == 'completed';
+            }).toList();
+            final ongoingJobs = allDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return data['status'] == 'accepted' || data['status'] == 'pending';
+            }).toList();
+
+            return TabBarView(
+              children: [
+                _buildJobsList(context, completedJobs),
+                _buildJobsList(context, ongoingJobs),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildJobsList(List<Map<String, dynamic>> jobs) {
-    if (jobs.isEmpty) {
+  Widget _buildJobsList(BuildContext context, List<QueryDocumentSnapshot> docs) {
+    if (docs.isEmpty) {
       return const Center(child: Text('No jobs found.'));
     }
     return ListView.builder(
       padding: const EdgeInsets.all(20),
-      itemCount: jobs.length,
+      itemCount: docs.length,
       itemBuilder: (context, index) {
-        final job = jobs[index];
-        final isCompleted = job['status'] == 'Completed';
+        final job = docs[index].data() as Map<String, dynamic>;
+        final isCompleted = job['status'] == 'completed';
+        final title = job['descriptionEn']?.toString() ?? job['descriptionUr']?.toString() ?? 'Service';
+        final worker = job['workerName']?.toString() ?? 'Unknown';
+        final customer = job['customerName']?.toString() ?? 'Unknown';
+        final price = (job['price'] as num?)?.toDouble() ?? 0;
+        final status = job['status']?.toString() ?? '';
+        final timestamp = job['createdAt'] as Timestamp?;
+        final date = timestamp != null
+            ? '${timestamp.toDate().day} ${_monthName(timestamp.toDate().month)} ${timestamp.toDate().year}'
+            : 'N/A';
+
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
@@ -90,26 +95,50 @@ class _JobsTabState extends State<JobsTab> {
               backgroundColor: isCompleted ? Colors.green.shade100 : Colors.orange.shade100,
               child: Icon(isCompleted ? Icons.check_circle : Icons.handyman, color: isCompleted ? Colors.green : Colors.orange),
             ),
-            title: Text(job['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Worker: ${job['worker']} • Customer: ${job['customer']}\nDate: ${job['date']}'),
+            title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('Worker: $worker • Customer: $customer\nDate: $date'),
             isThreeLine: true,
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('Rs. ${job['amount']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                Text(job['status'], style: TextStyle(color: isCompleted ? Colors.green : Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+                Text('Rs. ${price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(_statusLabel(status), style: TextStyle(
+                  color: isCompleted ? Colors.green : Colors.orange,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                )),
               ],
             ),
-            onTap: () => _showJobDetails(context, job),
+            onTap: () => _showJobDetails(context, job, price),
           ),
         );
       },
     );
   }
 
-  void _showJobDetails(BuildContext context, Map<String, dynamic> job) {
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'completed': return 'Completed';
+      case 'accepted': return 'Ongoing';
+      case 'pending': return 'Pending';
+      case 'rejected': return 'Rejected';
+      default: return status;
+    }
+  }
+
+  String _monthName(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
+  }
+
+  void _showJobDetails(BuildContext context, Map<String, dynamic> job, double price) {
     final penaltyController = TextEditingController();
+    final title = job['descriptionEn']?.toString() ?? job['descriptionUr']?.toString() ?? 'Service';
+    final worker = job['workerName']?.toString() ?? 'Unknown';
+    final customer = job['customerName']?.toString() ?? 'Unknown';
+    final status = job['status']?.toString() ?? '';
+    final isCompleted = status == 'completed';
 
     showModalBottomSheet(
       context: context,
@@ -121,33 +150,31 @@ class _JobsTabState extends State<JobsTab> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Job Details: ${job['title']}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('Job Details: $title', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            Text('Worker: ${job['worker']}', style: const TextStyle(fontSize: 16)),
+            Text('Worker: $worker', style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 4),
-            Text('Customer: ${job['customer']}', style: const TextStyle(fontSize: 16)),
+            Text('Customer: $customer', style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 4),
-            Text('Date: ${job['date']}', style: const TextStyle(fontSize: 16)),
+            Text('Status: ${_statusLabel(status)}', style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 4),
-            Text('Status: ${job['status']}', style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 4),
-            Text('Amount: Rs. ${job['amount']}', style: const TextStyle(fontSize: 16)),
+            Text('Amount: Rs. ${price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 16)),
             const Divider(height: 32),
-            if (job['status'] == 'Completed') ...[
+            if (isCompleted) ...[
               const Text('Add Penalty (Optional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => penaltyController.text = (int.parse(job['amount']) * 0.05).toStringAsFixed(0),
+                      onPressed: () => penaltyController.text = (price * 0.05).toStringAsFixed(0),
                       child: const Text('5%'),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => penaltyController.text = (int.parse(job['amount']) * 0.10).toStringAsFixed(0),
+                      onPressed: () => penaltyController.text = (price * 0.10).toStringAsFixed(0),
                       child: const Text('10%'),
                     ),
                   ),
@@ -168,7 +195,7 @@ class _JobsTabState extends State<JobsTab> {
                 child: FilledButton(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Penalty of Rs. ${penaltyController.text} applied to ${job['worker']}')));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Penalty of Rs. ${penaltyController.text} applied to $worker')));
                   },
                   child: const Text('Apply Penalty'),
                 ),

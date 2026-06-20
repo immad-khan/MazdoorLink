@@ -363,7 +363,7 @@ class _HomeTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ..._recentActivity.map((a) => _ActivityTile(activity: a)),
+                _RecentActivityList(),
                 const SizedBox(height: 24),
               ]),
             ),
@@ -393,6 +393,81 @@ class _HomeTab extends StatelessWidget {
 
   static void _openUserManagement(BuildContext context) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => const _UserManagementTab()));
+  }
+}
+
+class _RecentActivityList extends StatelessWidget {
+  const _RecentActivityList();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('jobs')
+          .orderBy('createdAt', descending: true)
+          .limit(5)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final docs = snapshot.data!.docs;
+        if (docs.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Text('No recent activity'),
+          );
+        }
+        return Column(
+          children: docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final title = data['descriptionEn']?.toString() ?? data['descriptionUr']?.toString() ?? 'Job';
+            final status = data['status']?.toString() ?? 'pending';
+            final customer = data['customerName']?.toString() ?? 'Customer';
+            final worker = data['workerName']?.toString() ?? 'Worker';
+            String label;
+            IconData icon;
+            Color color;
+            switch (status) {
+              case 'completed':
+                label = '$title (Completed)';
+                icon = Icons.check_circle_outline;
+                color = const Color(0xFF10B981);
+                break;
+              case 'accepted':
+                label = '$title accepted by $worker';
+                icon = Icons.handyman_outlined;
+                color = const Color(0xFFF59E0B);
+                break;
+              case 'pending':
+                label = 'New job: $title from $customer';
+                icon = Icons.business_center_outlined;
+                color = const Color(0xFF3B82F6);
+                break;
+              case 'rejected':
+                label = '$title rejected by $worker';
+                icon = Icons.cancel_outlined;
+                color = const Color(0xFFEF4444);
+                break;
+              default:
+                label = title;
+                icon = Icons.circle;
+                color = Colors.grey;
+            }
+            return _ActivityTile(activity: {
+              'title': label,
+              'time': '',
+              'icon': icon,
+              'color': color,
+              'status': status,
+            });
+          }).toList(),
+        );
+      },
+    );
   }
 }
 

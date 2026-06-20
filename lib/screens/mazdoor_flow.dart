@@ -1,8 +1,6 @@
+import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
 import 'dart:math' as math;
-import 'package:crypto/crypto.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -58,15 +56,17 @@ class ProfileArguments {
 class SimulatorArguments {
   final WorkerModel worker;
   final JobPostingArguments job;
+  final String? jobId;
 
-  SimulatorArguments({required this.worker, required this.job});
+  SimulatorArguments({required this.worker, required this.job, this.jobId});
 }
 
 class TrackingArguments {
   final WorkerModel worker;
   final JobPostingArguments job;
+  final String? jobId;
 
-  TrackingArguments({required this.worker, required this.job});
+  TrackingArguments({required this.worker, required this.job, this.jobId});
 }
 
 
@@ -2504,19 +2504,31 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                              );
                              return;
                            }
-                           Navigator.pushNamed(
-                             context,
-                             AppRoutes.matchingSimulator,
-                             arguments: SimulatorArguments(
-                               worker: worker,
-                               job: args?.job ?? JobPostingArguments(
-                                 descriptionEn: 'Scheduled Service',
-                                 descriptionUr: 'شیڈولڈ سروس',
-                                 price: offerPrice,
-                                 categoryKey: worker.category.toLowerCase(),
-                               ),
-                             ),
+                           final jobDesc = args?.job ?? JobPostingArguments(
+                             descriptionEn: 'Scheduled Service',
+                             descriptionUr: 'شیڈولڈ سروس',
+                             price: offerPrice,
+                             categoryKey: worker.category.toLowerCase(),
                            );
+                           final jobId = await createJobOffer(
+                             workerId: worker.id,
+                             workerName: worker.name,
+                             descriptionEn: jobDesc.descriptionEn,
+                             descriptionUr: jobDesc.descriptionUr,
+                             price: offerPrice,
+                             categoryKey: worker.category.toLowerCase(),
+                           );
+                           if (context.mounted) {
+                             Navigator.pushNamed(
+                               context,
+                               AppRoutes.matchingSimulator,
+                               arguments: SimulatorArguments(
+                                 worker: worker,
+                                 job: jobDesc,
+                                 jobId: jobId,
+                               ),
+                             );
+                           }
                         }
                       }
                     },
@@ -2527,7 +2539,7 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () {
+                    onPressed: () async {
                       final priceText = _offerController.text.trim();
                       final offerPrice = double.tryParse(priceText);
                       if (offerPrice == null || offerPrice <= 0) {
@@ -2539,19 +2551,31 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         );
                         return;
                       }
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.matchingSimulator,
-                        arguments: SimulatorArguments(
-                          worker: worker,
-                          job: args?.job ?? JobPostingArguments(
-                            descriptionEn: 'Service',
-                            descriptionUr: 'سروس',
-                            price: offerPrice,
-                            categoryKey: worker.category.toLowerCase(),
-                          ),
-                        ),
+                      final jobDesc = args?.job ?? JobPostingArguments(
+                        descriptionEn: 'Service',
+                        descriptionUr: 'سروس',
+                        price: offerPrice,
+                        categoryKey: worker.category.toLowerCase(),
                       );
+                      final jobId = await createJobOffer(
+                        workerId: worker.id,
+                        workerName: worker.name,
+                        descriptionEn: jobDesc.descriptionEn,
+                        descriptionUr: jobDesc.descriptionUr,
+                        price: offerPrice,
+                        categoryKey: worker.category.toLowerCase(),
+                      );
+                      if (context.mounted) {
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.matchingSimulator,
+                          arguments: SimulatorArguments(
+                            worker: worker,
+                            job: jobDesc,
+                            jobId: jobId,
+                          ),
+                        );
+                      }
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF0D9488),
@@ -2613,20 +2637,40 @@ class ServiceTrackingScreen extends StatefulWidget {
 }
 
 class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
-  int _trackingState = 0; // 0: tracking, 1: arrived, 2: completed?
+  int _trackingState = 0; // 0: waiting for accept, 1: accepted/on way, 2: completed
+  StreamSubscription<DocumentSnapshot>? _jobSub;
 
   @override
   void initState() {
     super.initState();
-    _startTimers();
+    _listenToJob();
   }
 
-  void _startTimers() async {
-    await Future.delayed(const Duration(seconds: 10));
-    if (mounted) setState(() => _trackingState = 1);
-    
-    await Future.delayed(const Duration(seconds: 10));
-    if (mounted) setState(() => _trackingState = 2);
+  void _listenToJob() {
+    final args = ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
+    final jobId = args?.jobId;
+    if (jobId == null) return;
+    _jobSub = streamJobById(jobId).listen((snapshot) {
+      if (!mounted) return;
+      final data = snapshot.data() as Map<String, dynamic>?;
+      if (data == null) return;
+      final status = data['status']?.toString() ?? 'pending';
+      setState(() {
+        if (status == 'accepted') {
+          _trackingState = 1;
+        } else if (status == 'completed') {
+          _trackingState = 2;
+        } else {
+          _trackingState = 0;
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _jobSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -2634,6 +2678,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     final args = ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
     final worker = args?.worker;
     final job = args?.job;
+    final jobId = args?.jobId;
 
     if (worker == null) {
       return Scaffold(
@@ -2768,9 +2813,9 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       Expanded(
                         child: Text(
                           _trackingState == 0 
-                              ? bilingual(context, 'Arriving in 12 min', '12 منٹ میں پہنچ رہا ہے')
+                              ? bilingual(context, 'Waiting for worker to accept...', 'ورکر کے قبول کرنے کا انتظار ہے...')
                               : _trackingState == 1 
-                                  ? bilingual(context, 'Worker arrived', 'ورکر پہنچ گیا')
+                                  ? bilingual(context, 'Worker is on the way', 'ورکر راستے میں ہے')
                                   : bilingual(context, 'Worker claims job is completed', 'ورکر کا دعویٰ ہے کہ کام مکمل ہو گیا'),
                           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                         ),
@@ -2779,7 +2824,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       const Icon(Icons.explore),
                     ],
                   ),
-                  if (_trackingState == 0) Text(bilingual(context, '2.5 km away', '2.5 کلومیٹر دور')),
+                  if (_trackingState == 1) Text(bilingual(context, 'Worker has accepted the job', 'ورکر نے کام قبول کر لیا ہے')),
                   if (_trackingState == 2) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -2837,7 +2882,10 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         Expanded(
                           child: FilledButton(
                             onPressed: () {
-                               Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: args);
+                              if (jobId != null) {
+                                updateJobCompleted(jobId);
+                              }
+                              Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: args);
                             },
                             style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
                             child: Text(bilingual(context, 'Yes', 'ہاں')),
@@ -3686,20 +3734,12 @@ class WorkerDashboardScreen extends StatefulWidget {
 
 class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   bool online = true;
-  bool _isEditingPrice = false;
-  double? _negotiatedPrice;
-  late TextEditingController _negotiatePriceController;
-
-  @override
-  void initState() {
-    super.initState();
-    _negotiatePriceController = TextEditingController();
-  }
 
   @override
   Widget build(BuildContext context) {
     final scope = AppScope.of(context);
     final isUrdu = scope.isUrdu;
+    final user = FirebaseAuth.instance.currentUser;
 
     return MzScaffold(
       showBottomNav: true,
@@ -3761,195 +3801,156 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          if (online)
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 260),
-              builder: (_, value, child) => Transform.translate(offset: Offset(0, 12 * (1 - value)), child: Opacity(opacity: value, child: child)),
-              child: Card(
-                shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFF0D9488), width: 2), borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isUrdu ? 'نیا کام!' : 'New Job!',
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+          if (online && user != null)
+            StreamBuilder<QuerySnapshot>(
+              stream: streamWorkerJobs(user.uid),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Text(bilingual(context, 'Error loading jobs', 'ملازمین لوڈ کرنے میں خرابی'));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final jobs = snapshot.data?.docs ?? [];
+                if (jobs.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: Center(
+                      child: Text(
+                        bilingual(context, 'No new jobs yet', 'ابھی تک کوئی نیا کام نہیں'),
+                        style: const TextStyle(color: Colors.grey, fontSize: 16),
                       ),
-                      const SizedBox(height: 6),
-                      Text(isUrdu ? 'کچن کے سنک کی لیکیج' : 'Kitchen sink leakage'),
-                      Text(isUrdu ? '📍 گلبرگ 3 (2.5 کلومیٹر)' : '📍 Gulberg III (2.5 km)'),
-                      const SizedBox(height: 4),
-                      Text(
-                        isUrdu ? 'ادائیگی بذریعہ: کیش' : 'Payment Method: Cash',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                    ),
+                  );
+                }
+                return Column(
+                  children: jobs.map((doc) {
+                    final jobData = doc.data() as Map<String, dynamic>;
+                    final jobId = doc.id;
+                    final descEn = jobData['descriptionEn']?.toString() ?? 'Service';
+                    final descUr = jobData['descriptionUr']?.toString() ?? 'سروس';
+                    final price = (jobData['price'] as num?)?.toDouble() ?? 0;
+                    final payment = jobData['paymentMethod']?.toString() ?? 'Cash';
+                    final customerName = jobData['customerName']?.toString() ?? 'Customer';
+
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 260),
+                      builder: (_, value, child) => Transform.translate(
+                        offset: Offset(0, 12 * (1 - value)),
+                        child: Opacity(opacity: value, child: child),
                       ),
-                      const SizedBox(height: 8),
-                      
-                      // Negotiation / Price display area
-                      if (_isEditingPrice) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _negotiatePriceController,
-                                keyboardType: TextInputType.number,
-                                textDirection: TextDirection.ltr,
-                                decoration: InputDecoration(
-                                  labelText: isUrdu ? 'پیشکش قیمت' : 'Offer Price (Rs.)',
-                                  prefixIcon: Container(
-                                    width: 40,
-                                    alignment: Alignment.center,
-                                    child: const Text('PKR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () {
-                                final enteredPrice = double.tryParse(_negotiatePriceController.text.trim());
-                                if (enteredPrice != null && enteredPrice > 0) {
-                                  setState(() {
-                                    _negotiatedPrice = enteredPrice;
-                                    _isEditingPrice = false;
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(isUrdu 
-                                          ? 'پیشکش روپے ${enteredPrice.toStringAsFixed(0)} بھیج دی گئی ہے!' 
-                                          : 'Negotiation offer of Rs. ${enteredPrice.toStringAsFixed(0)} sent!'),
-                                      backgroundColor: const Color(0xFF0D9488),
-                                    ),
-                                  );
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0D9488),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              ),
-                              child: Text(isUrdu ? 'بھیجیں' : 'Send'),
-                            ),
-                            const SizedBox(width: 6),
-                            OutlinedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _isEditingPrice = false;
-                                });
-                              },
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              ),
-                              child: Text(isUrdu ? 'منسوخ' : 'Cancel'),
-                            ),
-                          ],
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(
+                          side: const BorderSide(color: Color(0xFF0D9488), width: 2),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ] else ...[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _negotiatedPrice != null
-                                  ? 'Rs. ${_negotiatedPrice!.toStringAsFixed(0)}'
-                                  : 'Rs. 1,000',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0D9488),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isUrdu ? 'نیا کام!' : 'New Job!',
+                                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                               ),
-                            ),
-                            if (_negotiatedPrice != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF59E0B).withOpacity(0.12),
-                                  border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.5)),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  isUrdu ? 'باہمی پیشکش بھیج دی گئی' : 'Offer Sent',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFFD97706),
-                                  ),
+                              const SizedBox(height: 6),
+                              Text(isUrdu ? descUr : descEn, style: const TextStyle(fontSize: 16)),
+                              Text(
+                                '${bilingual(context, 'Customer:', 'گاہک:')} $customerName',
+                                style: const TextStyle(color: Colors.black54, fontSize: 13),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${bilingual(context, 'Payment:', 'ادائیگی:')} $payment',
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Rs. ${price.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0D9488),
                                 ),
                               ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      
-                      // Action buttons row
-                      if (!_isEditingPrice)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _negotiatedPrice = null;
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(isUrdu ? 'کام رد کر دیا گیا' : 'Job rejected'),
-                                      backgroundColor: Colors.redAccent,
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () {
+                                        updateJobStatus(jobId, 'rejected');
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(isUrdu ? 'کام رد کر دیا گیا' : 'Job rejected'),
+                                            backgroundColor: Colors.redAccent,
+                                          ),
+                                        );
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.redAccent,
+                                        side: const BorderSide(color: Colors.redAccent),
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                      ),
+                                      child: Text(isUrdu ? 'رد کریں' : 'Reject'),
                                     ),
-                                  );
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.redAccent,
-                                  side: const BorderSide(color: Colors.redAccent),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                ),
-                                child: Text(isUrdu ? 'رد کریں' : 'Reject'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              flex: 2,
-                              child: FilledButton(
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (_) => AlertDialog(
-                                      title: Text(isUrdu ? 'تصدیق کریں' : 'Confirm?'),
-                                      content: Text(isUrdu ? 'کیا آپ اس کام کو قبول کرنا چاہتے ہیں؟' : 'Are you sure you want to accept this job?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: Text(isUrdu ? 'نہیں' : 'No', style: const TextStyle(color: Colors.red)),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            Navigator.push(context, MaterialPageRoute(
-                                              builder: (_) => WorkerTrackingScreen(
-                                                jobPrice: _negotiatedPrice ?? 1000.0,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    flex: 2,
+                                    child: FilledButton(
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => AlertDialog(
+                                            title: Text(isUrdu ? 'تصدیق کریں' : 'Confirm?'),
+                                            content: Text(isUrdu
+                                                ? 'کیا آپ اس کام کو قبول کرنا چاہتے ہیں؟'
+                                                : 'Are you sure you want to accept this job?'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: Text(isUrdu ? 'نہیں' : 'No',
+                                                    style: const TextStyle(color: Colors.red)),
                                               ),
-                                            ));
-                                          },
-                                          child: Text(isUrdu ? 'جی ہاں' : 'Yes'),
-                                        ),
-                                      ],
+                                              TextButton(
+                                                onPressed: () {
+                                                  Navigator.pop(context);
+                                                  updateJobStatus(jobId, 'accepted');
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => WorkerTrackingScreen(
+                                                        jobPrice: price,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                child: Text(isUrdu ? 'جی ہاں' : 'Yes'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                      style: FilledButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                      ),
+                                      child: Text(isUrdu ? 'قبول کریں' : 'Accept'),
                                     ),
-                                  );
-                                },
-                                style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                ),
-                                child: Text(isUrdu ? 'قبول کریں' : 'Accept'),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                    ],
-                  ),
-                ),
-              ),
-            )
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -3984,7 +3985,13 @@ class JobNotificationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final price = ModalRoute.of(context)?.settings.arguments as double? ?? 1000.0;
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final descUr = args?['descriptionUr']?.toString() ?? 'سروس';
+    final descEn = args?['descriptionEn']?.toString() ?? 'Service';
+    final price = (args?['price'] as num?)?.toDouble() ?? 1000.0;
+    final payment = args?['paymentMethod']?.toString() ?? 'Cash';
+    final customerName = args?['customerName']?.toString() ?? 'Customer';
+    final isUrdu = AppScope.of(context).isUrdu;
 
     return MzScaffold(
       showBottomNav: false,
@@ -4014,17 +4021,19 @@ class JobNotificationScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('✅ نیا کام!', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
+                      Text(
+                        isUrdu ? '✅ نیا کام!' : '✅ New Job!',
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+                      ),
                       const SizedBox(height: 6),
-                      const Text('گاہک آپ کا انتظار کر رہا ہے'),
+                      Text(isUrdu ? 'گاہک آپ کا انتظار کر رہا ہے' : 'Customer is waiting for you'),
                       const SizedBox(height: 8),
-                      const Text('کچن کے سنک کی لیکیج'),
-                      const Text('📍 مکان 42، سیکٹر F-8/4'),
-                      const Text('🕐 ابھی'),
+                      Text(isUrdu ? descUr : descEn, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      Text(isUrdu ? '👤 $customerName' : '👤 $customerName'),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Payment Method: Cash',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                      Text(
+                        isUrdu ? 'ادائیگی بذریعہ: $payment' : 'Payment Method: $payment',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
                       ),
                       const SizedBox(height: 8),
                       Text('Rs. ${price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700)),
@@ -4034,7 +4043,7 @@ class JobNotificationScreen extends StatelessWidget {
                           Expanded(
                             child: OutlinedButton(
                               onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard),
-                              child: const Text('رد'),
+                              child: Text(isUrdu ? 'رد' : 'Reject'),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -4043,44 +4052,11 @@ class JobNotificationScreen extends StatelessWidget {
                             child: FilledButton.icon(
                               onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.sharedChat),
                               icon: const Icon(Icons.explore),
-                              label: const Text('قبول کریں'),
+                              label: Text(isUrdu ? 'قبول کریں' : 'Accept'),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200)
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
-                                SizedBox(width: 8),
-                                Expanded(child: Text('ایڈمن نوٹس (جرمانہ)', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            const Text('ایڈمن نے پچھلے کام کی شکایت پر 10% کٹوتی کی ہے۔', style: TextStyle(color: Colors.red, fontSize: 13)),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 36,
-                              child: OutlinedButton.icon(
-                                onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedChat),
-                                icon: const Icon(Icons.chat_bubble_outline, size: 16, color: Colors.red),
-                                label: const Text('ایڈمن سے بات کریں', style: TextStyle(color: Colors.red, fontSize: 12)),
-                                style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red)),
-                              ),
-                            )
-                          ],
-                        )
-                      )
                     ],
                   ),
                 ),
@@ -4184,131 +4160,152 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
 
     return MzScaffold(
       showBottomNav: true,
-      child: ListView(
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(18, 22, 18, 24),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [Color(0xFF0D9488), Color(0xFF14B8A6)]),
-              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isUrdu ? 'میری آمدنی' : 'My Earnings',
-                  style: const TextStyle(fontSize: 28, color: Colors.white, fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  isUrdu ? 'اس ہفتے کی کمائی' : 'Earnings this week',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 8),
-                Text(isUrdu ? '12,500 روپے' : 'Rs. 12,500', style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    ChoiceChip(
-                      label: Text(isUrdu ? 'ہفتہ' : 'Week'),
-                      selected: weekly,
-                      onSelected: (_) => setState(() => weekly = true),
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: Text(isUrdu ? 'مہینہ' : 'Month'),
-                      selected: !weekly,
-                      onSelected: (_) => setState(() => weekly = false),
-                    ),
-                  ],
-                )
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ColorStatCard(
-                    color: const Color(0xFFDCFCE7),
-                    label: isUrdu ? 'مکمل' : 'Completed',
-                    value: isUrdu ? '15 کام' : '15 jobs',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _ColorStatCard(
-                    color: const Color(0xFFDBEAFE),
-                    label: isUrdu ? 'نکلوائی' : 'Withdrawn',
-                    value: isUrdu ? '8,000 روپے' : 'Rs. 8,000',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0E7FF),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: StreamBuilder<double>(
+        stream: streamWorkerEarnings(),
+        builder: (context, earningsSnapshot) {
+          final totalEarnings = earningsSnapshot.data ?? 0;
+
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('jobs')
+                .where('workerId', isEqualTo: FirebaseAuth.instance.currentUser?.uid ?? '')
+                .where('status', whereIn: ['accepted', 'completed'])
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
+            builder: (context, jobsSnapshot) {
+              final jobs = jobsSnapshot.data?.docs ?? [];
+              final completedCount = jobs.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return data['status'] == 'completed';
+              }).length;
+
+              return ListView(
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(isUrdu ? 'ٹاپ اپ بیلنس' : 'Top-up Balance', style: const TextStyle(fontSize: 18)),
-                      const SizedBox(height: 6),
-                      Text(isUrdu ? '$_topupBalance روپے' : 'Rs. $_topupBalance', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(18, 22, 18, 24),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(colors: [Color(0xFF0D9488), Color(0xFF14B8A6)]),
+                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isUrdu ? 'میری آمدنی' : 'My Earnings',
+                          style: const TextStyle(fontSize: 28, color: Colors.white, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          isUrdu ? 'اب تک کی کل کمائی' : 'Total earnings',
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          isUrdu ? '${totalEarnings.toStringAsFixed(0)} روپے' : 'Rs. ${totalEarnings.toStringAsFixed(0)}',
+                          style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
                   ),
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
-                    icon: const Icon(Icons.add_card),
-                    label: Text(isUrdu ? 'ٹاپ اپ کریں' : 'Top-up'),
-                    onPressed: () => _showTopUpDialog(context, isUrdu),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _ColorStatCard(
+                            color: const Color(0xFFDCFCE7),
+                            label: isUrdu ? 'مکمل' : 'Completed',
+                            value: isUrdu ? '$completedCount کام' : '$completedCount jobs',
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _ColorStatCard(
+                            color: const Color(0xFFDBEAFE),
+                            label: isUrdu ? 'کل کمائی' : 'Total Earned',
+                            value: isUrdu ? '${totalEarnings.toStringAsFixed(0)} روپے' : 'Rs. ${totalEarnings.toStringAsFixed(0)}',
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0E7FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(isUrdu ? 'ٹاپ اپ بیلنس' : 'Top-up Balance', style: const TextStyle(fontSize: 18)),
+                              const SizedBox(height: 6),
+                              Text(isUrdu ? '$_topupBalance روپے' : 'Rs. $_topupBalance', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
+                            icon: const Icon(Icons.add_card),
+                            label: Text(isUrdu ? 'ٹاپ اپ کریں' : 'Top-up'),
+                            onPressed: () => _showTopUpDialog(context, isUrdu),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      isUrdu ? 'حالیہ لین دین' : 'Recent Transactions',
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (jobs.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Text(
+                          isUrdu ? 'ابھی تک کوئی لین دین نہیں' : 'No transactions yet',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    )
+                  else
+                    ...jobs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final desc = isUrdu
+                          ? (data['descriptionUr']?.toString() ?? data['descriptionEn']?.toString() ?? 'Service')
+                          : (data['descriptionEn']?.toString() ?? data['descriptionUr']?.toString() ?? 'Service');
+                      final price = (data['price'] as num?)?.toDouble() ?? 0;
+                      final status = data['status']?.toString() ?? '';
+                      final customer = data['customerName']?.toString() ?? 'Customer';
+                      return ListTile(
+                        leading: Icon(
+                          status == 'completed' ? Icons.check_circle : Icons.south_west,
+                          color: status == 'completed' ? Colors.green : Colors.orange,
+                        ),
+                        title: Text(desc),
+                        subtitle: Text(
+                          isUrdu ? '$customer • ${status == "completed" ? "مکمل" : "جاری"}' : '$customer • ${status == "completed" ? "Completed" : "In progress"}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        trailing: Text(
+                          '+${price.toStringAsFixed(0)}',
+                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    }),
                 ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              isUrdu ? 'حالیہ لین دین' : 'Recent Transactions',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ListTile(
-            leading: const Icon(Icons.south_west, color: Colors.green),
-            title: Text(isUrdu ? 'کچن پلمبنگ' : 'Kitchen Plumber'),
-            subtitle: Text('12 May, 2:30 PM • Adnan Ali (PKR 1000 - PKR 0 Penalty)', style: const TextStyle(fontSize: 12)),
-            trailing: const Text('+1,000', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-          ),
-          ListTile(
-            leading: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-            title: Text(isUrdu ? 'الیکٹریکل وائرنگ' : 'Electrician Wiring'),
-            subtitle: Text('10 May, 4:00 PM • Raza (10% Damage Penalty)', style: const TextStyle(fontSize: 12)),
-            trailing: const Text('+4,500', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-          ),
-          ListTile(
-            leading: const Icon(Icons.north_east, color: Colors.red),
-            title: Text(isUrdu ? 'نکالے' : 'Withdrawn'),
-            subtitle: Text('10 May, 8:00 AM • EasyPaisa Transfer', style: const TextStyle(fontSize: 12)),
-            trailing: const Text('-5,000', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-          ),
-          ListTile(
-            leading: const Icon(Icons.south_west, color: Colors.green),
-            title: Text(isUrdu ? 'موٹر مرمت' : 'Motor Repair'),
-            subtitle: Text('08 May, 1:15 PM • Usman (PKR 1500)', style: const TextStyle(fontSize: 12)),
-            trailing: const Text('+1,500', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-          ),
-        ],
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -4836,11 +4833,17 @@ class _WorkerAcceptanceSimulatorScreenState extends State<WorkerAcceptanceSimula
     super.dispose();
   }
 
+  String? _jobId;
+
   void _onAccept(WorkerModel worker, JobPostingArguments job) {
     setState(() {
       _currentState = 2;
     });
     _successController.forward();
+
+    if (_jobId != null) {
+      updateJobStatus(_jobId!, 'accepted');
+    }
     
     // Auto-route to tracking screen after 2 seconds
     Future.delayed(const Duration(milliseconds: 2000), () {
@@ -4855,6 +4858,9 @@ class _WorkerAcceptanceSimulatorScreenState extends State<WorkerAcceptanceSimula
   }
 
   void _onDecline() {
+    if (_jobId != null) {
+      updateJobStatus(_jobId!, 'rejected');
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -4881,6 +4887,7 @@ class _WorkerAcceptanceSimulatorScreenState extends State<WorkerAcceptanceSimula
       price: 1000,
       categoryKey: 'other',
     );
+    _jobId = args?.jobId;
 
     if (worker == null) {
       return Scaffold(

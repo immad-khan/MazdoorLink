@@ -108,3 +108,91 @@ Future<void> updateUserProfile({
     await FirebaseFirestore.instance.collection('users').doc(user.uid).update(updates);
   }
 }
+
+Future<String?> createJobOffer({
+  required String? workerId,
+  required String workerName,
+  required String descriptionEn,
+  required String descriptionUr,
+  required double price,
+  required String categoryKey,
+  String paymentMethod = 'Cash',
+}) async {
+  final customer = FirebaseAuth.instance.currentUser;
+  if (customer == null || workerId == null) return null;
+
+  final customerDoc = await FirebaseFirestore.instance.collection('users').doc(customer.uid).get();
+  final customerName = customerDoc.data()?['name']?.toString() ?? customer.displayName ?? 'Customer';
+
+  final docRef = await FirebaseFirestore.instance.collection('jobs').add({
+    'customerId': customer.uid,
+    'customerName': customerName,
+    'workerId': workerId,
+    'workerName': workerName,
+    'descriptionEn': descriptionEn,
+    'descriptionUr': descriptionUr,
+    'price': price,
+    'categoryKey': categoryKey,
+    'paymentMethod': paymentMethod,
+    'status': 'pending',
+    'createdAt': FieldValue.serverTimestamp(),
+  });
+
+  return docRef.id;
+}
+
+Future<void> updateJobStatus(String jobId, String status) async {
+  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+    'status': status,
+  });
+}
+
+Stream<QuerySnapshot> streamWorkerJobs(String workerId) {
+  return FirebaseFirestore.instance
+      .collection('jobs')
+      .where('workerId', isEqualTo: workerId)
+      .where('status', isEqualTo: 'pending')
+      .orderBy('createdAt', descending: true)
+      .snapshots();
+}
+
+Stream<QuerySnapshot> streamWorkerActiveJobs(String workerId) {
+  return FirebaseFirestore.instance
+      .collection('jobs')
+      .where('workerId', isEqualTo: workerId)
+      .where('status', whereIn: ['pending', 'accepted'])
+      .orderBy('createdAt', descending: true)
+      .snapshots();
+}
+
+Stream<double> streamWorkerEarnings() {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return const Stream.empty();
+  return FirebaseFirestore.instance
+      .collection('jobs')
+      .where('workerId', isEqualTo: user.uid)
+      .where('status', whereIn: ['accepted', 'completed'])
+      .snapshots()
+      .map((snapshot) => snapshot.docs.fold<double>(0, (total, doc) {
+            final data = doc.data();
+            final price = data['price'];
+            return total + ((price as num?)?.toDouble() ?? 0);
+          }));
+}
+
+Stream<QuerySnapshot> streamAllJobs() {
+  return FirebaseFirestore.instance
+      .collection('jobs')
+      .orderBy('createdAt', descending: true)
+      .snapshots();
+}
+
+Future<void> updateJobCompleted(String jobId) async {
+  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+    'status': 'completed',
+  });
+}
+
+Stream<DocumentSnapshot> streamJobById(String jobId) {
+  return FirebaseFirestore.instance.collection('jobs').doc(jobId).snapshots();
+}

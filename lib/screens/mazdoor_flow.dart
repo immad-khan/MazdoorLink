@@ -23,6 +23,8 @@ import 'privacy_settings_screen.dart';
 import 'voice_navigation_screen.dart';
 import 'issue_selection_screen.dart';
 import 'worker_services_setup_screen.dart';
+import '../services/cloudinary_service.dart';
+import '../services/workers_service.dart';
 import 'recommendation_arguments.dart';
 import 'cancel_job_screen.dart';
 import 'customer_support_screen.dart';
@@ -778,6 +780,12 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   String? _emailError;
   String? _passwordError;
+  String? _nameError;
+  String? _phoneError;
+  String? _confirmPasswordError;
+  String? _idFrontError;
+  String? _idBackError;
+  String? _imageSizeError;
 
   void _validateEmail(String val) {
     if (val.isEmpty) {
@@ -811,6 +819,31 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  void _validateSignupFields() {
+    final role = AppScope.of(context).role;
+    setState(() {
+      _nameError = _fullNameController.text.trim().isEmpty ? 'Full name is required' : null;
+      _emailError = _emailController.text.trim().isEmpty
+          ? 'Email is required'
+          : (RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(_emailController.text.trim())
+              ? null
+              : 'Enter a valid email address');
+      _phoneError = _phone.text.trim().isEmpty ? 'Mobile number is required' : null;
+      if (_password.text.isEmpty) {
+        _passwordError = 'Password is required';
+      } else if (_passwordError == null) {
+        _validatePassword(_password.text);
+      }
+      _confirmPasswordError = _confirmPassword.text.isEmpty
+          ? 'Please confirm your password'
+          : (_password.text != _confirmPassword.text ? 'Passwords must match' : null);
+      if (role == UserRole.worker) {
+        _idFrontError = _idFrontImage == null ? 'Front ID image is required' : null;
+        _idBackError = _idBackImage == null ? 'Back ID image is required' : null;
+      }
+    });
+  }
+
 final _phone = TextEditingController();
   final _emailController = TextEditingController();
   final _password = TextEditingController();
@@ -832,38 +865,29 @@ final _phone = TextEditingController();
   Future<void> _pickImage(bool isFront) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      final file = File(image.path);
+      final sizeInMb = file.lengthSync() / (1024 * 1024);
+      if (sizeInMb > 5) {
+        setState(() {
+          _imageSizeError = 'Image size must be less than 5MB (current: ${sizeInMb.toStringAsFixed(1)}MB)';
+        });
+        return;
+      }
       setState(() {
-        if (isFront) _idFrontImage = File(image.path);
-        else _idBackImage = File(image.path);
+        _imageSizeError = null;
+        if (isFront) {
+          _idFrontImage = file;
+          _idFrontError = null;
+        } else {
+          _idBackImage = file;
+          _idBackError = null;
+        }
       });
     }
   }
 
   Future<String?> _uploadToCloudinary(File imageFile) async {
-    const cloudName = 'dcdhsyj86';
-    const apiKey = '921185953673167';
-    const apiSecret = 'P-Vro4fA8_gF9dnTcHgKnOQ-xGI';
-    final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    
-    final strToSign = "timestamp=$timestamp$apiSecret";
-    final bytes = utf8.encode(strToSign);
-    final digest = sha1.convert(bytes);
-    final signature = digest.toString();
-
-    var uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
-    var request = http.MultipartRequest('POST', uri);
-    request.fields['api_key'] = apiKey;
-    request.fields['timestamp'] = timestamp.toString();
-    request.fields['signature'] = signature;
-    request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
-    
-    var response = await request.send();
-    if (response.statusCode == 200) {
-      var responseData = await response.stream.bytesToString();
-      var jsonMap = json.decode(responseData);
-      return jsonMap['secure_url'];
-    }
-    return null;
+    return CloudinaryService.uploadImage(imageFile);
   }
 
   @override
@@ -880,6 +904,12 @@ final _phone = TextEditingController();
     for (final n in _otpNodes) {
       n.dispose();
     }
+    _imageSizeError = null;
+    _nameError = null;
+    _phoneError = null;
+    _confirmPasswordError = null;
+    _idFrontError = null;
+    _idBackError = null;
     super.dispose();
   }
 
@@ -903,16 +933,13 @@ final _phone = TextEditingController();
 
     if (widget.isSignup) {
       if (step == 0) {
-        if (_fullNameController.text.trim().isEmpty || _emailController.text.trim().isEmpty || _password.text.isEmpty) {
-          showToast('Please fill all required fields');
-          return;
-        }
-        if (_password.text != _confirmPassword.text) {
-          showToast('Passwords must match');
-          return;
-        }
+        _validateSignupFields();
         final role = AppScope.of(context).role;
-        if (role == UserRole.worker && (_idFrontImage == null || _idBackImage == null)) {
+        if (_nameError != null || _emailError != null || _phoneError != null || _passwordError != null || _confirmPasswordError != null) {
+          showToast('Please fill all required fields correctly');
+          return;
+        }
+        if (role == UserRole.worker && (_idFrontError != null || _idBackError != null)) {
           showToast('Please upload both front and back of your ID card');
           return;
         }
@@ -975,7 +1002,15 @@ final _phone = TextEditingController();
       } 
     } else {
       // Login flow
-      if (_emailController.text.trim().isEmpty || _password.text.isEmpty) {
+      setState(() {
+        _emailError = _emailController.text.trim().isEmpty
+            ? 'Email is required'
+            : (RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(_emailController.text.trim())
+                ? null
+                : 'Enter a valid email address');
+        _passwordError = _password.text.isEmpty ? 'Password is required' : null;
+      });
+      if (_emailError != null || _passwordError != null) {
         showToast('Please enter your email and password');
         return;
       }
@@ -1161,8 +1196,10 @@ final _phone = TextEditingController();
         TextField(
           controller: _password,
           obscureText: _obscurePassword,
+          onChanged: (_) { if (_passwordError != null) setState(() => _passwordError = null); },
           decoration: InputDecoration(
             hintText: 'Enter your password',
+            errorText: _passwordError,
             suffixIcon: IconButton(
               icon: Icon((_obscurePassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
               onPressed: () => setState(() => _obscurePassword = !(_obscurePassword)),
@@ -1231,9 +1268,11 @@ final _phone = TextEditingController();
           const SizedBox(height: 8),
           TextField(
             controller: _fullNameController,
+            onChanged: (_) { if (_nameError != null) setState(() => _nameError = null); },
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.person_outline),
               hintText: 'Enter your full name',
+              errorText: _nameError,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
@@ -1259,6 +1298,7 @@ final _phone = TextEditingController();
             child: TextField(
               controller: _phone,
               keyboardType: TextInputType.phone,
+              onChanged: (_) { if (_phoneError != null) setState(() => _phoneError = null); },
               decoration: InputDecoration(
                 prefixIcon: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1266,6 +1306,7 @@ final _phone = TextEditingController();
                 ),
                 prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
                 hintText: '3038064241',
+                errorText: _phoneError,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -1298,9 +1339,13 @@ final _phone = TextEditingController();
           TextField(
             controller: _confirmPassword,
             obscureText: _obscureConfirmPassword,
+            onChanged: (_) {
+              if (_confirmPasswordError != null) setState(() => _confirmPasswordError = null);
+            },
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.lock_outline),
               hintText: 'Confirm your password',
+              errorText: _confirmPasswordError,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               suffixIcon: IconButton(
                 icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
@@ -1320,42 +1365,73 @@ final _phone = TextEditingController();
             Row(
               children: [
                 Expanded(
-                  child: InkWell(
-                    onTap: () => _pickImage(true),
-                    child: Container(
-                      height: 100,
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300)
+                  child: Column(
+                    children: [
+                      InkWell(
+                        onTap: () => _pickImage(true),
+                        child: Container(
+                          height: 100,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: _idFrontError != null ? Colors.red : Colors.grey.shade300)
+                          ),
+                          child: _idFrontImage != null 
+                              ? Image.file(_idFrontImage!, fit: BoxFit.cover)
+                              : const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
+                        ),
                       ),
-                      child: _idFrontImage != null 
-                          ? Image.file(_idFrontImage!, fit: BoxFit.cover)
-                          : const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
-                    ),
+                      if (_idFrontError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(_idFrontError!, style: const TextStyle(color: Colors.red, fontSize: 11)),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: InkWell(
-                    onTap: () => _pickImage(false),
-                    child: Container(
-                      height: 100,
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300)
+                  child: Column(
+                    children: [
+                      InkWell(
+                        onTap: () => _pickImage(false),
+                        child: Container(
+                          height: 100,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: _idBackError != null ? Colors.red : Colors.grey.shade300)
+                          ),
+                          child: _idBackImage != null
+                              ? Image.file(_idBackImage!, fit: BoxFit.cover)
+                              : const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
+                        ),
                       ),
-                      child: _idBackImage != null
-                          ? Image.file(_idBackImage!, fit: BoxFit.cover)
-                          : const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
-                    ),
+                      if (_idBackError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(_idBackError!, style: const TextStyle(color: Colors.red, fontSize: 11)),
+                        ),
+                    ],
                   ),
                 ),
               ],
             ),
+            if (_imageSizeError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber, color: Colors.red, size: 14),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(_imageSizeError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 24),
           ],
           SizedBox(
@@ -1598,22 +1674,53 @@ class CustomerHomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          for (final w in workers)
-            ListTile(
-              leading: CircleAvatar(backgroundImage: NetworkImage(w.image)),
-              title: Text(w.name),
-              subtitle: Text('⭐ ${w.rating}  ${w.category}  • ${w.distanceKm} km'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.pushNamed(
-                context, 
-                AppRoutes.workerProfile,
-                arguments: ProfileArguments(
-                  worker: w,
-                  job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
-                ),
-              ),
-            ),
-          const SizedBox(height: 10),
+          StreamBuilder<List<WorkerModel>>(
+            stream: streamApprovedWorkers(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(bilingual(context, 'Failed to load workers', 'ورکرز لوڈ کرنے میں ناکامی')),
+                );
+              }
+              if (!snapshot.hasData) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final realWorkers = snapshot.data!;
+              if (realWorkers.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(bilingual(context, 'No workers available yet', 'ابھی کوئی ورکر دستیاب نہیں')),
+                );
+              }
+              return Column(
+                children: [
+                  for (final w in realWorkers)
+                    ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: w.image.isNotEmpty ? NetworkImage(w.image) : null,
+                        child: w.image.isEmpty ? Text(w.name.isNotEmpty ? w.name[0].toUpperCase() : '?') : null,
+                      ),
+                      title: Text(w.name),
+                      subtitle: Text('${w.category}${w.price.isNotEmpty ? '  •  ${w.price}' : ''}'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        AppRoutes.workerProfile,
+                        arguments: ProfileArguments(
+                          worker: w,
+                          job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 10),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
@@ -1950,17 +2057,23 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
 
 
 
-class WorkerRecommendationsScreen extends StatelessWidget {
+class WorkerRecommendationsScreen extends StatefulWidget {
   const WorkerRecommendationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final rawArgs = ModalRoute.of(context)?.settings.arguments;
-    final isUrdu = AppScope.of(context).isUrdu;
+  State<WorkerRecommendationsScreen> createState() => _WorkerRecommendationsScreenState();
+}
 
-    List<IssueItem> selectedIssues = [];
-    String categoryKey = 'electrician';
-    String paymentMethod = 'Cash';
+class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScreen> {
+  List<IssueItem> selectedIssues = [];
+  String categoryKey = 'electrician';
+  String paymentMethod = 'Cash';
+  late Future<List<WorkerModel>> _workersFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final rawArgs = ModalRoute.of(context)?.settings.arguments;
 
     if (rawArgs is RecommendationArguments) {
       selectedIssues = rawArgs.selectedIssues;
@@ -1979,207 +2092,216 @@ class WorkerRecommendationsScreen extends StatelessWidget {
       ];
     }
 
-    final List<WorkerModel> matchedWorkers = [];
-    for (int i = 0; i < selectedIssues.length; i++) {
-      final issue = selectedIssues[i];
-      final base = workers[i % workers.length];
-      final double workerPrice = issue.price + (i * 50);
+    _workersFuture = getWorkersByCategory(categoryKey);
+  }
 
-      matchedWorkers.add(WorkerModel(
-        name: base.name,
-        category: categoryKey == 'Plumber' ? 'Plumber' : 'Electrician',
-        rating: base.rating,
-        reviews: base.reviews,
-        distanceKm: (i + 1) * 1.5,
-        price: 'Rs. ${workerPrice.toStringAsFixed(0)}',
-        image: base.image,
-        skillsEn: [issue.titleEn, ...base.skillsEn],
-        skillsUr: [issue.titleUr, ...base.skillsUr],
-      ));
-    }
+  @override
+  Widget build(BuildContext context) {
+    final isUrdu = AppScope.of(context).isUrdu;
 
     return MzScaffold(
       showBottomNav: false,
       showBack: true,
       title: bilingual(context, 'Available Workers', 'دستیاب ورکرز'),
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0D9488), Color(0xFF0891B2)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+      child: FutureBuilder<List<WorkerModel>>(
+        future: _workersFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(bilingual(context, 'Failed to load workers', 'ورکرز لوڈ کرنے میں ناکامی')),
+            );
+          }
+          final matchedWorkers = snapshot.data ?? [];
+          if (matchedWorkers.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  bilingual(context, 'No workers found for this category. Check back later.', 'اس زمرے میں کوئی ورکر نہیں ملا۔ بعد میں دوبارہ چیک کریں۔'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, color: Colors.black54),
+                ),
               ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.psychology, color: Colors.white, size: 26),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isUrdu
-                            ? '${matchedWorkers.length} ورکرز دستیاب ہیں'
-                            : '${matchedWorkers.length} workers available',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isUrdu ? 'قیمت دیکھنے کے لیے پیشکش کریں' : 'Make an offer to negotiate price',
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0D9488), Color(0xFF0891B2)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          for (var i = 0; i < matchedWorkers.length; i++)
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: Duration(milliseconds: 320 + i * 100),
-              builder: (_, value, child) => Opacity(
-                opacity: value,
-                child: Transform.translate(offset: Offset(0, (1 - value) * 18), child: child),
-              ),
-              child: Card(
-                margin: const EdgeInsets.only(bottom: 14),
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  side: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0FDFA),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFF99F6E4)),
-                        ),
-                        child: Text(
-                          isUrdu
-                              ? '📌 ${selectedIssues[i].titleUr}'
-                              : '📌 ${selectedIssues[i].titleEn}',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
+                child: Row(
+                  children: [
+                    const Icon(Icons.psychology, color: Colors.white, size: 26),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              matchedWorkers[i].image,
-                              width: 62,
-                              height: 62,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const CircleAvatar(child: Icon(Icons.person)),
-                            ),
+                          Text(
+                            isUrdu
+                                ? '${matchedWorkers.length} ورکرز دستیاب ہیں'
+                                : '${matchedWorkers.length} workers available',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15),
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  matchedWorkers[i].name,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.darkerText),
-                                ),
-                                const SizedBox(height: 3),
-                                Row(
+                          const SizedBox(height: 2),
+                          Text(
+                            isUrdu ? 'قیمت دیکھنے کے لیے پیشکش کریں' : 'Make an offer to negotiate price',
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              for (var i = 0; i < matchedWorkers.length; i++)
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: Duration(milliseconds: 320 + i * 100),
+                  builder: (_, value, child) => Opacity(
+                    opacity: value,
+                    child: Transform.translate(offset: Offset(0, (1 - value) * 18), child: child),
+                  ),
+                  child: Card(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (selectedIssues.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDFA),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFF99F6E4)),
+                              ),
+                              child: Text(
+                                isUrdu
+                                    ? '📌 ${selectedIssues[i % selectedIssues.length].titleUr}'
+                                    : '📌 ${selectedIssues[i % selectedIssues.length].titleEn}',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                              ),
+                            ),
+                          if (selectedIssues.isNotEmpty) const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: matchedWorkers[i].image.isNotEmpty
+                                    ? Image.network(
+                                        matchedWorkers[i].image,
+                                        width: 62,
+                                        height: 62,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => CircleAvatar(
+                                          radius: 31,
+                                          child: Text(matchedWorkers[i].name.isNotEmpty ? matchedWorkers[i].name[0].toUpperCase() : '?'),
+                                        ),
+                                      )
+                                    : CircleAvatar(
+                                        radius: 31,
+                                        child: Text(matchedWorkers[i].name.isNotEmpty ? matchedWorkers[i].name[0].toUpperCase() : '?'),
+                                      ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.star, color: Colors.amber, size: 15),
-                                    const SizedBox(width: 3),
                                     Text(
-                                      '${matchedWorkers[i].rating} • ${matchedWorkers[i].reviews} ${isUrdu ? 'جائزے' : 'reviews'}',
+                                      matchedWorkers[i].name,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.darkerText),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      matchedWorkers[i].category,
                                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                                     ),
+                                    if (matchedWorkers[i].price.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        matchedWorkers[i].price,
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                                      ),
+                                    ],
                                   ],
                                 ),
-                                const SizedBox(height: 3),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.location_on, size: 14, color: Color(0xFF0D9488)),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      isUrdu ? '${matchedWorkers[i].distanceKm} کلومیٹر دور' : '${matchedWorkers[i].distanceKm} km away',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                          if (matchedWorkers[i].skillsEn.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: (isUrdu ? matchedWorkers[i].skillsUr : matchedWorkers[i].skillsEn).map((s) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF3F4F6),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(s, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                              )).toList(),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: () {
+                                final issueIndex = i % (selectedIssues.isNotEmpty ? selectedIssues.length : 1);
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.workerProfile,
+                                  arguments: ProfileArguments(
+                                    worker: matchedWorkers[i],
+                                    job: JobPostingArguments(
+                                      descriptionEn: selectedIssues.isNotEmpty ? selectedIssues[issueIndex].titleEn : '',
+                                      descriptionUr: selectedIssues.isNotEmpty ? selectedIssues[issueIndex].titleUr : '',
+                                      price: 0,
+                                      categoryKey: categoryKey,
+                                      paymentMethod: paymentMethod,
                                     ),
-                                  ],
-                                ),
-                              ],
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.person_outline, size: 16),
+                              label: Text(bilingual(context, 'View Profile', 'پروفائل دیکھیں'), style: const TextStyle(fontSize: 14)),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF0D9488),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              isUrdu ? 'ورکر کی مقرر کردہ قیمت:' : 'Worker\'s Preset Price:',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
-                            ),
-                            Text(
-                              matchedWorkers[i].price,
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              AppRoutes.workerProfile,
-                              arguments: ProfileArguments(
-                                worker: matchedWorkers[i],
-                                job: JobPostingArguments(
-                                  descriptionEn: selectedIssues[i].titleEn,
-                                  descriptionUr: selectedIssues[i].titleUr,
-                                  price: 0,
-                                  categoryKey: categoryKey,
-                                  paymentMethod: paymentMethod,
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.person_outline, size: 16),
-                          label: Text(bilingual(context, 'View Profile', 'پروفائل دیکھیں'), style: const TextStyle(fontSize: 14)),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF0D9488),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -2204,9 +2326,15 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as ProfileArguments?;
-    final worker = args?.worker ?? workers.first;
+    final worker = args?.worker;
     final scope = AppScope.of(context);
     final isUrdu = scope.isUrdu;
+
+    if (worker == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(bilingual(context, 'Worker not found', 'ورکر نہیں ملا'))),
+      );
+    }
 
     return MzScaffold(
       showBottomNav: false,
@@ -2217,7 +2345,19 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
             children: [
               Stack(
                 children: [
-                  Image.network(worker.image, height: 260, width: double.infinity, fit: BoxFit.cover),
+                  worker.image.isNotEmpty
+                      ? Image.network(worker.image, height: 260, width: double.infinity, fit: BoxFit.cover)
+                      : Container(
+                          height: 260,
+                          width: double.infinity,
+                          color: const Color(0xFF0D9488),
+                          child: Center(
+                            child: Text(
+                              worker.name.isNotEmpty ? worker.name[0].toUpperCase() : '?',
+                              style: const TextStyle(fontSize: 80, color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
                   Container(
                     height: 260,
                     decoration: const BoxDecoration(
@@ -2492,8 +2632,16 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
-    final worker = args?.worker ?? workers.first;
+    final worker = args?.worker;
     final job = args?.job;
+
+    if (worker == null) {
+      return Scaffold(
+        body: Center(
+          child: Text(bilingual(context, 'Tracking data not available', 'ٹریکنگ ڈیٹا دستیاب نہیں')),
+        ),
+      );
+    }
 
     return MzScaffold(
       showBottomNav: false,
@@ -3116,9 +3264,15 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
       key: const ValueKey('ratingForm'),
       padding: const EdgeInsets.all(16),
       children: [
-        CircleAvatar(radius: 32, backgroundImage: NetworkImage(workers.first.image)),
+        const CircleAvatar(
+          radius: 32,
+          child: Icon(Icons.person, size: 32),
+        ),
         const SizedBox(height: 10),
-        Text(bilingual(context, 'How was Muhammad Ali?', 'محمد علی کی سروس کیسی تھی؟'), textAlign: TextAlign.center),
+        Text(
+          bilingual(context, 'How was your service?', 'آپ کی سروس کیسی تھی؟'),
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 14),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -3364,6 +3518,14 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
     },
   ];
 
+  int _categoryKeyToIndex(String key) {
+    switch (key) {
+      case 'plumber': return 0;
+      case 'electrician': return 1;
+      default: return 0;
+    }
+  }
+
   Future<void> _save() async {
     if (_selected == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -3379,7 +3541,13 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
           'category': _selected,
         });
       }
-      if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
+      if (mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.workerServicesSetup,
+          arguments: _categoryKeyToIndex(_selected!),
+        );
+      }
     } catch (e) {
       setState(() => _isSaving = false);
       if (mounted) showToast(e.toString());
@@ -3388,32 +3556,39 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 24),
-              const CircleAvatar(
-                radius: 30,
-                backgroundColor: Color(0xFF0D9488),
-                child: Icon(Icons.construction, color: Colors.white, size: 30),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'What is your specialty?',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Select the category that best describes your profession. This will show you relevant jobs.',
-                style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
-              ),
-              const SizedBox(height: 32),
-              ...(_categories.map((cat) {
+    final controller = AppScope.of(context);
+    final isUrdu = controller.isUrdu;
+
+    return Directionality(
+      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 24),
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Color(0xFF0D9488),
+                  child: Icon(Icons.construction, color: Colors.white, size: 30),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  isUrdu ? 'آپ کی خصوصیت کیا ہے؟' : 'What is your specialty?',
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isUrdu
+                      ? 'وہ زمرہ منتخب کریں جو آپ کے پیشے کو بہترین طور پر بیان کرے۔ اس سے آپ کو متعلقہ کام دکھائے جائیں گے۔'
+                      : 'Select the category that best describes your profession. This will show you relevant jobs.',
+                  style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
+                ),
+                const SizedBox(height: 32),
+                ...(_categories.map((cat) {
                 final key = cat['key'] as String;
                 final isSelected = _selected == key;
                 final color = cat['color'] as Color;
@@ -3489,7 +3664,7 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
                   ),
                   child: _isSaving
                       ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Continue to Dashboard', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text(isUrdu ? 'خدمات کے سیٹ اپ پر جائیں' : 'Continue to Services Setup', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 8),
@@ -3497,7 +3672,8 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
@@ -3530,18 +3706,34 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(backgroundImage: NetworkImage(workers.first.image)),
-            title: Text(
-              isUrdu ? 'محمد علی' : 'Muhammad Ali',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-            ),
-            subtitle: Text(isUrdu ? 'پلمبر' : 'Plumber'),
-            trailing: IconButton(
-              icon: const Icon(Icons.notifications),
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.workerNotification),
-            ),
+          StreamBuilder<DocumentSnapshot>(
+            stream: streamCurrentUserData(),
+            builder: (context, snapshot) {
+              final data = snapshot.data?.data() as Map<String, dynamic>?;
+              final name = data?['name']?.toString() ?? (isUrdu ? 'ورکر' : 'Worker');
+              final categoryUr = data?['categoryNameUr']?.toString() ?? '';
+              final categoryEn = data?['categoryNameEn']?.toString() ?? '';
+              final profileImage = data?['profileImage']?.toString() ?? '';
+
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundImage: profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
+                  child: profileImage.isEmpty
+                      ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'W')
+                      : null,
+                ),
+                title: Text(
+                  name,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text(isUrdu && categoryUr.isNotEmpty ? categoryUr : categoryEn),
+                trailing: IconButton(
+                  icon: const Icon(Icons.notifications),
+                  onPressed: () => Navigator.pushNamed(context, AppRoutes.workerNotification),
+                ),
+              );
+            },
           ),
           AnimatedContainer(
             duration: const Duration(milliseconds: 500),
@@ -4413,10 +4605,23 @@ class SettingsScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          ListTile(
-            leading: CircleAvatar(backgroundImage: NetworkImage(isWorker ? workers.first.image : workers[1].image)),
-            title: Text(isWorker ? 'Muhammad Ali' : 'Ahmad Raza'),
-            subtitle: const Text('+92 300 1234567'),
+          StreamBuilder<DocumentSnapshot>(
+            stream: streamCurrentUserData(),
+            builder: (context, snapshot) {
+              final data = snapshot.data?.data() as Map<String, dynamic>?;
+              final name = data?['name']?.toString() ?? FirebaseAuth.instance.currentUser?.displayName ?? 'User';
+              final phone = data?['phone']?.toString() ?? '+92 300 1234567';
+              final profileImage = data?['profileImage']?.toString() ?? '';
+
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
+                  child: profileImage.isEmpty ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?') : null,
+                ),
+                title: Text(name),
+                subtitle: Text(phone),
+              );
+            },
           ),
           const SizedBox(height: 8),
           GestureDetector(
@@ -4669,13 +4874,21 @@ class _WorkerAcceptanceSimulatorScreenState extends State<WorkerAcceptanceSimula
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as SimulatorArguments?;
-    final worker = args?.worker ?? workers.first;
+    final worker = args?.worker;
     final job = args?.job ?? JobPostingArguments(
       descriptionEn: 'Service',
       descriptionUr: 'سروس',
       price: 1000,
       categoryKey: 'other',
     );
+
+    if (worker == null) {
+      return Scaffold(
+        body: Center(
+          child: Text(bilingual(context, 'Worker data not available', 'ورکر کا ڈیٹا دستیاب نہیں')),
+        ),
+      );
+    }
     
     final isUrdu = AppScope.of(context).isUrdu;
 
@@ -5279,44 +5492,69 @@ class FavoriteWorkersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // A mock representation of favorited workers (simulating a filtered list)
-    final favWorkers = workers.take(2).toList(); 
-
     return MzScaffold(
       showBack: true,
       title: bilingual(context, 'Favorite Workers', 'پسندیدہ ورکرز'),
       showBottomNav: false,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: favWorkers.length,
-        itemBuilder: (context, i) {
-          final w = favWorkers[i];
-          return ListTile(
-            leading: CircleAvatar(backgroundImage: NetworkImage(w.image)),
-            title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('${w.category} • ⭐ ${w.rating}'),
-            trailing: IconButton.filledTonal(
-              onPressed: () {
-                Navigator.pushNamed(
-                  context, 
-                  AppRoutes.workerProfile,
-                  arguments: ProfileArguments(
-                    worker: w,
-                    job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.arrow_forward_ios, size: 14),
-              color: const Color(0xFF0D9488),
-            ),
-            onTap: () {
-              Navigator.pushNamed(
-                context, 
-                AppRoutes.workerProfile,
-                arguments: ProfileArguments(
-                  worker: w,
-                  job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+      child: StreamBuilder<List<WorkerModel>>(
+        stream: streamApprovedWorkers(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError || !snapshot.hasData) {
+            return Center(
+              child: Text(bilingual(context, 'No workers available', 'کوئی ورکر دستیاب نہیں')),
+            );
+          }
+          final favWorkers = snapshot.data!;
+          if (favWorkers.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  bilingual(context, 'No workers found. Workers who register and get approved will appear here.', 'کوئی ورکر نہیں ملا۔ رجسٹرڈ اور منظور شدہ ورکرز یہاں نظر آئیں گے۔'),
+                  textAlign: TextAlign.center,
                 ),
+              ),
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: favWorkers.length,
+            itemBuilder: (context, i) {
+              final w = favWorkers[i];
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: w.image.isNotEmpty ? NetworkImage(w.image) : null,
+                  child: w.image.isEmpty ? Text(w.name.isNotEmpty ? w.name[0].toUpperCase() : '?') : null,
+                ),
+                title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('${w.category}${w.price.isNotEmpty ? '  •  ${w.price}' : ''}'),
+                trailing: IconButton.filledTonal(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context, 
+                      AppRoutes.workerProfile,
+                      arguments: ProfileArguments(
+                        worker: w,
+                        job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                  color: const Color(0xFF0D9488),
+                ),
+                onTap: () {
+                  Navigator.pushNamed(
+                    context, 
+                    AppRoutes.workerProfile,
+                    arguments: ProfileArguments(
+                      worker: w,
+                      job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+                    ),
+                  );
+                },
               );
             },
           );

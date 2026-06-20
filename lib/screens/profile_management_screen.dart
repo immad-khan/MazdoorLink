@@ -1,6 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../l10n/app_localizations.dart';
+import '../services/cloudinary_service.dart';
+import '../services/workers_service.dart';
 
 class ProfileManagementScreen extends StatefulWidget {
   @override
@@ -9,23 +15,48 @@ class ProfileManagementScreen extends StatefulWidget {
 
 class _ProfileManagementScreenState extends State<ProfileManagementScreen>
     with TickerProviderStateMixin {
-  bool _isWorker = false;
-  final _nameController = TextEditingController(text: 'Ahmed Hassan');
-  final _phoneController = TextEditingController(text: '+92 300 1234567');
-  final _emailController = TextEditingController(text: 'ahmed@example.com');
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   late AnimationController _fadeController;
 
-  final List<String> _workerSkills = ['Plumber', 'Electrician', 'Carpentry'];
-  final List<String> _selectedSkills = ['Plumber', 'Electrician'];
+  String _profileImageUrl = '';
+  File? _selectedImage;
+  bool _isUploading = false;
+  bool _isLoading = true;
+  bool _isWorker = false;
+
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     _fadeController =
-        AnimationController(duration: Duration(milliseconds: 400), vsync: this);
-    Future.delayed(Duration(milliseconds: 100), () {
+        AnimationController(duration: const Duration(milliseconds: 400), vsync: this);
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        _nameController.text = data['name']?.toString() ?? '';
+        _phoneController.text = data['phone']?.toString() ?? '';
+        _emailController.text = data['email']?.toString() ?? user.email ?? '';
+        _profileImageUrl = data['profileImage']?.toString() ?? '';
+        _isWorker = data['role'] == 'worker';
+      }
+    } catch (_) {}
+    if (mounted) {
+      setState(() => _isLoading = false);
       _fadeController.forward();
-    });
+    }
   }
 
   @override
@@ -37,20 +68,103 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final file = File(image.path);
+      final sizeInMb = file.lengthSync() / (1024 * 1024);
+      if (sizeInMb > 5) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Image size must be less than 5MB (current: ${sizeInMb.toStringAsFixed(1)}MB)'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        return;
+      }
+      setState(() {
+        _selectedImage = file;
+        _profileImageUrl = '';
+      });
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    setState(() => _isUploading = true);
+
+    try {
+      String? imageUrl;
+      if (_selectedImage != null) {
+        imageUrl = await CloudinaryService.uploadImage(_selectedImage!);
+        if (imageUrl == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to upload profile picture. Try again.'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+          }
+          setState(() => _isUploading = false);
+          return;
+        }
+      }
+
+      await updateUserProfile(
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+      );
+
+      if (imageUrl != null) {
+        await updateProfileImage(imageUrl);
+        setState(() => _profileImageUrl = imageUrl);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Text('Profile updated successfully'),
+              ],
+            ),
+            backgroundColor: const Color(0xFF059669),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+
+    setState(() => _isUploading = false);
+  }
+
   Widget _buildSettingsSection(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
             color: AppTheme.lightText,
             letterSpacing: 0.5,
           ),
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -60,7 +174,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
               BoxShadow(
                 color: Colors.black.withValues(alpha:0.02),
                 blurRadius: 6,
-                offset: Offset(0, 1),
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -72,68 +186,23 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
     );
   }
 
-  Widget _buildSettingsItem({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: AppTheme.notWhite),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withValues(alpha:0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon,
-                  color: Theme.of(context).primaryColor, size: 20),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.darkerText,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.deactivatedText,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.arrow_forward_ios, size: 16, color: AppTheme.deactivatedText),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final isUrdu = Localizations.localeOf(context).languageCode == 'ur';
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Theme.of(context).primaryColor,
+          title: Text(
+            t.t('profile_management'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -141,7 +210,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
         backgroundColor: Theme.of(context).primaryColor,
         title: Text(
           t.t('profile_management'),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         leading: Material(
           color: Colors.transparent,
@@ -149,14 +218,14 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
             onTap: () => Navigator.pop(context),
             borderRadius: BorderRadius.circular(8),
             child: Padding(
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               child: Icon(Icons.arrow_back, color: Colors.white, size: 24),
             ),
           ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: FadeTransition(
           opacity: _fadeController,
           child: Column(
@@ -164,7 +233,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
             children: [
               // Profile Header
               Container(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -181,42 +250,62 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor,
-                        borderRadius: BorderRadius.circular(32),
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 32,
+                            backgroundImage: _selectedImage != null
+                                ? FileImage(_selectedImage!)
+                                : (_profileImageUrl.isNotEmpty
+                                    ? NetworkImage(_profileImageUrl)
+                                    : null),
+                            child: (_selectedImage == null && _profileImageUrl.isEmpty)
+                                ? const Icon(Icons.person, color: Colors.white, size: 32)
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF0D9488),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Icon(Icons.person,
-                          color: Colors.white, size: 32),
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _nameController.text,
-                            style: TextStyle(
+                            _nameController.text.isNotEmpty ? _nameController.text : 'Your Name',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.darkerText,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Container(
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Color(0xFFFEF3C7),
+                              color: const Color(0xFFFEF3C7),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               _isWorker ? 'Worker' : 'Customer',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFFB45309),
@@ -226,107 +315,48 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                         ],
                       ),
                     ),
-                    ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Profile photo updated'),
-                            backgroundColor: Color(0xFF059669),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        backgroundColor:
-                            Theme.of(context).primaryColor,
-                      ),
-                      child: Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                    TextButton(
+                      onPressed: _pickImage,
+                      child: const Text('Change', style: TextStyle(fontSize: 12)),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 28),
+              const SizedBox(height: 28),
 
               // Personal Information
               _buildSettingsSection(
                 'PERSONAL INFORMATION',
                 [
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: TextField(
                       controller: _nameController,
                       decoration: InputDecoration(
                         labelText: 'Full Name',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: AppTheme.spacer),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: AppTheme.spacer),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).primaryColor,
-                            width: 2,
-                          ),
-                        ),
                         prefixIcon: Icon(Icons.person,
                             color: Theme.of(context).primaryColor, size: 20),
                       ),
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: TextField(
                       controller: _phoneController,
                       decoration: InputDecoration(
                         labelText: 'Phone Number',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: AppTheme.spacer),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: AppTheme.spacer),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).primaryColor,
-                            width: 2,
-                          ),
-                        ),
                         prefixIcon: Icon(Icons.phone,
                             color: Theme.of(context).primaryColor, size: 20),
                       ),
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: TextField(
                       controller: _emailController,
+                      enabled: false,
                       decoration: InputDecoration(
                         labelText: 'Email Address',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: AppTheme.spacer),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: AppTheme.spacer),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).primaryColor,
-                            width: 2,
-                          ),
-                        ),
                         prefixIcon: Icon(Icons.email,
                             color: Theme.of(context).primaryColor, size: 20),
                       ),
@@ -334,247 +364,33 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                   ),
                 ],
               ),
-              SizedBox(height: 24),
-
-              // Account Settings
-              _buildSettingsSection(
-                'ACCOUNT SETTINGS',
-                [
-                  _buildSettingsItem(
-                    title: 'Account Type',
-                    subtitle: _isWorker ? 'Service Provider' : 'Service Customer',
-                    icon: _isWorker ? Icons.build : Icons.person_search,
-                    onTap: () {
-                      setState(() => _isWorker = !_isWorker);
-                    },
-                  ),
-                  _buildSettingsItem(
-                    title: 'Notification Preferences',
-                    subtitle: 'Manage your alerts',
-                    icon: Icons.notifications,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Opening notification preferences')),
-                      );
-                    },
-                  ),
-                  _buildSettingsItem(
-                    title: 'Language Preference',
-                    subtitle: isUrdu ? 'اردو' : 'English',
-                    icon: Icons.language,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Language switching available')),
-                      );
-                    },
-                  ),
-                  _buildSettingsItem(
-                    title: 'Security & Privacy',
-                    subtitle: 'Password and privacy settings',
-                    icon: Icons.security,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Opening security settings')),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              SizedBox(height: 24),
-
-              // If Worker, show skills
-              if (_isWorker) ...[
-                _buildSettingsSection(
-                  'PROFESSIONAL SKILLS',
-                  [
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _workerSkills.map((skill) {
-                          final isSelected = _selectedSkills.contains(skill);
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                if (isSelected) {
-                                  _selectedSkills.remove(skill);
-                                } else {
-                                  _selectedSkills.add(skill);
-                                }
-                              });
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? Theme.of(context).primaryColor
-                                    : AppTheme.notWhite,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? Theme.of(context).primaryColor
-                                      : AppTheme.spacer,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (isSelected)
-                                    Padding(
-                                      padding: EdgeInsets.only(right: 6),
-                                      child: Icon(
-                                        Icons.check,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  Text(
-                                    skill,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : AppTheme.lightText,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 24),
-              ],
-
-              // Danger Zone
-              _buildSettingsSection(
-                'DANGER ZONE',
-                [
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 1),
-                    child: InkWell(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text('Logout?'),
-                            content: Text(
-                              'Are you sure you want to logout? You\'ll need to login again to access your account.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  Navigator.pop(context);
-                                },
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Color(0xFFDC2626),
-                                ),
-                                child: Text('Logout'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Color(0xFFFEE2E2),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(Icons.logout,
-                                  color: Color(0xFFDC2626), size: 20),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Logout',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFFDC2626),
-                                    ),
-                                  ),
-                                  SizedBox(height: 2),
-                                  Text(
-                                    'Sign out from your account',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.deactivatedText,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(Icons.arrow_forward_ios,
-                                size: 16, color: AppTheme.deactivatedText),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
 
               // Save Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            Icon(Icons.check_circle, color: Colors.white, size: 20),
-                            SizedBox(width: 12),
-                            Text(t.t('profile_updated')),
-                          ],
-                        ),
-                        backgroundColor: Color(0xFF059669),
-                        duration: Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
+                  onPressed: _isUploading ? null : _saveProfile,
                   style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: Text(
-                    t.t('update_profile'),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: _isUploading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : Text(
+                          t.t('update_profile'),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
             ],
           ),
         ),

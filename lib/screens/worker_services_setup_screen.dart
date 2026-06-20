@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../app_state.dart';
 
@@ -220,7 +223,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
     );
   }
 
-  void _completeSetup(bool isUrdu) {
+  Future<void> _completeSetup(bool isUrdu) async {
     // Check if at least one service is selected
     final selectedCount = _currentServices.where((element) => element.isSelected).length;
     if (selectedCount == 0) {
@@ -244,11 +247,43 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
       }
     }
 
+    // Save skills/services to Firestore
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final selectedServices = _currentServices
+            .where((s) => s.isSelected)
+            .map((s) => {
+                  'titleEn': s.titleEn,
+                  'titleUr': s.titleUr,
+                  'price': s.price,
+                })
+            .toList();
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'skills': selectedServices,
+          'categoryNameEn': _skillNamesEn[_categoryIndex],
+          'categoryNameUr': _skillNamesUr[_categoryIndex],
+          'setupComplete': true,
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isUrdu ? 'محفوظ کرنے میں خرابی: $e' : 'Error saving: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return;
+    }
+
     // Display stunning success modal
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Container(
           padding: const EdgeInsets.all(28),
@@ -331,6 +366,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
         ),
       ),
     );
+    }
   }
 
   @override

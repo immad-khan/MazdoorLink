@@ -643,6 +643,204 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$workerName approved!')));
   }
 
+  void _showWorkerDetail(BuildContext context, Map<String, dynamic> w) {
+    final name = w['name'] ?? 'Unknown';
+    final email = w['email'] ?? 'No email';
+    final phone = w['phone'] ?? 'No phone';
+    final status = w['status'] ?? 'pending';
+    final idFrontUrl = w['idFrontUrl'];
+    final idBackUrl = w['idBackUrl'];
+    final category = w['category'];
+    final categoryNameEn = w['categoryNameEn'];
+    final categoryNameUr = w['categoryNameUr'];
+    final skills = w['skills'] as List<dynamic>?;
+    final setupComplete = w['setupComplete'] as bool? ?? false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          maxChildSize: 0.95,
+          builder: (_, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: CircleAvatar(
+                      radius: 36,
+                      backgroundColor: const Color(0xFF006B5E).withOpacity(0.12),
+                      child: Text(
+                        name.toString().isNotEmpty ? name.toString()[0].toUpperCase() : '?',
+                        style: const TextStyle(color: Color(0xFF006B5E), fontWeight: FontWeight.bold, fontSize: 28),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                  ),
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: status == 'approved' ? const Color(0xFF10B981).withOpacity(0.12)
+                            : status == 'rejected' ? const Color(0xFFEF4444).withOpacity(0.12)
+                            : const Color(0xFFF59E0B).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        status.toString().toUpperCase(),
+                        style: TextStyle(
+                          color: status == 'approved' ? const Color(0xFF10B981)
+                              : status == 'rejected' ? const Color(0xFFEF4444)
+                              : const Color(0xFFF59E0B),
+                          fontWeight: FontWeight.bold, fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 32),
+
+                  // Personal Info
+                  _detailField('Email', email, Icons.email_outlined),
+                  _detailField('Phone', phone, Icons.phone_outlined),
+                  if (category != null) _detailField('Category (Key)', category.toString(), Icons.category_outlined),
+                  if (categoryNameEn != null) _detailField('Category (English)', categoryNameEn.toString(), Icons.translate),
+                  if (categoryNameUr != null) _detailField('Category (Urdu)', categoryNameUr.toString(), Icons.translate),
+
+                  const SizedBox(height: 16),
+
+                  // ID Images
+                  if (idFrontUrl != null || idBackUrl != null) ...[
+                    const Text('ID Card Images', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                    const SizedBox(height: 10),
+                    if (idFrontUrl != null) ...[
+                      const Text('Front:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
+                      const SizedBox(height: 4),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(idFrontUrl, height: 160, width: double.infinity, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(height: 160, color: Colors.grey.shade200, child: const Center(child: Text('Failed to load'))),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    if (idBackUrl != null) ...[
+                      const Text('Back:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
+                      const SizedBox(height: 4),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(idBackUrl, height: 160, width: double.infinity, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(height: 160, color: Colors.grey.shade200, child: const Center(child: Text('Failed to load'))),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Skills / Services
+                  if (setupComplete && skills != null && skills.isNotEmpty) ...[
+                    const Text('Selected Services / Skills', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                    const SizedBox(height: 8),
+                    ...skills.map((s) {
+                      final skill = s as Map<String, dynamic>;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDFA),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF99F6E4)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${skill['titleEn'] ?? ''} / ${skill['titleUr'] ?? ''}',
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              'Rs. ${(skill['price'] as num?)?.toStringAsFixed(0) ?? '0'}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0D9488)),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+
+                  if (!setupComplete && status == 'approved')
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Color(0xFFD97706), size: 18),
+                          SizedBox(width: 8),
+                          Expanded(child: Text('Worker approved but hasn\'t completed services setup yet.', style: TextStyle(color: Color(0xFF92400E), fontSize: 13))),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _detailField(String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFF64748B)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(value, style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -689,7 +887,14 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                       ? const Color(0xFFEF4444)
                       : const Color(0xFFF59E0B);
 
-              return Container(
+              return Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                elevation: 0,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => _showWorkerDetail(context, w),
+                  child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
@@ -783,10 +988,12 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                           ],
                         ),
                       ],
-                    ],
+                    ],                      // close children list
                   ),
                 ),
-              );
+              ),
+            ),
+          );
             },
           );
         },

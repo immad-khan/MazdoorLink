@@ -15,18 +15,23 @@ class ServiceCategory {
 }
 
 class WorkerModel {
-  const WorkerModel({
+  WorkerModel({
+    this.id,
     required this.name,
     required this.category,
-    required this.rating,
-    required this.reviews,
-    required this.distanceKm,
-    required this.price,
-    required this.image,
-    required this.skillsEn,
-    required this.skillsUr,
+    this.rating = 0,
+    this.reviews = 0,
+    this.distanceKm = 0,
+    this.price = '',
+    this.image = '',
+    this.skillsEn = const [],
+    this.skillsUr = const [],
+    this.phone = '',
+    this.email = '',
+    this.priceValue = 0,
   });
 
+  final String? id;
   final String name;
   final String category;
   final double rating;
@@ -36,6 +41,39 @@ class WorkerModel {
   final String image;
   final List<String> skillsEn;
   final List<String> skillsUr;
+  final String phone;
+  final String email;
+  final double priceValue;
+
+  factory WorkerModel.fromFirestore(Map<String, dynamic> data, {String? docId}) {
+    final List<dynamic> skillsData = data['skills'] as List<dynamic>? ?? [];
+    final List<String> skillsEn = skillsData.map((s) => (s as Map)['titleEn']?.toString() ?? '').toList();
+    final List<String> skillsUr = skillsData.map((s) => (s as Map)['titleUr']?.toString() ?? '').toList();
+
+    final categoryNameEn = data['categoryNameEn']?.toString() ?? '';
+    final categoryNameUr = data['categoryNameUr']?.toString() ?? '';
+
+    final double lowestPrice = skillsData.fold<double>(0, (prev, s) {
+      final p = ((s as Map)['price'] ?? 0).toDouble();
+      return prev == 0 ? p : (p < prev ? p : prev);
+    });
+
+    return WorkerModel(
+      id: docId ?? data['uid']?.toString(),
+      name: data['name']?.toString() ?? '',
+      category: categoryNameEn,
+      rating: (data['rating'] ?? 4.5).toDouble(),
+      reviews: (data['reviews'] ?? 0) as int,
+      distanceKm: (data['distanceKm'] ?? 2.0).toDouble(),
+      price: lowestPrice > 0 ? 'Rs. ${lowestPrice.toStringAsFixed(0)}' : '',
+      image: data['profileImage']?.toString() ?? '',
+      skillsEn: skillsEn,
+      skillsUr: skillsUr,
+      phone: data['phone']?.toString() ?? '',
+      email: data['email']?.toString() ?? '',
+      priceValue: lowestPrice,
+    );
+  }
 }
 
 class JobModel {

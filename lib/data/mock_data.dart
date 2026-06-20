@@ -51,7 +51,6 @@ class WorkerModel {
     final List<String> skillsUr = skillsData.map((s) => (s as Map)['titleUr']?.toString() ?? '').toList();
 
     final categoryNameEn = data['categoryNameEn']?.toString() ?? '';
-    final categoryNameUr = data['categoryNameUr']?.toString() ?? '';
 
     final double lowestPrice = skillsData.fold<double>(0, (prev, s) {
       final p = ((s as Map)['price'] ?? 0).toDouble();
@@ -99,7 +98,7 @@ const List<ServiceCategory> categories = [
   ServiceCategory(key: 'plumber', en: 'Plumber', ur: 'پلمبر', icon: Icons.plumbing),
 ];
 
-const List<WorkerModel> workers = [
+final List<WorkerModel> workers = [
   WorkerModel(
     name: 'Muhammad Ali',
     category: 'Plumber',
@@ -135,7 +134,7 @@ const List<WorkerModel> workers = [
   ),
 ];
 
-const List<JobModel> jobs = [
+final List<JobModel> jobs = [
   JobModel(
     titleEn: 'Fix leaking kitchen sink',
     titleUr: 'کچن سنک لیکیج ٹھیک کریں',

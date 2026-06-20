@@ -48,7 +48,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
         final data = doc.data()!;
         _nameController.text = data['name']?.toString() ?? '';
         _phoneController.text = data['phone']?.toString() ?? '';
-        _emailController.text = data['email']?.toString() ?? user.email ?? '';
+        _emailController.text = (data['email']?.toString() ?? user.email ?? '') as String;
         _profileImageUrl = data['profileImage']?.toString() ?? '';
         _isWorker = data['role'] == 'worker';
       }
@@ -119,7 +119,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
 
       if (imageUrl != null) {
         await updateProfileImage(imageUrl);
-        setState(() => _profileImageUrl = imageUrl);
+        setState(() => _profileImageUrl = imageUrl!);
       }
 
       if (mounted) {

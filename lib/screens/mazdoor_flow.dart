@@ -3008,7 +3008,7 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         FilledButton(
           onPressed: () {
             final args = ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
-            final paymentMethod = args?.job?.paymentMethod ?? 'Cash';
+            final paymentMethod = (args?.job)?.paymentMethod ?? 'Cash';
             if (paymentMethod == 'Cash') {
               setState(() => _step = PostJobStep.workerConfirmationWaiting);
               Future.delayed(const Duration(seconds: 4), () {

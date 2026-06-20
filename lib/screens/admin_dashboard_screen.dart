@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'admin_jobs_screen.dart';
+import '../services/workers_service.dart';
 
 // ─────────────────────────────────────────────
 // Entry point routed from /admin/dashboard
@@ -317,22 +318,34 @@ class _HomeTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                _DashboardActionCard(
-                  icon: Icons.broken_image_outlined,
-                  title: 'Damage Claims',
-                  subtitle: 'Review & approve damage reports',
-                  color: const Color(0xFFF59E0B),
-                  badgeCount: 7,
-                  onTap: () => _openDetail(context, 'Damage Claims', _damageClaimsData),
+                StreamBuilder<QuerySnapshot>(
+                  stream: streamDamageClaims(),
+                  builder: (context, snap) {
+                    final pendingCount = snap.data?.docs.where((d) => (d.data() as Map<String, dynamic>)['status'] == 'Pending').length ?? 0;
+                    return _DashboardActionCard(
+                      icon: Icons.broken_image_outlined,
+                      title: 'Damage Claims',
+                      subtitle: 'Review & approve damage reports',
+                      color: const Color(0xFFF59E0B),
+                      badgeCount: pendingCount > 0 ? pendingCount : null,
+                      onTap: () => _showDamageClaimsSheet(context),
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
-                _DashboardActionCard(
-                  icon: Icons.account_balance_wallet_outlined,
-                  title: 'Security Deposits',
-                  subtitle: 'Manage deductions and refunds',
-                  color: const Color(0xFF10B981),
-                  badgeCount: 4,
-                  onTap: () => _openDetail(context, 'Security Deposits', _depositsData),
+                StreamBuilder<QuerySnapshot>(
+                  stream: streamSecurityDeposits(),
+                  builder: (context, snap) {
+                    final lowCount = snap.data?.docs.where((d) => (d.data() as Map<String, dynamic>)['status'] == 'Low Balance').length ?? 0;
+                    return _DashboardActionCard(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Security Deposits',
+                      subtitle: 'Manage deductions and refunds',
+                      color: const Color(0xFF10B981),
+                      badgeCount: lowCount > 0 ? lowCount : null,
+                      onTap: () => _showDepositsSheet(context),
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 _DashboardActionCard(
@@ -373,12 +386,21 @@ class _HomeTab extends StatelessWidget {
     );
   }
 
-  static void _openDetail(BuildContext context, String title, List<Map<String, String>> items) {
+  static void _showDamageClaimsSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _ListDetailSheet(title: title, items: items),
+      builder: (_) => const _DamageClaimsSheet(),
+    );
+  }
+
+  static void _showDepositsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _DepositsSheet(),
     );
   }
 
@@ -1080,67 +1102,11 @@ class _WorkerRegistrationsTab extends StatelessWidget {
 // ─────────────────────────────────────────────
 // TAB 2 – Complaints
 // ─────────────────────────────────────────────
-class _ComplaintsTab extends StatefulWidget {
+class _ComplaintsTab extends StatelessWidget {
   const _ComplaintsTab();
 
   @override
-  State<_ComplaintsTab> createState() => _ComplaintsTabState();
-}
-
-class _ComplaintsTabState extends State<_ComplaintsTab> {
-  final List<Map<String, dynamic>> _complaints = [
-    {
-      'user': 'Sara Malik',
-      'worker': 'Ali Raza',
-      'issue': 'Worker did not complete the job properly and left a mess.',
-      'date': 'May 22',
-      'type': 'Service Quality',
-      'priority': 'High',
-      'resolved': false,
-    },
-    {
-      'user': 'Ahmed Khan',
-      'worker': 'Bilal Plumber',
-      'issue': 'Overcharged for materials without prior agreement.',
-      'date': 'May 21',
-      'type': 'Billing',
-      'priority': 'Medium',
-      'resolved': false,
-    },
-    {
-      'user': 'Fatima Bano',
-      'worker': 'Hassan Electrician',
-      'issue': 'Worker was rude and disrespectful during the visit.',
-      'date': 'May 20',
-      'type': 'Conduct',
-      'priority': 'High',
-      'resolved': false,
-    },
-    {
-      'user': 'Rahul Arif',
-      'worker': 'Tariq Mehmood',
-      'issue': 'App showed wrong estimated price.',
-      'date': 'May 19',
-      'type': 'App Issue',
-      'priority': 'Low',
-      'resolved': true,
-    },
-    {
-      'user': 'Nida Hussain',
-      'worker': 'Umar Farooq',
-      'issue': 'Worker cancelled last minute without notice.',
-      'date': 'May 18',
-      'type': 'Cancellation',
-      'priority': 'Medium',
-      'resolved': true,
-    },
-  ];
-
-  @override
   Widget build(BuildContext context) {
-    final open = _complaints.where((c) => !(c['resolved'] as bool)).toList();
-    final resolved = _complaints.where((c) => c['resolved'] as bool).toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5FA),
       appBar: AppBar(
@@ -1149,48 +1115,74 @@ class _ComplaintsTabState extends State<_ComplaintsTab> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         automaticallyImplyLeading: false,
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text('${open.length} Open',
-                style: const TextStyle(color: Colors.white, fontSize: 12)),
-          ),
-        ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (open.isNotEmpty) ...[
-            const _SectionHeader(title: 'Open Complaints', color: Color(0xFFEF4444)),
-            const SizedBox(height: 8),
-            ...open.map((c) => _ComplaintCard(
-                  complaint: c,
-                  onResolve: () {
-                    setState(() => c['resolved'] = true);
-                    _snack(context, 'Complaint marked as resolved');
-                  },
-                )),
-          ],
-          if (resolved.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const _SectionHeader(title: 'Resolved', color: Color(0xFF10B981)),
-            const SizedBox(height: 8),
-            ...resolved.map((c) => _ComplaintCard(complaint: c)),
-          ],
-        ],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: streamComplaints(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final docs = snapshot.data!.docs;
+          final open = docs.where((d) => !((d.data() as Map)['resolved'] == true)).toList();
+          final resolved = docs.where((d) => (d.data() as Map)['resolved'] == true).toList();
+
+          if (docs.isEmpty) {
+            return const Center(child: Text('No complaints yet.'));
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (open.isNotEmpty) ...[
+                Row(
+                  children: [
+                    const _SectionHeader(title: 'Open Complaints', color: Color(0xFFEF4444)),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text('${open.length} Open',
+                          style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...open.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return _ComplaintCard(
+                    complaint: data,
+                    docId: doc.id,
+                    onResolve: () async {
+                      await resolveComplaint(doc.id);
+                      _snack(context, 'Complaint marked as resolved');
+                    },
+                  );
+                }),
+              ],
+              if (resolved.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const _SectionHeader(title: 'Resolved', color: Color(0xFF10B981)),
+                const SizedBox(height: 8),
+                ...resolved.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return _ComplaintCard(complaint: data, docId: doc.id);
+                }),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
 }
 
 class _ComplaintCard extends StatelessWidget {
-  const _ComplaintCard({required this.complaint, this.onResolve});
+  const _ComplaintCard({required this.complaint, this.docId, this.onResolve});
   final Map<String, dynamic> complaint;
+  final String? docId;
   final VoidCallback? onResolve;
 
   @override
@@ -1898,6 +1890,249 @@ class _ListDetailSheetState extends State<_ListDetailSheet> {
   }
 }
 
+// ─────────────────────────────────────────────
+// Damage Claims Sheet (Firestore-backed)
+// ─────────────────────────────────────────────
+class _DamageClaimsSheet extends StatelessWidget {
+  const _DamageClaimsSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      maxChildSize: 0.95,
+      builder: (_, controller) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: streamDamageClaims(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final docs = snapshot.data!.docs;
+            if (docs.isEmpty) {
+              return const Center(child: Text('No damage claims.'));
+            }
+            return Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Text('Damage Claims',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B))),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: ListView(
+                    controller: controller,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: docs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final status = data['status']?.toString() ?? 'Pending';
+                      final statusColor = status == 'Approved'
+                          ? const Color(0xFF10B981)
+                          : status == 'Rejected'
+                              ? const Color(0xFFEF4444)
+                              : const Color(0xFFF59E0B);
+                      final title = data['title']?.toString() ?? 'Claim';
+                      final customerName = data['customerName']?.toString() ?? '';
+                      final workerName = data['workerName']?.toString() ?? '';
+                      final amount = data['amount'];
+                      final amountStr = amount != null ? 'Rs ${(amount as num).toStringAsFixed(0)}' : '';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(title,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(status,
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text('$customerName · $workerName · $amountStr',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                            if (status == 'Pending') ...[
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () async {
+                                        await updateDamageClaimStatus(doc.id, 'Rejected');
+                                        _snack(context, 'Claim rejected');
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFFEF4444),
+                                        side: const BorderSide(color: Color(0xFFEF4444)),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        padding: const EdgeInsets.symmetric(vertical: 6),
+                                      ),
+                                      child: const Text('Reject', style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () async {
+                                        await updateDamageClaimStatus(doc.id, 'Approved');
+                                        _snack(context, 'Claim approved');
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF10B981),
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        padding: const EdgeInsets.symmetric(vertical: 6),
+                                        elevation: 0,
+                                      ),
+                                      child: const Text('Approve', style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Security Deposits Sheet (Firestore-backed)
+// ─────────────────────────────────────────────
+class _DepositsSheet extends StatelessWidget {
+  const _DepositsSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      maxChildSize: 0.95,
+      builder: (_, controller) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: streamSecurityDeposits(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final docs = snapshot.data!.docs;
+            if (docs.isEmpty) {
+              return const Center(child: Text('No security deposits.'));
+            }
+            return Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Text('Security Deposits',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E293B))),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: ListView(
+                    controller: controller,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: docs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final status = data['status']?.toString() ?? 'Active';
+                      final statusColor = status == 'Active'
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFEF4444);
+                      final workerName = data['workerName']?.toString() ?? 'Worker';
+                      final totalDeposited = (data['totalDeposited'] as num?)?.toDouble() ?? 0;
+                      final currentBalance = (data['currentBalance'] as num?)?.toDouble() ?? 0;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(workerName,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(status,
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text('Total Deposited: Rs ${totalDeposited.toStringAsFixed(0)}',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                            Text('Current Balance: Rs ${currentBalance.toStringAsFixed(0)}',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
 class _StatsSheet extends StatelessWidget {
   const _StatsSheet();
 
@@ -2325,34 +2560,6 @@ class _AdminVoiceSheetState extends State<_AdminVoiceSheet>
     );
   }
 }
-
-// ─────────────────────────────────────────────
-// Mock Data
-// ─────────────────────────────────────────────
-final List<Map<String, String>> _damageClaimsData = [
-  {'title': 'Broken Kitchen Tap', 'sub': 'Sara Malik · Plumber Ali Raza', 'amount': 'Rs 3,200', 'status': 'Pending'},
-  {'title': 'Cracked Wall Tiles', 'sub': 'Ahmed Khan · Mason Bilal', 'amount': 'Rs 8,500', 'status': 'Pending'},
-  {'title': 'Damaged Electrician Panel', 'sub': 'Nida Hussain · Hassan Elec.', 'amount': 'Rs 12,000', 'status': 'Approved'},
-  {'title': 'Scratched Floor', 'sub': 'Rahul Arif · Carpenter Umar', 'amount': 'Rs 6,000', 'status': 'Rejected'},
-  {'title': 'Broken Window Pane', 'sub': 'Fatima Bano · Worker Kamran', 'amount': 'Rs 4,500', 'status': 'Pending'},
-  {'title': 'Water Pipe Burst', 'sub': 'Ali Shah · Plumber Tariq', 'amount': 'Rs 9,800', 'status': 'Pending'},
-  {'title': 'AC Unit Damaged', 'sub': 'Hina Malik · Tech Zubair', 'amount': 'Rs 15,000', 'status': 'Pending'},
-];
-
-final List<Map<String, String>> _depositsData = [
-  {'title': 'Ali Raza (Plumber)', 'sub': 'Total Deposited', 'amount': 'Rs 5,000  •  Current Balance: Rs 5,000', 'status': 'Active'},
-  {'title': 'Hassan Elec. (Electrician)', 'sub': 'Total Deposited', 'amount': 'Rs 5,000  •  Current Balance: Rs 3,500', 'status': 'Active'},
-  {'title': 'Bilal Ahmed (Mason)', 'sub': 'Total Deposited', 'amount': 'Rs 4,000  •  Current Balance: Rs 800', 'status': 'Low Balance'},
-  {'title': 'Umar Farooq (Carpenter)', 'sub': 'Total Deposited', 'amount': 'Rs 5,000  •  Current Balance: Rs 5,000', 'status': 'Active'},
-];
-
-final List<Map<String, dynamic>> _recentActivity = [
-  {'title': 'Worker Hassan approved', 'time': '5 min ago', 'icon': Icons.check_circle_outline, 'color': Color(0xFF10B981), 'status': 'Approved'},
-  {'title': 'New complaint from Sara Malik', 'time': '12 min ago', 'icon': Icons.report_problem_outlined, 'color': Color(0xFFEF4444), 'status': 'Open'},
-  {'title': 'Damage claim Rs 8,500 filed', 'time': '1 hr ago', 'icon': Icons.broken_image_outlined, 'color': Color(0xFFF59E0B), 'status': 'Pending'},
-  {'title': 'Kamran Shah account banned', 'time': '2 hr ago', 'icon': Icons.block, 'color': Color(0xFFEF4444), 'status': 'Banned'},
-  {'title': 'Deposit refund Rs 5,000 sent', 'time': '3 hr ago', 'icon': Icons.account_balance_wallet_outlined, 'color': Color(0xFF10B981), 'status': 'Done'},
-];
 
 // ─────────────────────────────────────────────
 // Helper

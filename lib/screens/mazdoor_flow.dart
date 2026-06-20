@@ -4534,11 +4534,21 @@ class BookingHistoryScreen extends StatefulWidget {
 class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   bool activeTab = true;
 
+  Stream<QuerySnapshot> _buildStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Stream.empty();
+    final role = AppScope.of(context).role;
+    final uidField = role == UserRole.worker ? 'workerId' : 'customerId';
+    return FirebaseFirestore.instance
+        .collection('jobs')
+        .where(uidField, isEqualTo: user.uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final scope = AppScope.of(context);
-    final isUrdu = scope.isUrdu;
-    final list = jobs.where((e) => activeTab ? e.status == 'pending' : e.status == 'completed').toList();
+    final isUrdu = AppScope.of(context).isUrdu;
 
     return MzScaffold(
       showBottomNav: true,
@@ -4556,30 +4566,61 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
             ),
           ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
-                for (final item in list)
-                  Card(
-                    child: InkWell(
-                      onTap: () {
-                        if (activeTab) {
-                          Navigator.pushNamed(context, AppRoutes.tracking);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Job Details opened')),
-                          );
-                        }
-                      },
-                      child: ListTile(
-                        leading: Icon(item.status == 'completed' ? Icons.check_circle : Icons.schedule, color: item.status == 'completed' ? Colors.green : Colors.amber.shade700),
-                        title: Text(isUrdu ? item.titleUr : item.titleEn),
-                        subtitle: Text('${item.time} • ${item.distance}'),
-                        trailing: Text(item.price, style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _buildStream(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final docs = snapshot.data!.docs;
+                final filtered = docs.where((doc) {
+                  final status = (doc.data() as Map<String, dynamic>)['status']?.toString() ?? '';
+                  return activeTab
+                      ? (status == 'pending' || status == 'accepted')
+                      : (status == 'completed' || status == 'rejected');
+                }).toList();
+
+                if (filtered.isEmpty) {
+                  return Center(child: Text(bilingual(context, 'No bookings yet', 'ابھی کوئی بکنگ نہیں')));
+                }
+
+                return ListView(
+                  padding: const EdgeInsets.all(12),
+                  children: filtered.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final status = data['status']?.toString() ?? '';
+                    final descEn = data['descriptionEn']?.toString() ?? '';
+                    final descUr = data['descriptionUr']?.toString() ?? '';
+                    final price = data['price'];
+                    final priceStr = price != null ? 'Rs. ${(price as num).toStringAsFixed(0)}' : '';
+                    final createdAt = data['createdAt'] as Timestamp?;
+                    final timeStr = createdAt != null
+                        ? DateFormat('d MMM yyyy').format(createdAt.toDate())
+                        : '';
+
+                    return Card(
+                      child: InkWell(
+                        onTap: () {
+                          if (activeTab) {
+                            Navigator.pushNamed(context, AppRoutes.tracking, arguments: TrackingArguments(jobId: doc.id));
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Job Details opened')),
+                            );
+                          }
+                        },
+                        child: ListTile(
+                          leading: Icon(status == 'completed' ? Icons.check_circle : Icons.schedule,
+                              color: status == 'completed' ? Colors.green : Colors.amber.shade700),
+                          title: Text(isUrdu ? descUr : descEn),
+                          subtitle: Text(timeStr),
+                          trailing: Text(priceStr, style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
+                        ),
                       ),
-                    ),
-                  )
-              ],
+                    );
+                  }).toList(),
+                );
+              },
             ),
           )
         ],

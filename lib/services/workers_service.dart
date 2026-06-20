@@ -196,3 +196,42 @@ Future<void> updateJobCompleted(String jobId) async {
 Stream<DocumentSnapshot> streamJobById(String jobId) {
   return FirebaseFirestore.instance.collection('jobs').doc(jobId).snapshots();
 }
+
+// ── Complaints ──────────────────────────────
+
+Stream<QuerySnapshot> streamComplaints() {
+  return FirebaseFirestore.instance
+      .collection('complaints')
+      .orderBy('createdAt', descending: true)
+      .snapshots();
+}
+
+Future<void> resolveComplaint(String complaintId) async {
+  await FirebaseFirestore.instance.collection('complaints').doc(complaintId).update({
+    'resolved': true,
+  });
+}
+
+// ── Damage Claims ───────────────────────────
+
+Stream<QuerySnapshot> streamDamageClaims() {
+  return FirebaseFirestore.instance
+      .collection('damage_claims')
+      .orderBy('createdAt', descending: true)
+      .snapshots();
+}
+
+Future<void> updateDamageClaimStatus(String claimId, String status) async {
+  await FirebaseFirestore.instance.collection('damage_claims').doc(claimId).update({
+    'status': status,
+  });
+}
+
+// ── Security Deposits ───────────────────────
+
+Stream<QuerySnapshot> streamSecurityDeposits() {
+  return FirebaseFirestore.instance
+      .collection('security_deposits')
+      .orderBy('createdAt', descending: true)
+      .snapshots();
+}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/translation_service.dart';
@@ -18,6 +19,8 @@ class ChatMessage {
 }
 
 class ChatScreen extends StatefulWidget {
+  final String phoneNumber;
+  const ChatScreen({super.key, this.phoneNumber = ''});
   @override
   _ChatScreenState createState() => _ChatScreenState();
 }
@@ -271,11 +274,26 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
           Material(
             color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Calling worker...')),
-                );
+            child:             InkWell(
+              onTap: () async {
+                if (widget.phoneNumber.isNotEmpty) {
+                  final uri = Uri(scheme: 'tel', path: widget.phoneNumber);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Unable to call')),
+                      );
+                    }
+                  }
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('No phone number available')),
+                    );
+                  }
+                }
               },
               borderRadius: BorderRadius.circular(8),
               child: Padding(

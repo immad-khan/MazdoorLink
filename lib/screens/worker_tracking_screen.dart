@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
 import '../services/workers_service.dart';
 
@@ -22,6 +23,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   GoogleMapController? _mapController;
   StreamSubscription<DocumentSnapshot>? _jobSub;
   String _customerName = 'Customer';
+  String _customerPhone = '';
   String _jobDesc = '';
 
   @override
@@ -31,7 +33,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   }
 
   void _listenToJob() {
-    _jobSub = streamJobById(widget.jobId).listen((snapshot) {
+    _jobSub = streamJobById(widget.jobId).listen((snapshot) async {
       if (!mounted) return;
       final data = snapshot.data() as Map<String, dynamic>?;
       if (data == null) return;
@@ -41,10 +43,17 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
         lat = (data['customerLatitude'] as num).toDouble();
         lng = (data['customerLongitude'] as num).toDouble();
       }
+      final customerId = data['customerId']?.toString();
+      String phone = '';
+      if (customerId != null) {
+        phone = await getUserPhone(customerId) ?? '';
+      }
+      if (!mounted) return;
       setState(() {
         if (lat != null && lng != null) _customerLocation = LatLng(lat, lng);
         _pin = data['pin']?.toString() ?? '';
         _customerName = data['customerName']?.toString() ?? 'Customer';
+        _customerPhone = phone;
         _jobDesc = isUrdu
             ? (data['descriptionUr']?.toString() ?? '')
             : (data['descriptionEn']?.toString() ?? '');
@@ -232,10 +241,22 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
             icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF0D9488)),
           ),
           IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Calling customer...')),
-              );
+            onPressed: () async {
+              final isUrdu = AppScope.of(context).isUrdu;
+              if (_customerPhone.isNotEmpty) {
+                final uri = Uri(scheme: 'tel', path: _customerPhone);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(isUrdu ? 'کال کرنے سے قاصر' : 'Unable to call'),
+                  ));
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(isUrdu ? 'فون نمبر دستیاب نہیں' : 'No phone number available'),
+                ));
+              }
             },
             icon: const Icon(Icons.call, color: Colors.green),
           ),
@@ -310,9 +331,16 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                         style: FilledButton.styleFrom(backgroundColor: Colors.red),
                         icon: const Icon(Icons.call),
                         label: const Text('15 / Admin'),
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SOS Triggered!')));
+                          final uri = Uri(scheme: 'tel', path: '15');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(isUrdu ? 'ایمرجنسی کال کرنے سے قاصر' : 'Unable to call emergency'),
+                            ));
+                          }
                         },
                       ),
                     ],

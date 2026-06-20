@@ -88,6 +88,11 @@ Stream<DocumentSnapshot> streamCurrentUserData() {
   return FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots();
 }
 
+Future<String?> getUserPhone(String userId) async {
+  final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+  return doc.data()?['phone']?.toString();
+}
+
 Future<void> updateProfileImage(String imageUrl) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;

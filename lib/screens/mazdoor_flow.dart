@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../main.dart';
 import '../app_state.dart';
@@ -2776,9 +2777,14 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         style: FilledButton.styleFrom(backgroundColor: Colors.red),
                         icon: const Icon(Icons.call),
                         label: const Text('15 / Admin'),
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.pop(ctx);
-                          showToast('SOS Triggered!');
+                          final uri = Uri(scheme: 'tel', path: '15');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri);
+                          } else {
+                            showToast(bilingual(context, 'Unable to call emergency', 'ایمرجنسی کال کرنے سے قاصر'));
+                          }
                         },
                       ),
                     ],
@@ -2911,11 +2917,18 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       children: [
                         IconButton(onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedChat), icon: const Icon(Icons.chat)),
                         IconButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Calling worker...')),
-                            );
-                          }, 
+                          onPressed: () async {
+                            if (worker.phone.isNotEmpty) {
+                              final uri = Uri(scheme: 'tel', path: worker.phone);
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri);
+                              } else {
+                                showToast(bilingual(context, 'Unable to call', 'کال کرنے سے قاصر'));
+                              }
+                            } else {
+                              showToast(bilingual(context, 'No phone number available', 'فون نمبر دستیاب نہیں'));
+                            }
+                          },
                           icon: const Icon(Icons.call, color: Colors.green)
                         ),
                       ],

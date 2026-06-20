@@ -62,11 +62,11 @@ class SimulatorArguments {
 }
 
 class TrackingArguments {
-  final WorkerModel worker;
-  final JobPostingArguments job;
+  final WorkerModel? worker;
+  final JobPostingArguments? job;
   final String? jobId;
 
-  TrackingArguments({required this.worker, required this.job, this.jobId});
+  TrackingArguments({this.worker, this.job, this.jobId});
 }
 
 
@@ -4600,9 +4600,28 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
 
                     return Card(
                       child: InkWell(
-                        onTap: () {
+                        onTap: () async {
                           if (activeTab) {
-                            Navigator.pushNamed(context, AppRoutes.tracking, arguments: TrackingArguments(jobId: doc.id));
+                            final workerId = data['workerId']?.toString() ?? '';
+                            if (workerId.isNotEmpty) {
+                              final workerDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
+                              final workerData = workerDoc.data();
+                              if (workerData != null && context.mounted) {
+                                final worker = WorkerModel.fromFirestore(workerData, docId: workerDoc.id);
+                                final jobArgs = JobPostingArguments(
+                                  descriptionEn: descEn,
+                                  descriptionUr: descUr,
+                                  price: (price as num?)?.toDouble() ?? 0,
+                                  categoryKey: data['categoryKey']?.toString() ?? '',
+                                  paymentMethod: data['paymentMethod']?.toString() ?? 'Cash',
+                                );
+                                Navigator.pushNamed(context, AppRoutes.tracking, arguments: TrackingArguments(
+                                  worker: worker,
+                                  job: jobArgs,
+                                  jobId: doc.id,
+                                ));
+                              }
+                            }
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Job Details opened')),

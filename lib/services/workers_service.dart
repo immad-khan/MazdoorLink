@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../data/mock_data.dart';
@@ -117,12 +118,16 @@ Future<String?> createJobOffer({
   required double price,
   required String categoryKey,
   String paymentMethod = 'Cash',
+  double? customerLatitude,
+  double? customerLongitude,
 }) async {
   final customer = FirebaseAuth.instance.currentUser;
   if (customer == null || workerId == null) return null;
 
   final customerDoc = await FirebaseFirestore.instance.collection('users').doc(customer.uid).get();
   final customerName = customerDoc.data()?['name']?.toString() ?? customer.displayName ?? 'Customer';
+
+  final pin = '${1000 + Random().nextInt(9000)}';
 
   final docRef = await FirebaseFirestore.instance.collection('jobs').add({
     'customerId': customer.uid,
@@ -135,6 +140,9 @@ Future<String?> createJobOffer({
     'categoryKey': categoryKey,
     'paymentMethod': paymentMethod,
     'status': 'pending',
+    'pin': pin,
+    if (customerLatitude != null) 'customerLatitude': customerLatitude,
+    if (customerLongitude != null) 'customerLongitude': customerLongitude,
     'createdAt': FieldValue.serverTimestamp(),
   });
 

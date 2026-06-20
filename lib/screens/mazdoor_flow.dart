@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../main.dart';
 import '../app_state.dart';
@@ -44,6 +46,19 @@ void showToast(String message) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
   );
+}
+
+Future<LatLng?> getCurrentLocation() async {
+  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) return null;
+  LocationPermission permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) return null;
+  }
+  if (permission == LocationPermission.deniedForever) return null;
+  final pos = await Geolocator.getCurrentPosition();
+  return LatLng(pos.latitude, pos.longitude);
 }
 
 class ProfileArguments {
@@ -2510,18 +2525,21 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                              price: offerPrice,
                              categoryKey: worker.category.toLowerCase(),
                            );
-                           final jobId = await createJobOffer(
-                             workerId: worker.id,
-                             workerName: worker.name,
-                             descriptionEn: jobDesc.descriptionEn,
-                             descriptionUr: jobDesc.descriptionUr,
-                             price: offerPrice,
-                             categoryKey: worker.category.toLowerCase(),
-                           );
-                           if (context.mounted) {
-                             Navigator.pushNamed(
-                               context,
-                               AppRoutes.matchingSimulator,
+                            final loc = await getCurrentLocation();
+                            final jobId = await createJobOffer(
+                              workerId: worker.id,
+                              workerName: worker.name,
+                              descriptionEn: jobDesc.descriptionEn,
+                              descriptionUr: jobDesc.descriptionUr,
+                              price: offerPrice,
+                              categoryKey: worker.category.toLowerCase(),
+                              customerLatitude: loc?.latitude,
+                              customerLongitude: loc?.longitude,
+                            );
+                            if (context.mounted) {
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.matchingSimulator,
                                arguments: SimulatorArguments(
                                  worker: worker,
                                  job: jobDesc,
@@ -2557,6 +2575,7 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         price: offerPrice,
                         categoryKey: worker.category.toLowerCase(),
                       );
+                      final loc = await getCurrentLocation();
                       final jobId = await createJobOffer(
                         workerId: worker.id,
                         workerName: worker.name,
@@ -2564,6 +2583,8 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         descriptionUr: jobDesc.descriptionUr,
                         price: offerPrice,
                         categoryKey: worker.category.toLowerCase(),
+                        customerLatitude: loc?.latitude,
+                        customerLongitude: loc?.longitude,
                       );
                       if (context.mounted) {
                         Navigator.pushNamed(
@@ -2637,8 +2658,12 @@ class ServiceTrackingScreen extends StatefulWidget {
 }
 
 class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
-  int _trackingState = 0; // 0: waiting for accept, 1: accepted/on way, 2: completed
+  int _trackingState = 0;
   StreamSubscription<DocumentSnapshot>? _jobSub;
+  LatLng? _customerLocation;
+  String _pin = '';
+  Set<Marker> _markers = {};
+  GoogleMapController? _mapController;
 
   @override
   void initState() {
@@ -2655,6 +2680,11 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       final data = snapshot.data() as Map<String, dynamic>?;
       if (data == null) return;
       final status = data['status']?.toString() ?? 'pending';
+      double? lat, lng;
+      if (data['customerLatitude'] != null) {
+        lat = (data['customerLatitude'] as num).toDouble();
+        lng = (data['customerLongitude'] as num).toDouble();
+      }
       setState(() {
         if (status == 'accepted') {
           _trackingState = 1;
@@ -2663,6 +2693,30 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         } else {
           _trackingState = 0;
         }
+        if (lat != null && lng != null) _customerLocation = LatLng(lat, lng);
+        _pin = data['pin']?.toString() ?? '';
+        _markers = {
+          Marker(
+            markerId: const MarkerId('customer'),
+            position: _customerLocation ?? const LatLng(31.5204, 74.3587),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            infoWindow: InfoWindow(title: bilingual(context, 'You', 'آپ')),
+          ),
+          Marker(
+            markerId: const MarkerId('worker'),
+            position: _trackingState >= 1
+                ? (_customerLocation ?? const LatLng(31.5204, 74.3587))
+                : LatLng(
+                    (_customerLocation?.latitude ?? 31.5204) + 0.005,
+                    (_customerLocation?.longitude ?? 74.3587) + 0.005,
+                  ),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            infoWindow: InfoWindow(title: bilingual(context, 'Worker', 'ورکر')),
+          ),
+        };
+        if (_mapController != null && _customerLocation != null) {
+          _mapController!.animateCamera(CameraUpdate.newLatLng(_customerLocation!));
+        }
       });
     });
   }
@@ -2670,6 +2724,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   @override
   void dispose() {
     _jobSub?.cancel();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -2694,12 +2749,14 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       title: bilingual(context, 'Service Tracking', 'سروس ٹریکنگ'),
       child: Stack(
         children: [
-          Container(
-            color: const Color(0xFFE5E3DF),
-            child: CustomPaint(
-              size: Size.infinite,
-              painter: _MapPainter(),
+          GoogleMap(
+            mapType: MapType.normal,
+            initialCameraPosition: CameraPosition(
+              target: _customerLocation ?? const LatLng(31.5204, 74.3587),
+              zoom: 15,
             ),
+            markers: _markers,
+            onMapCreated: (controller) => _mapController = controller,
           ),
           Positioned(
             top: 20,
@@ -2747,7 +2804,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     const Icon(Icons.lock, color: Colors.white, size: 16),
                     const SizedBox(width: 6),
                     Text(
-                      '${bilingual(context, 'PIN', 'پِن')}: 4921',
+                      '${bilingual(context, 'PIN', 'پِن')}: $_pin',
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ],
@@ -2915,28 +2972,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   }
 }
 
-class _MapPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = Colors.white.withOpacity(0.8)..strokeWidth = 8;
-    for (var i = 0.0; i < size.height; i += 90) {
-      canvas.drawLine(Offset(0, i + 10), Offset(size.width, i + 40), p);
-    }
-
-    final routePaint = Paint()
-      ..color = const Color(0xFF0D9488)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    final path = Path()
-      ..moveTo(100, 130)
-      ..quadraticBezierTo(170, 170, 190, 220)
-      ..quadraticBezierTo(210, 240, 250, 260);
-    canvas.drawPath(path, routePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
+// _MapPainter has been replaced by GoogleMap widget above.
 
 enum PostJobStep {
   chooseAction,
@@ -3924,6 +3960,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                                     MaterialPageRoute(
                                                       builder: (_) => WorkerTrackingScreen(
                                                         jobPrice: price,
+                                                        jobId: jobId,
                                                       ),
                                                     ),
                                                   );

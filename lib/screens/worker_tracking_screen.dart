@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:service_frontend/app_theme.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../app_state.dart';
+import '../services/workers_service.dart';
 
 class WorkerTrackingScreen extends StatefulWidget {
   final double jobPrice;
-  const WorkerTrackingScreen({Key? key, required this.jobPrice}) : super(key: key);
+  final String jobId;
+  const WorkerTrackingScreen({Key? key, required this.jobPrice, required this.jobId}) : super(key: key);
 
   @override
   State<WorkerTrackingScreen> createState() => _WorkerTrackingScreenState();
@@ -12,7 +16,70 @@ class WorkerTrackingScreen extends StatefulWidget {
 
 class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   int _status = 0; // 0: tracking, 1: arrived/working, 2: completing, 3: completed
-  bool _isLoading = false;
+  LatLng? _customerLocation;
+  String _pin = '';
+  Set<Marker> _markers = {};
+  GoogleMapController? _mapController;
+  StreamSubscription<DocumentSnapshot>? _jobSub;
+  String _customerName = 'Customer';
+  String _jobDesc = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToJob();
+  }
+
+  void _listenToJob() {
+    _jobSub = streamJobById(widget.jobId).listen((snapshot) {
+      if (!mounted) return;
+      final data = snapshot.data() as Map<String, dynamic>?;
+      if (data == null) return;
+      final isUrdu = AppScope.of(context).isUrdu;
+      double? lat, lng;
+      if (data['customerLatitude'] != null) {
+        lat = (data['customerLatitude'] as num).toDouble();
+        lng = (data['customerLongitude'] as num).toDouble();
+      }
+      setState(() {
+        if (lat != null && lng != null) _customerLocation = LatLng(lat, lng);
+        _pin = data['pin']?.toString() ?? '';
+        _customerName = data['customerName']?.toString() ?? 'Customer';
+        _jobDesc = isUrdu
+            ? (data['descriptionUr']?.toString() ?? '')
+            : (data['descriptionEn']?.toString() ?? '');
+        _updateMarkers();
+      });
+    });
+  }
+
+  void _updateMarkers() {
+    final center = _customerLocation ?? const LatLng(31.5204, 74.3587);
+    _markers = {
+      Marker(
+        markerId: const MarkerId('customer'),
+        position: center,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        infoWindow: InfoWindow(title: _customerName),
+      ),
+      Marker(
+        markerId: const MarkerId('worker'),
+        position: _status >= 1 ? center : LatLng(center.latitude + 0.005, center.longitude + 0.005),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: const InfoWindow(title: 'You'),
+      ),
+    };
+    if (_mapController != null) {
+      _mapController!.animateCamera(CameraUpdate.newLatLng(center));
+    }
+  }
+
+  @override
+  void dispose() {
+    _jobSub?.cancel();
+    _mapController?.dispose();
+    super.dispose();
+  }
 
   void _onArrived() {
     final isUrdu = AppScope.of(context).isUrdu;
@@ -48,7 +115,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
           ),
           FilledButton(
             onPressed: () {
-              if (otpController.text == '4921') {
+              if (otpController.text == _pin) {
                 Navigator.pop(ctx);
                 setState(() {
                   _status = 1;
@@ -149,12 +216,12 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isUrdu ? 'عمر فاروق' : 'Omer Farooq',
+                  _customerName,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Kitchen Leakage • Rs. 1500',
+                  '$_jobDesc • Rs. ${widget.jobPrice.toStringAsFixed(0)}',
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                 ),
               ],
@@ -189,106 +256,38 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
       ),
       body: Stack(
         children: [
-          // Map background
+          // Google Map
           Positioned.fill(
-            child: Container(
-              color: const Color(0xFFE8EDDF),
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: _MapPainter(status: _status),
+            child: GoogleMap(
+              mapType: MapType.normal,
+              initialCameraPosition: CameraPosition(
+                target: _customerLocation ?? const LatLng(31.5204, 74.3587),
+                zoom: 15,
               ),
+              markers: _markers,
+              onMapCreated: (controller) => _mapController = controller,
             ),
           ),
 
-          // Worker pin (en-route)
-          if (_status == 0)
-            Positioned(
-              top: 90,
-              left: 60,
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: const Offset(0, 3))],
-                    ),
-                    child: const Icon(Icons.handyman, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(isUrdu ? 'آپ' : 'You', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            ),
-
-          // Customer pin (en-route)
-          if (_status == 0)
-            Positioned(
-              top: 200,
-              right: 50,
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D9488),
-                      shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: const Color(0xFF0D9488).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
-                    ),
-                    child: const Icon(Icons.location_on, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D9488),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(isUrdu ? 'گاہک' : 'Customer', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            ),
-
-          // At location pin (after arrived)
+          // At location status overlay
           if (_status >= 1)
             Positioned(
-              top: 140,
+              top: 16,
               left: 0,
               right: 0,
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D9488),
-                      shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: const Color(0xFF0D9488).withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
-                    ),
-                    child: const Icon(Icons.location_on, color: Colors.white, size: 28),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
                   ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
-                    ),
-                    child: Text(
-                      isUrdu ? '📍 آپ گاہک کے پاس ہیں' : '📍 At Customer Location',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-                    ),
+                  child: Text(
+                    isUrdu ? 'آپ گاہک کے پاس ہیں' : '📍 At Customer Location',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
                   ),
-                ],
+                ),
               ),
             ),
           
@@ -511,90 +510,4 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   }
 }
 
-class _MapPainter extends CustomPainter {
-  final int status;
-  _MapPainter({this.status = 0});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Background
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      Paint()..color = const Color(0xFFE8EDDF),
-    );
-
-    // Draw road grid (horizontal roads)
-    final roadFill = Paint()..color = const Color(0xFFF5F5F0);
-    final roadLine = Paint()..color = const Color(0xFFD1D5C8)..strokeWidth = 1;
-    for (var y = 60.0; y < size.height; y += 100) {
-      canvas.drawRect(Rect.fromLTWH(0, y - 14, size.width, 28), roadFill);
-      canvas.drawLine(Offset(0, y - 14), Offset(size.width, y - 14), roadLine);
-      canvas.drawLine(Offset(0, y + 14), Offset(size.width, y + 14), roadLine);
-      // Center dashes
-      final dashPaint = Paint()..color = const Color(0xFFCCD2C5)..strokeWidth = 1;
-      for (var dx = 0.0; dx < size.width; dx += 20) {
-        canvas.drawLine(Offset(dx, y), Offset(dx + 10, y), dashPaint);
-      }
-    }
-
-    // Draw road grid (vertical roads)
-    for (var x = 80.0; x < size.width; x += 120) {
-      canvas.drawRect(Rect.fromLTWH(x - 14, 0, 28, size.height), roadFill);
-      canvas.drawLine(Offset(x - 14, 0), Offset(x - 14, size.height), roadLine);
-      canvas.drawLine(Offset(x + 14, 0), Offset(x + 14, size.height), roadLine);
-      // Center dashes
-      final dashPaint = Paint()..color = const Color(0xFFCCD2C5)..strokeWidth = 1;
-      for (var dy = 0.0; dy < size.height; dy += 20) {
-        canvas.drawLine(Offset(x, dy), Offset(x, dy + 10), dashPaint);
-      }
-    }
-
-    // Draw blocks (buildings/houses)
-    final blockPaint = Paint()..color = const Color(0xFFCCD5C0);
-    final blockBorder = Paint()
-      ..color = const Color(0xFFB8C1AD)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-
-    for (var y = 80.0; y < size.height - 60; y += 100) {
-      for (var x = 100.0; x < size.width - 40; x += 120) {
-        final rect = RRect.fromRectAndRadius(
-          Rect.fromLTWH(x - 40, y, 80, 68),
-          const Radius.circular(4),
-        );
-        canvas.drawRRect(rect, blockPaint);
-        canvas.drawRRect(rect, blockBorder);
-      }
-    }
-
-    // Draw route line (only when en-route)
-    if (status == 0) {
-      final routeGlow = Paint()
-        ..color = const Color(0xFF0D9488).withOpacity(0.2)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 14
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-
-      final routePaint = Paint()
-        ..color = const Color(0xFF0D9488)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-
-      final path = Path()
-        ..moveTo(85, 120)
-        ..lineTo(85, 160)
-        ..lineTo(200, 160)
-        ..lineTo(200, 230)
-        ..lineTo(size.width - 70, 230);
-      
-      canvas.drawPath(path, routeGlow);
-      canvas.drawPath(path, routePaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _MapPainter oldDelegate) => oldDelegate.status != status;
-}
+// _MapPainter removed — using GoogleMap widget above

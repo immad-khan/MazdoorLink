@@ -1014,6 +1014,8 @@ final _phone = TextEditingController();
           
           setState(() => _isUploading = false);
 
+          await FirebaseAuth.instance.signOut();
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text('Account created! Please check your email to verify your account before logging in.'),
@@ -1051,6 +1053,7 @@ final _phone = TextEditingController();
         );
         
         if (!userCredential.user!.emailVerified) {
+          await FirebaseAuth.instance.signOut();
           if (mounted) {
             showToast('Please verify your email first! Check your inbox.');
           }
@@ -1092,7 +1095,16 @@ final _phone = TextEditingController();
         return;
       } catch (e) {
         if (mounted) {
-          showToast(e.toString());
+          final msg = e.toString();
+          if (msg.contains('user-not-found') || msg.contains('no user record')) {
+            showToast('No account found with this email. Please sign up first.');
+          } else if (msg.contains('wrong-password') || msg.contains('password is invalid')) {
+            showToast('Wrong password. Try again or tap "Forgot password?" to reset it.');
+          } else if (msg.contains('too-many-requests')) {
+            showToast('Too many failed attempts. Please wait a few minutes and try again.');
+          } else {
+            showToast(msg);
+          }
         }
         return;
       }
@@ -2302,10 +2314,12 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                               size: 22,
                             ),
                             onPressed: () {
-                              if (_favouriteIds.contains(matchedWorkers[i].id)) {
-                                removeFavouriteWorker(matchedWorkers[i].id);
+                              final wid = matchedWorkers[i].id;
+                              if (wid == null) return;
+                              if (_favouriteIds.contains(wid)) {
+                                removeFavouriteWorker(wid);
                               } else {
-                                addFavouriteWorker(matchedWorkers[i].id);
+                                addFavouriteWorker(wid);
                               }
                             },
                           ),
@@ -2459,10 +2473,12 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                           color: Colors.white,
                         ),
                         onPressed: () {
-                          if (_favouriteIds.contains(worker.id)) {
-                            removeFavouriteWorker(worker.id);
+                          final wid = worker.id;
+                          if (wid == null) return;
+                          if (_favouriteIds.contains(wid)) {
+                            removeFavouriteWorker(wid);
                           } else {
-                            addFavouriteWorker(worker.id);
+                            addFavouriteWorker(wid);
                           }
                         },
                       ),
@@ -2553,12 +2569,14 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
               children: [
                 IconButton.outlined(
                   onPressed: () async {
-                    final existingId = await findExistingConversation(worker.id);
+                    final wid = worker.id;
+                    if (wid == null) return;
+                    final existingId = await findExistingConversation(wid);
                     if (!context.mounted) return;
                     if (existingId != null) {
                       Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: existingId, otherName: worker.name));
                     } else {
-                      final newId = await createConversation(otherUserId: worker.id, otherUserName: worker.name);
+                      final newId = await createConversation(otherUserId: wid, otherUserName: worker.name);
                       if (context.mounted) {
                         Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: newId, otherName: worker.name));
                       }
@@ -2990,12 +3008,14 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       children: [
                         IconButton(
                           onPressed: () async {
-                            final existingId = await findExistingConversation(worker.id);
+                            final wid = worker.id;
+                            if (wid == null) return;
+                            final existingId = await findExistingConversation(wid);
                             if (!context.mounted) return;
                             if (existingId != null) {
                               Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: existingId, otherName: worker.name));
                             } else {
-                              final newId = await createConversation(otherUserId: worker.id, otherUserName: worker.name);
+                              final newId = await createConversation(otherUserId: wid, otherUserName: worker.name);
                               if (context.mounted) {
                                 Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: newId, otherName: worker.name));
                               }
@@ -4663,7 +4683,6 @@ class ChatHistoryScreen extends StatefulWidget {
 class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
   @override
   Widget build(BuildContext context) {
-    final isUrdu = AppScope.of(context).isUrdu;
     return MzScaffold(
       showBack: true,
       showBottomNav: true,
@@ -4751,7 +4770,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isUrdu = AppScope.of(context).isUrdu;
     return MzScaffold(
       showBack: true,
       showBottomNav: false,
@@ -5887,8 +5905,9 @@ class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
     for (final id in ids) {
       try {
         final doc = await FirebaseFirestore.instance.collection('workers').doc(id).get();
-        if (doc.exists) {
-          workers.add(WorkerModel.fromFirestore(doc, null));
+        final data = doc.data();
+        if (data != null) {
+          workers.add(WorkerModel.fromFirestore(data, docId: doc.id));
         }
       } catch (_) {}
     }
@@ -5937,8 +5956,10 @@ class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
                           IconButton(
                             icon: const Icon(Icons.favorite, color: Colors.red, size: 22),
                             onPressed: () {
-                              removeFavouriteWorker(w.id);
-                              setState(() => _favouriteIds.remove(w.id));
+                              final wid = w.id;
+                              if (wid == null) return;
+                              removeFavouriteWorker(wid);
+                              setState(() => _favouriteIds.remove(wid));
                               _fetchWorkers(_favouriteIds);
                             },
                           ),

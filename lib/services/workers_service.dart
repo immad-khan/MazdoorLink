@@ -248,3 +248,112 @@ Stream<QuerySnapshot> streamSecurityDeposits() {
       .orderBy('createdAt', descending: true)
       .snapshots();
 }
+
+// ── Favourite Workers ───────────────────────
+
+Future<void> addFavouriteWorker(String workerId) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+  await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+    'favouriteWorkerIds': FieldValue.arrayUnion([workerId]),
+  });
+}
+
+Future<void> removeFavouriteWorker(String workerId) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+  await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+    'favouriteWorkerIds': FieldValue.arrayRemove([workerId]),
+  });
+}
+
+Stream<List<String>> streamFavouriteWorkerIds() {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return const Stream.empty();
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .snapshots()
+      .map((doc) {
+        final ids = doc.data()?['favouriteWorkerIds'] as List<dynamic>?;
+        return ids?.map((e) => e.toString()).toList() ?? [];
+      });
+}
+
+// ── Conversations & Chat ────────────────────
+
+Future<String> createConversation({
+  required String otherUserId,
+  required String otherUserName,
+  String? otherUserImage,
+}) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) throw Exception('Not logged in');
+  final docRef = await FirebaseFirestore.instance.collection('conversations').add({
+    'participants': [user.uid, otherUserId],
+    'participantNames': {
+      user.uid: user.displayName ?? 'User',
+      otherUserId: otherUserName,
+    },
+    if (otherUserImage != null)
+      'participantImages': {
+        user.uid: '',
+        otherUserId: otherUserImage,
+      },
+    'lastMessage': '',
+    'lastTimestamp': FieldValue.serverTimestamp(),
+    'createdAt': FieldValue.serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+Stream<QuerySnapshot> streamConversations() {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return const Stream.empty();
+  return FirebaseFirestore.instance
+      .collection('conversations')
+      .where('participants', arrayContains: user.uid)
+      .orderBy('lastTimestamp', descending: true)
+      .snapshots();
+}
+
+Future<void> sendMessage(String conversationId, String text) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+  await FirebaseFirestore.instance
+      .collection('conversations')
+      .doc(conversationId)
+      .collection('messages')
+      .add({
+    'senderId': user.uid,
+    'text': text,
+    'timestamp': FieldValue.serverTimestamp(),
+  });
+  await FirebaseFirestore.instance.collection('conversations').doc(conversationId).update({
+    'lastMessage': text,
+    'lastTimestamp': FieldValue.serverTimestamp(),
+  });
+}
+
+Stream<QuerySnapshot> streamMessages(String conversationId) {
+  return FirebaseFirestore.instance
+      .collection('conversations')
+      .doc(conversationId)
+      .collection('messages')
+      .orderBy('timestamp', descending: false)
+      .snapshots();
+}
+
+Future<String?> findExistingConversation(String otherUserId) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return null;
+  final snapshot = await FirebaseFirestore.instance
+      .collection('conversations')
+      .where('participants', arrayContains: user.uid)
+      .get();
+  for (final doc in snapshot.docs) {
+    final participants = List<String>.from(doc['participants'] ?? []);
+    if (participants.contains(otherUserId)) return doc.id;
+  }
+  return null;
+}

@@ -113,6 +113,7 @@ class AppRoutes {
   static const profileManagement = '/shared/profile-management';
   static const privacySettings = '/shared/privacy-settings';
   static const sharedChat = '/shared/chat';
+  static const sharedConversation = '/shared/conversation';
   static const sharedHistory = '/shared/history';
   static const sharedSettings = '/shared/settings';
   static const customerSupport = '/customer/support';
@@ -1377,6 +1378,8 @@ final _phone = TextEditingController();
             const Divider(),
             const SizedBox(height: 16),
             const Text('ID Card Images (Front & Back)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+            const SizedBox(height: 2),
+            Text('Max 5MB per image', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -2085,6 +2088,22 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
   String categoryKey = 'electrician';
   String paymentMethod = 'Cash';
   late Future<List<WorkerModel>> _workersFuture;
+  List<String> _favouriteIds = [];
+  StreamSubscription? _favSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _favSub = streamFavouriteWorkerIds().listen((ids) {
+      if (mounted) setState(() => _favouriteIds = ids);
+    });
+  }
+
+  @override
+  void dispose() {
+    _favSub?.cancel();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -2238,31 +2257,45 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                                         radius: 31,
                                         child: Text(matchedWorkers[i].name.isNotEmpty ? matchedWorkers[i].name[0].toUpperCase() : '?'),
                                       ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      matchedWorkers[i].name,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.darkerText),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      matchedWorkers[i].category,
-                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                    ),
-                                    if (matchedWorkers[i].price.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        matchedWorkers[i].price,
-                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-                                      ),
-                                    ],
-                                  ],
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  matchedWorkers[i].name,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.darkerText),
                                 ),
-                              ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  matchedWorkers[i].category,
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                ),
+                                if (matchedWorkers[i].price.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    matchedWorkers[i].price,
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              _favouriteIds.contains(matchedWorkers[i].id) ? Icons.favorite : Icons.favorite_border,
+                              color: _favouriteIds.contains(matchedWorkers[i].id) ? Colors.red : Colors.grey,
+                              size: 22,
+                            ),
+                            onPressed: () {
+                              if (_favouriteIds.contains(matchedWorkers[i].id)) {
+                                removeFavouriteWorker(matchedWorkers[i].id);
+                              } else {
+                                addFavouriteWorker(matchedWorkers[i].id);
+                              }
+                            },
+                          ),
                             ],
                           ),
                           if (matchedWorkers[i].skillsEn.isNotEmpty) ...[
@@ -2332,9 +2365,20 @@ class FlowWorkerProfileScreen extends StatefulWidget {
 
 class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
   final TextEditingController _offerController = TextEditingController();
+  List<String> _favouriteIds = [];
+  StreamSubscription? _favSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _favSub = streamFavouriteWorkerIds().listen((ids) {
+      if (mounted) setState(() => _favouriteIds = ids);
+    });
+  }
 
   @override
   void dispose() {
+    _favSub?.cancel();
     _offerController.dispose();
     super.dispose();
   }
@@ -2397,11 +2441,16 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                     child: CircleAvatar(
                       backgroundColor: Colors.white24,
                       child: IconButton(
-                        icon: const Icon(Icons.favorite_border, color: Colors.white),
+                        icon: Icon(
+                          _favouriteIds.contains(worker.id) ? Icons.favorite : Icons.favorite_border,
+                          color: Colors.white,
+                        ),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(bilingual(context, 'Added to Favorites! You will ping this worker first next time.', 'پسندیدہ میں شامل کر دیا گیا! اگلی بار یہ ورکر کو سب سے پہلے درخواست دی جائے گی'))),
-                          );
+                          if (_favouriteIds.contains(worker.id)) {
+                            removeFavouriteWorker(worker.id);
+                          } else {
+                            addFavouriteWorker(worker.id);
+                          }
                         },
                       ),
                     ),
@@ -5604,8 +5653,49 @@ class _WorkerAcceptanceSimulatorScreenState extends State<WorkerAcceptanceSimula
   }
 }
 
-class FavoriteWorkersScreen extends StatelessWidget {
+class FavoriteWorkersScreen extends StatefulWidget {
   const FavoriteWorkersScreen({super.key});
+  @override
+  State<FavoriteWorkersScreen> createState() => _FavoriteWorkersScreenState();
+}
+
+class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
+  StreamSubscription? _favSub;
+  List<String> _favouriteIds = [];
+  List<WorkerModel> _workers = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _favSub = streamFavouriteWorkerIds().listen((ids) {
+      _favouriteIds = ids;
+      _fetchWorkers(ids);
+    });
+  }
+
+  Future<void> _fetchWorkers(List<String> ids) async {
+    if (ids.isEmpty) {
+      if (mounted) setState(() { _workers = []; _loading = false; });
+      return;
+    }
+    final workers = <WorkerModel>[];
+    for (final id in ids) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('workers').doc(id).get();
+        if (doc.exists) {
+          workers.add(WorkerModel.fromFirestore(doc, null));
+        }
+      } catch (_) {}
+    }
+    if (mounted) setState(() { _workers = workers; _loading = false; });
+  }
+
+  @override
+  void dispose() {
+    _favSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -5613,70 +5703,70 @@ class FavoriteWorkersScreen extends StatelessWidget {
       showBack: true,
       title: bilingual(context, 'Favorite Workers', 'پسندیدہ ورکرز'),
       showBottomNav: false,
-      child: StreamBuilder<List<WorkerModel>>(
-        stream: streamApprovedWorkers(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return Center(
-              child: Text(bilingual(context, 'No workers available', 'کوئی ورکر دستیاب نہیں')),
-            );
-          }
-          final favWorkers = snapshot.data!;
-          if (favWorkers.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(
-                  bilingual(context, 'No workers found. Workers who register and get approved will appear here.', 'کوئی ورکر نہیں ملا۔ رجسٹرڈ اور منظور شدہ ورکرز یہاں نظر آئیں گے۔'),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: favWorkers.length,
-            itemBuilder: (context, i) {
-              final w = favWorkers[i];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: w.image.isNotEmpty ? NetworkImage(w.image) : null,
-                  child: w.image.isEmpty ? Text(w.name.isNotEmpty ? w.name[0].toUpperCase() : '?') : null,
-                ),
-                title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('${w.category}${w.price.isNotEmpty ? '  •  ${w.price}' : ''}'),
-                trailing: IconButton.filledTonal(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context, 
-                      AppRoutes.workerProfile,
-                      arguments: ProfileArguments(
-                        worker: w,
-                        job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+      child: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _workers.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Text(
+                      bilingual(context, 'No favourite workers yet. Tap the heart icon on a worker\'s profile to add them.', 'ابھی تک کوئی پسندیدہ ورکر نہیں۔ ورکر کے پروفائل پر دل کے آئیکن کو تھپتھپا کر شامل کریں۔'),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: _workers.length,
+                  itemBuilder: (context, i) {
+                    final w = _workers[i];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: w.image.isNotEmpty ? NetworkImage(w.image) : null,
+                        child: w.image.isEmpty ? Text(w.name.isNotEmpty ? w.name[0].toUpperCase() : '?') : null,
                       ),
+                      title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('${w.category}${w.price.isNotEmpty ? '  •  ${w.price}' : ''}'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.favorite, color: Colors.red, size: 22),
+                            onPressed: () {
+                              removeFavouriteWorker(w.id);
+                              setState(() => _favouriteIds.remove(w.id));
+                              _fetchWorkers(_favouriteIds);
+                            },
+                          ),
+                          IconButton.filledTonal(
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                context, 
+                                AppRoutes.workerProfile,
+                                arguments: ProfileArguments(
+                                  worker: w,
+                                  job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                            color: const Color(0xFF0D9488),
+                          ),
+                        ],
+                      ),
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context, 
+                          AppRoutes.workerProfile,
+                          arguments: ProfileArguments(
+                            worker: w,
+                            job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+                          ),
+                        );
+                      },
                     );
                   },
-                  icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  color: const Color(0xFF0D9488),
                 ),
-                onTap: () {
-                  Navigator.pushNamed(
-                    context, 
-                    AppRoutes.workerProfile,
-                    arguments: ProfileArguments(
-                      worker: w,
-                      job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
-      ),
     );
   }
 }

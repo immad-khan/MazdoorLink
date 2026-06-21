@@ -85,6 +85,13 @@ class TrackingArguments {
   TrackingArguments({this.worker, this.job, this.jobId});
 }
 
+class ConversationArguments {
+  final String conversationId;
+  final String otherName;
+
+  ConversationArguments({required this.conversationId, required this.otherName});
+}
+
 
 class AppRoutes {
   static const welcome = '/';
@@ -174,7 +181,13 @@ Route<dynamic> buildRoute(RouteSettings settings) {
     case AppRoutes.privacySettings:
       return _page(const PrivacySettingsScreen(), settings);
     case AppRoutes.sharedChat:
-      return _page(const SmartChatScreen(), settings);
+      return _page(const ChatHistoryScreen(), settings);
+    case AppRoutes.sharedConversation:
+      final args = settings.arguments;
+      if (args is ConversationArguments) {
+        return _page(ConversationScreen(conversationId: args.conversationId, otherName: args.otherName), settings);
+      }
+      return _page(const ChatHistoryScreen(), settings);
     case AppRoutes.sharedHistory:
       return _page(const BookingHistoryScreen(), settings);
     case AppRoutes.sharedSettings:
@@ -2539,7 +2552,18 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
             child: Row(
               children: [
                 IconButton.outlined(
-                  onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedChat),
+                  onPressed: () async {
+                    final existingId = await findExistingConversation(worker.id);
+                    if (!context.mounted) return;
+                    if (existingId != null) {
+                      Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: existingId, otherName: worker.name));
+                    } else {
+                      final newId = await createConversation(otherUserId: worker.id, otherUserName: worker.name);
+                      if (context.mounted) {
+                        Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: newId, otherName: worker.name));
+                      }
+                    }
+                  },
                   icon: const Icon(Icons.chat_bubble_outline),
                 ),
                 const SizedBox(width: 10),
@@ -2964,7 +2988,21 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        IconButton(onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedChat), icon: const Icon(Icons.chat)),
+                        IconButton(
+                          onPressed: () async {
+                            final existingId = await findExistingConversation(worker.id);
+                            if (!context.mounted) return;
+                            if (existingId != null) {
+                              Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: existingId, otherName: worker.name));
+                            } else {
+                              final newId = await createConversation(otherUserId: worker.id, otherUserName: worker.name);
+                              if (context.mounted) {
+                                Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: newId, otherName: worker.name));
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.chat),
+                        ),
                         IconButton(
                           onPressed: () async {
                             if (worker.phone.isNotEmpty) {
@@ -4149,7 +4187,7 @@ class JobNotificationScreen extends StatelessWidget {
                           Expanded(
                             flex: 2,
                             child: FilledButton.icon(
-                              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.sharedChat),
+                              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard),
                               icon: const Icon(Icons.explore),
                               label: Text(isUrdu ? 'قبول کریں' : 'Accept'),
                             ),
@@ -4615,6 +4653,172 @@ class _SmartChatScreenState extends State<SmartChatScreen> {
     );
   }
 }
+
+class ChatHistoryScreen extends StatefulWidget {
+  const ChatHistoryScreen({super.key});
+  @override
+  State<ChatHistoryScreen> createState() => _ChatHistoryScreenState();
+}
+
+class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final isUrdu = AppScope.of(context).isUrdu;
+    return MzScaffold(
+      showBack: true,
+      showBottomNav: true,
+      title: bilingual(context, 'Chat History', 'چیٹ ہسٹری'),
+      child: StreamBuilder<QuerySnapshot>(
+        stream: streamConversations(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final conversations = snapshot.data?.docs ?? [];
+          if (conversations.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  bilingual(context, 'No conversations yet. Start a chat with a worker to see it here.', 'ابھی تک کوئی گفتگو نہیں۔ کسی ورکر کے ساتھ چیٹ شروع کریں۔'),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: conversations.length,
+            itemBuilder: (_, i) {
+              final doc = conversations[i];
+              final data = doc.data() as Map<String, dynamic>;
+              final participants = List<String>.from(data['participants'] ?? []);
+              final participantNames = data['participantNames'] as Map<String, dynamic>?;
+              final lastMsg = data['lastMessage'] as String? ?? '';
+              final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+              final otherId = participants.where((p) => p != currentUid).firstOrNull ?? '';
+              final otherName = participantNames?[otherId] as String? ?? '';
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: const Color(0xFF0D9488).withOpacity(0.15),
+                  child: Text(
+                    otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                  ),
+                ),
+                title: Text(otherName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(lastMsg, maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.sharedConversation,
+                    arguments: ConversationArguments(conversationId: doc.id, otherName: otherName),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class ConversationScreen extends StatefulWidget {
+  final String conversationId;
+  final String otherName;
+  const ConversationScreen({super.key, required this.conversationId, required this.otherName});
+  @override
+  State<ConversationScreen> createState() => _ConversationScreenState();
+}
+
+class _ConversationScreenState extends State<ConversationScreen> {
+  final TextEditingController _msgCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _msgCtrl.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final text = _msgCtrl.text.trim();
+    if (text.isEmpty) return;
+    sendMessage(widget.conversationId, text);
+    _msgCtrl.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isUrdu = AppScope.of(context).isUrdu;
+    return MzScaffold(
+      showBack: true,
+      showBottomNav: false,
+      title: widget.otherName,
+      child: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: streamMessages(widget.conversationId),
+              builder: (context, snapshot) {
+                final msgs = snapshot.data?.docs ?? [];
+                return ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: msgs.length,
+                  itemBuilder: (_, i) {
+                    final data = msgs[i].data() as Map<String, dynamic>;
+                    final senderId = data['senderId'] as String? ?? '';
+                    final text = data['text'] as String? ?? '';
+                    final isMe = senderId == FirebaseAuth.instance.currentUser?.uid;
+                    return Align(
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        constraints: const BoxConstraints(maxWidth: 300),
+                        decoration: BoxDecoration(
+                          color: isMe ? const Color(0xFF0D9488) : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2))],
+                        ),
+                        child: Text(text, style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15)),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _msgCtrl,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(),
+                    decoration: InputDecoration(
+                      hintText: bilingual(context, 'Type a message...', 'پیغام لکھیں...'),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.send, color: Color(0xFF0D9488)),
+                  onPressed: _send,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Message {
   _Message(this.en, this.ur, this.own);
 

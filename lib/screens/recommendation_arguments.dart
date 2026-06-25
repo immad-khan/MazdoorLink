@@ -4,6 +4,14 @@ class RecommendationArguments {
   final List<IssueItem> selectedIssues;
   final String categoryKey;
   final String paymentMethod;
+  final double? customerLatitude;
+  final double? customerLongitude;
 
-  RecommendationArguments({required this.selectedIssues, required this.categoryKey, this.paymentMethod = 'Cash'});
+  RecommendationArguments({
+    required this.selectedIssues,
+    required this.categoryKey,
+    this.paymentMethod = 'Cash',
+    this.customerLatitude,
+    this.customerLongitude,
+  });
 }

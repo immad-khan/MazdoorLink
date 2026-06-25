@@ -94,6 +94,7 @@ class AppRoutes {
   static const customerHome = '/customer/home';
   static const jobPosting = '/customer/job-posting';
   static const issueSelection = '/customer/issue-selection';
+  static const confirmLocation = '/customer/confirm-location';
   static const recommendations = '/customer/recommendations';
   static const workerProfile = '/customer/worker-profile';
   static const tracking = '/customer/tracking';
@@ -136,6 +137,8 @@ Route<dynamic> buildRoute(RouteSettings settings) {
       return _page(const IssueSelectionScreen(), settings);
     case AppRoutes.jobPosting:
       return _page(const FlowJobPostingScreen(), settings);
+    case AppRoutes.confirmLocation:
+      return _page(const ConfirmLocationScreen(), settings);
     case AppRoutes.recommendations:
       return _page(const WorkerRecommendationsScreen(), settings);
     case AppRoutes.workerProfile:
@@ -2236,7 +2239,7 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
                   } else {
                     Navigator.pushReplacementNamed(
                       context,
-                      AppRoutes.recommendations,
+                      AppRoutes.confirmLocation,
                       arguments: JobPostingArguments(
                         descriptionEn: desc.text,
                         descriptionUr: desc.text,
@@ -2360,6 +2363,215 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
 }
 
 
+class ConfirmLocationScreen extends StatefulWidget {
+  const ConfirmLocationScreen({super.key});
+
+  @override
+  State<ConfirmLocationScreen> createState() => _ConfirmLocationScreenState();
+}
+
+class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
+  static const LatLng _fallbackLocation = LatLng(31.5204, 74.3587);
+  GoogleMapController? _mapController;
+  LatLng _selectedLocation = _fallbackLocation;
+  bool _loadingLocation = true;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) return;
+    _initialized = true;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final lat = args is JobPostingArguments
+        ? args.customerLatitude
+        : args is RecommendationArguments
+            ? args.customerLatitude
+            : null;
+    final lng = args is JobPostingArguments
+        ? args.customerLongitude
+        : args is RecommendationArguments
+            ? args.customerLongitude
+            : null;
+
+    if (lat != null && lng != null) {
+      _selectedLocation = LatLng(lat, lng);
+      _loadingLocation = false;
+    } else {
+      _useCurrentLocation();
+    }
+  }
+
+  @override
+  void dispose() {
+    _mapController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() => _loadingLocation = true);
+    final location = await getCurrentLocation();
+    if (!mounted) return;
+
+    setState(() {
+      _selectedLocation = location ?? _fallbackLocation;
+      _loadingLocation = false;
+    });
+
+    if (_mapController != null) {
+      _mapController!.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation, 16));
+    }
+
+    if (location == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(bilingual(context, 'Location permission unavailable. Move the pin manually.', 'لوکیشن دستیاب نہیں۔ پن کو خود منتقل کریں۔'))),
+      );
+    }
+  }
+
+  void _confirmLocation() {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is JobPostingArguments) {
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.recommendations,
+        arguments: JobPostingArguments(
+          descriptionEn: args.descriptionEn,
+          descriptionUr: args.descriptionUr,
+          price: args.price,
+          categoryKey: args.categoryKey,
+          paymentMethod: args.paymentMethod,
+          customerLatitude: _selectedLocation.latitude,
+          customerLongitude: _selectedLocation.longitude,
+        ),
+      );
+      return;
+    }
+
+    if (args is RecommendationArguments) {
+      Navigator.pushReplacementNamed(
+        context,
+        AppRoutes.recommendations,
+        arguments: RecommendationArguments(
+          selectedIssues: args.selectedIssues,
+          categoryKey: args.categoryKey,
+          paymentMethod: args.paymentMethod,
+          customerLatitude: _selectedLocation.latitude,
+          customerLongitude: _selectedLocation.longitude,
+        ),
+      );
+      return;
+    }
+
+    Navigator.pushReplacementNamed(context, AppRoutes.recommendations);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isUrdu = AppScope.of(context).isUrdu;
+    return MzScaffold(
+      showBottomNav: false,
+      showBack: true,
+      title: bilingual(context, 'Confirm Location', 'لوکیشن کی تصدیق کریں'),
+      child: Stack(
+        children: [
+          GoogleMap(
+            mapType: MapType.normal,
+            initialCameraPosition: CameraPosition(target: _selectedLocation, zoom: 16),
+            markers: {
+              Marker(
+                markerId: const MarkerId('customer_location'),
+                position: _selectedLocation,
+                draggable: true,
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+                infoWindow: InfoWindow(title: bilingual(context, 'Service location', 'سروس لوکیشن')),
+                onDragEnd: (position) => setState(() => _selectedLocation = position),
+              ),
+            },
+            onTap: (position) => setState(() => _selectedLocation = position),
+            onMapCreated: (controller) {
+              _mapController = controller;
+              controller.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation, 16));
+            },
+            myLocationButtonEnabled: false,
+            myLocationEnabled: false,
+            zoomControlsEnabled: false,
+          ),
+          if (_loadingLocation)
+            Container(
+              color: Colors.white.withOpacity(0.65),
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 18, offset: Offset(0, 8))],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    bilingual(context, 'Set exact service point', 'درست سروس پوائنٹ منتخب کریں'),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    bilingual(context, 'Drag the pin or tap the map. The worker will navigate to this exact point.', 'پن کو منتقل کریں یا نقشے پر ٹیپ کریں۔ ورکر اسی مقام پر آئے گا۔'),
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, color: Color(0xFF0D9488), size: 18),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${_selectedLocation.latitude.toStringAsFixed(5)}, ${_selectedLocation.longitude.toStringAsFixed(5)}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0D9488)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _loadingLocation ? null : () => _useCurrentLocation(),
+                          icon: const Icon(Icons.my_location),
+                          label: Text(isUrdu ? 'موجودہ لوکیشن' : 'Use current'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _loadingLocation ? null : _confirmLocation,
+                          icon: const Icon(Icons.check),
+                          label: Text(isUrdu ? 'تصدیق' : 'Confirm'),
+                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 
 class WorkerRecommendationsScreen extends StatefulWidget {
   const WorkerRecommendationsScreen({super.key});
@@ -2372,6 +2584,8 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
   List<IssueItem> selectedIssues = [];
   String categoryKey = 'electrician';
   String paymentMethod = 'Cash';
+  double? customerLatitude;
+  double? customerLongitude;
   late Future<List<WorkerModel>> _workersFuture;
   List<String> _favouriteIds = [];
   StreamSubscription? _favSub;
@@ -2399,9 +2613,13 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
       selectedIssues = rawArgs.selectedIssues;
       categoryKey = rawArgs.categoryKey;
       paymentMethod = rawArgs.paymentMethod;
+      customerLatitude = rawArgs.customerLatitude;
+      customerLongitude = rawArgs.customerLongitude;
     } else if (rawArgs is JobPostingArguments) {
       categoryKey = rawArgs.categoryKey;
       paymentMethod = rawArgs.paymentMethod;
+      customerLatitude = rawArgs.customerLatitude;
+      customerLongitude = rawArgs.customerLongitude;
       selectedIssues = [
         IssueItem(
           titleEn: rawArgs.descriptionEn,
@@ -2617,6 +2835,8 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                                       price: 0,
                                       categoryKey: categoryKey,
                                       paymentMethod: paymentMethod,
+                                      customerLatitude: customerLatitude,
+                                      customerLongitude: customerLongitude,
                                     ),
                                   ),
                                 );
@@ -2917,16 +3137,19 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                              price: offerPrice,
                              categoryKey: worker.category.toLowerCase(),
                            );
-                             final loc = await getCurrentLocation();
+                             final loc = jobDesc.customerLatitude == null || jobDesc.customerLongitude == null
+                                 ? await getCurrentLocation()
+                                 : null;
                              final jobId = await createJobOffer(
                                workerId: worker.id,
                                workerName: worker.name,
                                descriptionEn: jobDesc.descriptionEn,
                                descriptionUr: jobDesc.descriptionUr,
                                price: offerPrice,
-                               categoryKey: worker.category.toLowerCase(),
-                               customerLatitude: loc?.latitude,
-                               customerLongitude: loc?.longitude,
+                               categoryKey: jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey : worker.category.toLowerCase(),
+                               paymentMethod: jobDesc.paymentMethod,
+                               customerLatitude: jobDesc.customerLatitude ?? loc?.latitude,
+                               customerLongitude: jobDesc.customerLongitude ?? loc?.longitude,
                                visibilityDurationMinutes: _visibilityMinutes,
                              );
                              if (context.mounted) {
@@ -2968,16 +3191,19 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         price: offerPrice,
                         categoryKey: worker.category.toLowerCase(),
                       );
-                      final loc = await getCurrentLocation();
+                      final loc = jobDesc.customerLatitude == null || jobDesc.customerLongitude == null
+                          ? await getCurrentLocation()
+                          : null;
                       final jobId = await createJobOffer(
                         workerId: worker.id,
                         workerName: worker.name,
                         descriptionEn: jobDesc.descriptionEn,
                         descriptionUr: jobDesc.descriptionUr,
                         price: offerPrice,
-                        categoryKey: worker.category.toLowerCase(),
-                        customerLatitude: loc?.latitude,
-                        customerLongitude: loc?.longitude,
+                        categoryKey: jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey : worker.category.toLowerCase(),
+                        paymentMethod: jobDesc.paymentMethod,
+                        customerLatitude: jobDesc.customerLatitude ?? loc?.latitude,
+                        customerLongitude: jobDesc.customerLongitude ?? loc?.longitude,
                         visibilityDurationMinutes: _visibilityMinutes,
                       );
                       if (context.mounted) {
@@ -3080,7 +3306,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         return;
       }
       double? lat, lng;
-      if (data['customerLatitude'] != null) {
+      if (data['customerLatitude'] != null && data['customerLongitude'] != null) {
         lat = (data['customerLatitude'] as num).toDouble();
         lng = (data['customerLongitude'] as num).toDouble();
       }
@@ -5288,6 +5514,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                   price: (price as num?)?.toDouble() ?? 0,
                                   categoryKey: data['categoryKey']?.toString() ?? '',
                                   paymentMethod: data['paymentMethod']?.toString() ?? 'Cash',
+                                  customerLatitude: (data['customerLatitude'] as num?)?.toDouble(),
+                                  customerLongitude: (data['customerLongitude'] as num?)?.toDouble(),
                                 );
                                 Navigator.pushNamed(context, AppRoutes.tracking, arguments: TrackingArguments(
                                   worker: worker,

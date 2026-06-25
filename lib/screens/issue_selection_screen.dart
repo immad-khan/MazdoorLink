@@ -10,6 +10,8 @@ class JobPostingArguments {
   final double price;
   final String categoryKey;
   final String paymentMethod;
+  final double? customerLatitude;
+  final double? customerLongitude;
 
   JobPostingArguments({
     required this.descriptionEn,
@@ -17,6 +19,8 @@ class JobPostingArguments {
     required this.price,
     required this.categoryKey,
     this.paymentMethod = 'Cash',
+    this.customerLatitude,
+    this.customerLongitude,
   });
 }
 
@@ -315,7 +319,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
                               final selectedIssues = _selectedIndices.map((i) => issuesList[i]).toList();
                               Navigator.pushNamed(
                                 context,
-                                AppRoutes.recommendations,
+                                AppRoutes.confirmLocation,
                                 arguments: RecommendationArguments(selectedIssues: selectedIssues, categoryKey: categoryKey, paymentMethod: _paymentMethod),
                               );
                             },

@@ -39,7 +39,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
       if (data == null) return;
       final isUrdu = AppScope.of(context).isUrdu;
       double? lat, lng;
-      if (data['customerLatitude'] != null) {
+      if (data['customerLatitude'] != null && data['customerLongitude'] != null) {
         lat = (data['customerLatitude'] as num).toDouble();
         lng = (data['customerLongitude'] as num).toDouble();
       }
@@ -80,6 +80,34 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
     };
     if (_mapController != null) {
       _mapController!.animateCamera(CameraUpdate.newLatLng(center));
+    }
+  }
+
+  Future<void> _openCustomerDirections() async {
+    final isUrdu = AppScope.of(context).isUrdu;
+    final location = _customerLocation;
+    if (location == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isUrdu ? 'گاہک کی لوکیشن دستیاب نہیں ہے' : 'Customer location is not available'),
+      ));
+      return;
+    }
+
+    final uri = Uri.https('www.google.com', '/maps/dir/', {
+      'api': '1',
+      'destination': '${location.latitude},${location.longitude}',
+      'travelmode': 'driving',
+    });
+
+    final canOpenMaps = await canLaunchUrl(uri);
+    if (!mounted) return;
+
+    if (canOpenMaps) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isUrdu ? 'Google Maps نہیں کھل سکا' : 'Unable to open Google Maps'),
+      ));
     }
   }
 
@@ -410,6 +438,20 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                     const SizedBox(height: 12),
                     _buildCustomerInfoTile(isUrdu),
                     const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _openCustomerDirections,
+                        icon: const Icon(Icons.navigation),
+                        label: Text(isUrdu ? 'Google Maps میں راستہ دیکھیں' : 'Navigate with Google Maps'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF0D9488),
+                          side: const BorderSide(color: Color(0xFF0D9488)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(

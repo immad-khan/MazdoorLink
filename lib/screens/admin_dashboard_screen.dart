@@ -747,6 +747,8 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     final status = w['status'] ?? 'pending';
     final idFrontUrl = w['idFrontUrl'];
     final idBackUrl = w['idBackUrl'];
+    final policeCertUrl = w['policeCertUrl'];
+    final certificationUrl = w['certificationUrl'];
     final category = w['category'];
     final categoryNameEn = w['categoryNameEn'];
     final categoryNameUr = w['categoryNameUr'];
@@ -827,6 +829,38 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                   // ID Images
                   if (idFrontUrl != null || idBackUrl != null) ...[
                     const Text('ID Card Images', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                if (policeCertUrl != null) ...[
+                  const Divider(height: 24),
+                  Row(
+                    children: [
+                      const Icon(Icons.policy_outlined, size: 16, color: Color(0xFF0D9488)),
+                      const SizedBox(width: 6),
+                      const Text('Police Certificate:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(policeCertUrl, height: 140, width: double.infinity, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Text('Could not load certificate image')),
+                  ),
+                ],
+                if (certificationUrl != null) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.workspace_premium_outlined, size: 16, color: Color(0xFF0D9488)),
+                      const SizedBox(width: 6),
+                      const Text('Specialization Certificate:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(certificationUrl, height: 140, width: double.infinity, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Text('Could not load certificate image')),
+                  ),
+                ],
                     const SizedBox(height: 10),
                     if (idFrontUrl != null) ...[
                       const Text('Front:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),

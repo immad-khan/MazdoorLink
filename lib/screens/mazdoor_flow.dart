@@ -842,21 +842,6 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     });
   }
-    bool hasUppercase = val.contains(RegExp(r'[A-Z]'));
-    bool hasDigits = val.contains(RegExp(r'[0-9]'));
-    bool hasSpecialCharacters = val.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
-    if (val.length < 8) {
-      setState(() => _passwordError = 'Must be at least 8 characters');
-    } else if (!hasUppercase) {
-      setState(() => _passwordError = 'Must contain at least 1 uppercase letter');
-    } else if (!hasDigits) {
-      setState(() => _passwordError = 'Must contain at least 1 number');
-    } else if (!hasSpecialCharacters) {
-      setState(() => _passwordError = 'Must contain at least 1 special character');
-    } else {
-      setState(() => _passwordError = null);
-    }
-  }
 
   void _validateSignupFields() {
     final role = AppScope.of(context).role;

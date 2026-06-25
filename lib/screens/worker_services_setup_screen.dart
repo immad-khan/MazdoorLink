@@ -110,6 +110,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
 
   List<ServiceItem> _currentServices = [];
   int _categoryIndex = 0;
+  bool _loadedFromFirestore = false;
 
   @override
   void initState() {
@@ -131,7 +132,6 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
     if (args is int) {
       _categoryIndex = args;
     } else if (args is String) {
-      // Direct access from profile management screen
       int foundIndex = _skillNamesEn.indexWhere((element) => element.toLowerCase() == args.toLowerCase());
       if (foundIndex != -1) {
         _categoryIndex = foundIndex;
@@ -139,19 +139,71 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
     }
 
     if (_currentServices.isEmpty) {
-      final list = _servicesMap[_categoryIndex] ?? [];
-      // Deep copy to prevent modifying raw static templates
-      _currentServices = list.map((item) => ServiceItem(
-        titleEn: item.titleEn,
-        titleUr: item.titleUr,
-        price: item.price,
-        isSelected: item.isSelected,
-      )).toList();
+      _loadFromFirestoreOrInit();
+    }
+  }
 
-      // Initialize controllers
-      for (int i = 0; i < _currentServices.length; i++) {
-        _priceControllers[i] = TextEditingController(text: _currentServices[i].price.toStringAsFixed(0));
-      }
+  Future<void> _loadFromFirestoreOrInit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          final data = doc.data()!;
+          final savedSkills = data['skills'] as List<dynamic>?;
+          if (savedSkills != null && savedSkills.isNotEmpty) {
+            final saved = savedSkills.map((s) {
+              final m = s as Map<String, dynamic>;
+              return ServiceItem(
+                titleEn: m['titleEn']?.toString() ?? '',
+                titleUr: m['titleUr']?.toString() ?? '',
+                price: (m['price'] as num?)?.toDouble() ?? 0,
+                isSelected: true,
+              );
+            }).toList();
+
+            final defaults = _servicesMap[_categoryIndex] ?? [];
+            final merged = defaults.map((d) {
+              final existing = saved.where((s) => s.titleEn == d.titleEn).firstOrNull;
+              return ServiceItem(
+                titleEn: d.titleEn,
+                titleUr: d.titleUr,
+                price: existing?.price ?? d.price,
+                isSelected: existing != null || d.isSelected,
+              );
+            }).toList();
+
+            final custom = saved.where((s) => !defaults.any((d) => d.titleEn == s.titleEn)).toList();
+
+            if (mounted) {
+              setState(() {
+                _currentServices = [...merged, ...custom];
+                for (int i = 0; i < _currentServices.length; i++) {
+                  _priceControllers[i] = TextEditingController(text: _currentServices[i].price.toStringAsFixed(0));
+                }
+                _loadedFromFirestore = true;
+              });
+            }
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (mounted) {
+      setState(() {
+        final list = _servicesMap[_categoryIndex] ?? [];
+        _currentServices = list.map((item) => ServiceItem(
+          titleEn: item.titleEn,
+          titleUr: item.titleUr,
+          price: item.price,
+          isSelected: item.isSelected,
+        )).toList();
+        for (int i = 0; i < _currentServices.length; i++) {
+          _priceControllers[i] = TextEditingController(text: _currentServices[i].price.toStringAsFixed(0));
+        }
+        _loadedFromFirestore = true;
+      });
     }
   }
 
@@ -319,7 +371,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
               ),
               const SizedBox(height: 24),
               Text(
-                isUrdu ? 'سیٹ اپ مکمل!' : 'Setup Complete!',
+                isUrdu ? 'محفوظ ہو گیا!' : 'Saved!',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -329,8 +381,8 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
               const SizedBox(height: 12),
               Text(
                 isUrdu
-                    ? 'آپ کی سروسز اور ریٹس کامیابی سے شامل کر دیے گئے ہیں۔ اب آپ ڈیش بورڈ پر جا سکتے ہیں۔'
-                    : 'Your services and rates have been saved. You can now access your dashboard.',
+                    ? 'آپ کی سروسز اور ریٹس کامیابی سے محفوظ کر دیے گئے ہیں۔'
+                    : 'Your services and rates have been saved successfully.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 14,
@@ -344,7 +396,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context); // Pop dialog
-                    Navigator.pushReplacementNamed(context, '/worker/dashboard'); // Go to Dashboard
+                    Navigator.of(context).popUntil((route) => route.isFirst);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0D9488),
@@ -356,7 +408,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                     elevation: 2,
                   ),
                   child: Text(
-                    isUrdu ? 'ڈیش بورڈ پر جائیں' : 'Go to Dashboard',
+                    isUrdu ? 'محفوظ کریں' : 'Save & Go Back',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
@@ -389,6 +441,16 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
             onPressed: () => Navigator.maybePop(context),
             icon: Icon(isUrdu ? Icons.arrow_forward : Icons.arrow_back),
           ),
+          actions: [
+            TextButton.icon(
+              onPressed: () {
+                controller.toggleLanguage();
+                setState(() {});
+              },
+              icon: const Icon(Icons.translate, size: 18),
+              label: Text(controller.isUrdu ? 'EN' : 'اردو', style: const TextStyle(fontSize: 13)),
+            ),
+          ],
         ),
         body: Center(
           child: Container(

@@ -69,14 +69,6 @@ class ProfileArguments {
   ProfileArguments({required this.worker, required this.job});
 }
 
-class SimulatorArguments {
-  final WorkerModel worker;
-  final JobPostingArguments job;
-  final String? jobId;
-
-  SimulatorArguments({required this.worker, required this.job, this.jobId});
-}
-
 class TrackingArguments {
   final WorkerModel? worker;
   final JobPostingArguments? job;
@@ -109,7 +101,6 @@ class AppRoutes {
   static const workerOnboarding = '/worker/onboarding';
   static const workerCategorySelect = '/worker/category-select';
   static const workerDashboard = '/worker/dashboard';
-  static const workerNotification = '/worker/job-notification';
   static const workerEarnings = '/worker/earnings';
   static const priceEstimation = '/shared/price-estimation';
   static const documentUpload = '/worker/document-upload';
@@ -125,7 +116,6 @@ class AppRoutes {
   static const sharedSettings = '/shared/settings';
   static const customerSupport = '/customer/support';
   static const workerSupport = '/worker/support';
-  static const matchingSimulator = '/customer/matching-simulator';
 }
 
 Route<dynamic> buildRoute(RouteSettings settings) {
@@ -160,8 +150,6 @@ Route<dynamic> buildRoute(RouteSettings settings) {
       return _page(const WorkerCategorySelectScreen(), settings);
     case AppRoutes.workerDashboard:
       return _page(const WorkerDashboardScreen(), settings);
-    case AppRoutes.workerNotification:
-      return _page(const JobNotificationScreen(), settings);
     case AppRoutes.workerEarnings:
       return _page(const EarningsDashboardScreen(), settings);
     case AppRoutes.priceEstimation:
@@ -196,8 +184,6 @@ Route<dynamic> buildRoute(RouteSettings settings) {
       return _page(const CustomerSupportScreen(), settings);
     case AppRoutes.workerSupport:
       return _page(const WorkerSupportScreen(), settings);
-    case AppRoutes.matchingSimulator:
-      return _page(const WorkerAcceptanceSimulatorScreen(), settings);
     default:
       return _page(const WelcomeScreen(), settings);
   }
@@ -2394,6 +2380,7 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
   final TextEditingController _offerController = TextEditingController();
   List<String> _favouriteIds = [];
   StreamSubscription? _favSub;
+  int _visibilityMinutes = 10;
 
   @override
   void initState() {
@@ -2546,6 +2533,45 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         fillColor: Colors.white,
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDFA),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF99F6E4)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            bilingual(context, 'Offer visible to worker for:', 'ورکر کو پیشکش نظر آئے گی:'),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F766E)),
+                          ),
+                          const SizedBox(height: 8),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _DurationChip(label: '10 min', minutes: 10, selected: _visibilityMinutes == 10, onTap: () => setState(() => _visibilityMinutes = 10)),
+                                const SizedBox(width: 6),
+                                _DurationChip(label: '30 min', minutes: 30, selected: _visibilityMinutes == 30, onTap: () => setState(() => _visibilityMinutes = 30)),
+                                const SizedBox(width: 6),
+                                _DurationChip(label: '1 ${bilingual(context, 'hr', 'گھنٹہ')}', minutes: 60, selected: _visibilityMinutes == 60, onTap: () => setState(() => _visibilityMinutes = 60)),
+                                const SizedBox(width: 6),
+                                _DurationChip(label: '6 ${bilingual(context, 'hr', 'گھنٹے')}', minutes: 360, selected: _visibilityMinutes == 360, onTap: () => setState(() => _visibilityMinutes = 360)),
+                                const SizedBox(width: 6),
+                                _DurationChip(label: '1 ${bilingual(context, 'day', 'دن')}', minutes: 1440, selected: _visibilityMinutes == 1440, onTap: () => setState(() => _visibilityMinutes = 1440)),
+                                const SizedBox(width: 6),
+                                _DurationChip(label: '3 ${bilingual(context, 'days', 'دن')}', minutes: 4320, selected: _visibilityMinutes == 4320, onTap: () => setState(() => _visibilityMinutes = 4320)),
+                                const SizedBox(width: 6),
+                                _DurationChip(label: '1 ${bilingual(context, 'week', 'ہفتہ')}', minutes: 10080, selected: _visibilityMinutes == 10080, onTap: () => setState(() => _visibilityMinutes = 10080)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 18),
                     Text(bilingual(context, 'Skills', 'مہارتیں'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
@@ -2617,30 +2643,31 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                              price: offerPrice,
                              categoryKey: worker.category.toLowerCase(),
                            );
-                            final loc = await getCurrentLocation();
-                            final jobId = await createJobOffer(
-                              workerId: worker.id,
-                              workerName: worker.name,
-                              descriptionEn: jobDesc.descriptionEn,
-                              descriptionUr: jobDesc.descriptionUr,
-                              price: offerPrice,
-                              categoryKey: worker.category.toLowerCase(),
-                              customerLatitude: loc?.latitude,
-                              customerLongitude: loc?.longitude,
-                            );
-                            if (context.mounted) {
-                              Navigator.pushNamed(
-                                context,
-                                AppRoutes.matchingSimulator,
-                               arguments: SimulatorArguments(
-                                 worker: worker,
-                                 job: jobDesc,
-                                 jobId: jobId,
-                               ),
+                             final loc = await getCurrentLocation();
+                             final jobId = await createJobOffer(
+                               workerId: worker.id,
+                               workerName: worker.name,
+                               descriptionEn: jobDesc.descriptionEn,
+                               descriptionUr: jobDesc.descriptionUr,
+                               price: offerPrice,
+                               categoryKey: worker.category.toLowerCase(),
+                               customerLatitude: loc?.latitude,
+                               customerLongitude: loc?.longitude,
+                               visibilityDurationMinutes: _visibilityMinutes,
                              );
-                           }
-                        }
-                      }
+                             if (context.mounted) {
+                               Navigator.pushReplacementNamed(
+                                 context,
+                                 AppRoutes.tracking,
+                                 arguments: TrackingArguments(
+                                   worker: worker,
+                                   job: jobDesc,
+                                   jobId: jobId,
+                                 ),
+                               );
+                             }
+                         }
+                       }
                     },
                     icon: const Icon(Icons.calendar_month),
                     label: Text(bilingual(context, 'Schedule', 'شیڈول کریں')),
@@ -2677,12 +2704,13 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         categoryKey: worker.category.toLowerCase(),
                         customerLatitude: loc?.latitude,
                         customerLongitude: loc?.longitude,
+                        visibilityDurationMinutes: _visibilityMinutes,
                       );
                       if (context.mounted) {
-                        Navigator.pushNamed(
+                        Navigator.pushReplacementNamed(
                           context,
-                          AppRoutes.matchingSimulator,
-                          arguments: SimulatorArguments(
+                          AppRoutes.tracking,
+                          arguments: TrackingArguments(
                             worker: worker,
                             job: jobDesc,
                             jobId: jobId,
@@ -2772,6 +2800,11 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       final data = snapshot.data() as Map<String, dynamic>?;
       if (data == null) return;
       final status = data['status']?.toString() ?? 'pending';
+      if (status == 'rejected') {
+        showToast(bilingual(context, 'Worker declined your offer. Please find another worker.', 'ورکر نے آپ کی پیشکش مسترد کر دی۔ براہ کرم دوسرا ورکر تلاش کریں۔'));
+        Navigator.pop(context);
+        return;
+      }
       double? lat, lng;
       if (data['customerLatitude'] != null) {
         lat = (data['customerLatitude'] as num).toDouble();
@@ -3704,6 +3737,7 @@ class WorkerCategorySelectScreen extends StatefulWidget {
 class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen> {
   String? _selected;
   bool _isSaving = false;
+  bool _isLoading = true;
 
   static const _categories = [
     {
@@ -3720,12 +3754,73 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
       'icon': Icons.electrical_services,
       'color': Color(0xFFF59E0B),
     },
+    {
+      'key': 'carpenter',
+      'title': 'Carpenter',
+      'subtitle': 'Woodwork, furniture, doors & cabinets',
+      'icon': Icons.handyman,
+      'color': Color(0xFF8B5CF6),
+    },
+    {
+      'key': 'acmechanic',
+      'title': 'AC Mechanic',
+      'subtitle': 'AC repair, service, installation & gas refill',
+      'icon': Icons.ac_unit,
+      'color': Color(0xFF06B6D4),
+    },
+    {
+      'key': 'painter',
+      'title': 'Painter',
+      'subtitle': 'Wall painting, polish, texture & finishing',
+      'icon': Icons.format_paint,
+      'color': Color(0xFFEC4899),
+    },
+    {
+      'key': 'cleaner',
+      'title': 'Cleaner',
+      'subtitle': 'Deep cleaning, sofa, kitchen & full house',
+      'icon': Icons.cleaning_services,
+      'color': Color(0xFF10B981),
+    },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingCategory();
+  }
+
+  Future<void> _loadExistingCategory() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        final category = data['category']?.toString();
+        if (category != null && _categories.any((c) => c['key'] == category)) {
+          _selected = category;
+        } else {
+          final nameEn = data['categoryNameEn']?.toString().toLowerCase() ?? '';
+          for (final c in _categories) {
+            if (nameEn.contains(c['key'] as String)) {
+              _selected = c['key'] as String;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (mounted) setState(() => _isLoading = false);
+  }
 
   int _categoryKeyToIndex(String key) {
     switch (key) {
       case 'plumber': return 0;
       case 'electrician': return 1;
+      case 'carpenter': return 2;
+      case 'acmechanic': return 3;
+      case 'painter': return 4;
+      case 'cleaner': return 5;
       default: return 0;
     }
   }
@@ -3767,6 +3862,24 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
       textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFF8FAFC),
+          elevation: 0,
+          leading: IconButton(
+            onPressed: () => Navigator.maybePop(context),
+            icon: Icon(isUrdu ? Icons.arrow_forward : Icons.arrow_back),
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () {
+                controller.toggleLanguage();
+                setState(() {});
+              },
+              icon: const Icon(Icons.translate, size: 18),
+              label: Text(controller.isUrdu ? 'EN' : 'اردو', style: const TextStyle(fontSize: 13)),
+            ),
+          ],
+        ),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -3924,10 +4037,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                 ),
                 subtitle: Text(isUrdu && categoryUr.isNotEmpty ? categoryUr : categoryEn),
-                trailing: IconButton(
-                  icon: const Icon(Icons.notifications),
-                  onPressed: () => Navigator.pushNamed(context, AppRoutes.workerNotification),
-                ),
+                trailing: const SizedBox(width: 48),
               );
             },
           ),
@@ -3967,7 +4077,29 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final jobs = snapshot.data?.docs ?? [];
+                final allJobs = snapshot.data?.docs ?? [];
+                final now = DateTime.now();
+
+                final jobs = allJobs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final expiresAtStr = data['expiresAt']?.toString();
+                  if (expiresAtStr != null) {
+                    final expiresAt = DateTime.tryParse(expiresAtStr);
+                    if (expiresAt != null && expiresAt.isBefore(now)) return false;
+                  }
+                  return true;
+                }).toList();
+
+                jobs.sort((a, b) {
+                  final aData = a.data() as Map<String, dynamic>;
+                  final bData = b.data() as Map<String, dynamic>;
+                  final aCreated = aData['createdAt'];
+                  final bCreated = bData['createdAt'];
+                  final aTime = (aCreated as Timestamp?)?.toDate() ?? DateTime(2000);
+                  final bTime = (bCreated as Timestamp?)?.toDate() ?? DateTime(2000);
+                  return bTime.compareTo(aTime);
+                });
+
                 if (jobs.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 32),
@@ -3988,6 +4120,32 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     final price = (jobData['price'] as num?)?.toDouble() ?? 0;
                     final payment = jobData['paymentMethod']?.toString() ?? 'Cash';
                     final customerName = jobData['customerName']?.toString() ?? 'Customer';
+
+                    String remainingTime = '';
+                    final expiresAtStr = jobData['expiresAt']?.toString();
+                    if (expiresAtStr != null) {
+                      final expiresAt = DateTime.tryParse(expiresAtStr);
+                      if (expiresAt != null) {
+                        final diff = expiresAt.difference(now);
+                        if (diff.isNegative) {
+                          remainingTime = isUrdu ? 'میعاد ختم' : 'Expired';
+                        } else if (diff.inDays > 0) {
+                          remainingTime = isUrdu
+                              ? '${diff.inDays} دن باقی'
+                              : '${diff.inDays}d remaining';
+                        } else if (diff.inHours > 0) {
+                          remainingTime = isUrdu
+                              ? '${diff.inHours} گھنٹے باقی'
+                              : '${diff.inHours}h remaining';
+                        } else if (diff.inMinutes > 0) {
+                          remainingTime = isUrdu
+                              ? '${diff.inMinutes} منٹ باقی'
+                              : '${diff.inMinutes}min remaining';
+                        } else {
+                          remainingTime = isUrdu ? 'میعاد ختم' : 'Expired';
+                        }
+                      }
+                    }
 
                     return TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0, end: 1),
@@ -4017,6 +4175,19 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                 '${bilingual(context, 'Customer:', 'گاہک:')} $customerName',
                                 style: const TextStyle(color: Colors.black54, fontSize: 13),
                               ),
+                              if (remainingTime.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  remainingTime,
+                                  style: TextStyle(
+                                    color: remainingTime.contains('Expired') || remainingTime.contains('ختم')
+                                        ? Colors.red
+                                        : Colors.orange,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 4),
                               Text(
                                 '${bilingual(context, 'Payment:', 'ادائیگی:')} $payment',
@@ -4137,94 +4308,6 @@ class _ColorStatCard extends StatelessWidget {
   }
 }
 
-class JobNotificationScreen extends StatelessWidget {
-  const JobNotificationScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final descUr = args?['descriptionUr']?.toString() ?? 'سروس';
-    final descEn = args?['descriptionEn']?.toString() ?? 'Service';
-    final price = (args?['price'] as num?)?.toDouble() ?? 1000.0;
-    final payment = args?['paymentMethod']?.toString() ?? 'Cash';
-    final customerName = args?['customerName']?.toString() ?? 'Customer';
-    final isUrdu = AppScope.of(context).isUrdu;
-
-    return MzScaffold(
-      showBottomNav: false,
-      background: Colors.grey.shade900,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.network(
-              'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1200',
-              fit: BoxFit.cover,
-              color: Colors.black.withOpacity(0.6),
-              colorBlendMode: BlendMode.darken,
-            ),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 18,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 280),
-              builder: (_, value, child) => Transform.translate(offset: Offset(0, 30 * (1 - value)), child: Opacity(opacity: value, child: child)),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isUrdu ? '✅ نیا کام!' : '✅ New Job!',
-                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(isUrdu ? 'گاہک آپ کا انتظار کر رہا ہے' : 'Customer is waiting for you'),
-                      const SizedBox(height: 8),
-                      Text(isUrdu ? descUr : descEn, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      Text(isUrdu ? '👤 $customerName' : '👤 $customerName'),
-                      const SizedBox(height: 4),
-                      Text(
-                        isUrdu ? 'ادائیگی بذریعہ: $payment' : 'Payment Method: $payment',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('Rs. ${price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard),
-                              child: Text(isUrdu ? 'رد' : 'Reject'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 2,
-                            child: FilledButton.icon(
-                              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard),
-                              icon: const Icon(Icons.explore),
-                              label: Text(isUrdu ? 'قبول کریں' : 'Accept'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          )
-        ],
-      ),
-    );
-  }
-}
 
 class EarningsDashboardScreen extends StatefulWidget {
   const EarningsDashboardScreen({super.key});
@@ -5033,45 +5116,11 @@ class SettingsScreen extends StatelessWidget {
               onTap: () => Navigator.pushNamed(context, '/worker/support'),
               child: _SettingsItem(icon: Icons.help_outline, color: const Color(0xFF0D9488), title: bilingual(context, 'Worker Support', 'ورکر سپورٹ')),
             ),
-          const SizedBox(height: 14),
-          OutlinedButton.icon(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text(bilingual(context, 'Switch Role', 'کردار تبدیل کریں')),
-                  content: Text(bilingual(
-                    context,
-                    'Would you like to switch to ${isWorker ? 'customer' : 'worker'} mode?',
-                    'کیا آپ ${isWorker ? 'گاہک' : 'ورکر'} موڈ میں تبدیل کرنا چاہتے ہیں؟',
-                  )),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(bilingual(context, 'Cancel', 'منسوخ')),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        c.selectRole(isWorker ? UserRole.customer : UserRole.worker);
-                        final targetRoute = isWorker ? AppRoutes.customerHome : AppRoutes.workerOnboarding;
-                        Navigator.pushNamedAndRemoveUntil(context, targetRoute, (route) => false);
-                      },
-                      child: Text(bilingual(context, 'Switch', 'تبدیل کریں')),
-                    ),
-                  ],
-                ),
-              );
-            },
-            icon: const Icon(Icons.swap_horiz),
-            label: Text(
-              bilingual(
-                context,
-                'Switch to ${isWorker ? 'Customer' : 'Worker'} Mode',
-                '${isWorker ? 'گاہک' : 'ورکر'} موڈ میں تبدیل کریں',
-              ),
+          if (isWorker)
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, AppRoutes.workerCategorySelect),
+              child: _SettingsItem(icon: Icons.build, color: const Color(0xFF0D9488), title: bilingual(context, 'Skills & Services', 'مہارتیں اور خدمات')),
             ),
-          ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () {
@@ -5104,6 +5153,46 @@ class _SettingsItem extends StatelessWidget {
         leading: CircleAvatar(backgroundColor: color.withOpacity(0.12), child: Icon(icon, color: color)),
         title: Text(title),
         trailing: trailing ?? Transform.rotate(angle: isUrdu ? math.pi : 0, child: const Icon(Icons.chevron_right)),
+      ),
+    );
+  }
+}
+
+class _DurationChip extends StatelessWidget {
+  const _DurationChip({
+    required this.label,
+    required this.minutes,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int minutes;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF0D9488) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? const Color(0xFF0D9488) : const Color(0xFFD1D5DB),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.black87,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
@@ -5161,719 +5250,6 @@ class _PhotoActionCard extends StatelessWidget {
   }
 }
 
-class WorkerAcceptanceSimulatorScreen extends StatefulWidget {
-  const WorkerAcceptanceSimulatorScreen({super.key});
-
-  @override
-  State<WorkerAcceptanceSimulatorScreen> createState() => _WorkerAcceptanceSimulatorScreenState();
-}
-
-class _WorkerAcceptanceSimulatorScreenState extends State<WorkerAcceptanceSimulatorScreen> with TickerProviderStateMixin {
-  int _currentState = 0; // 0: Radar scanning, 1: Worker smartphone chassis, 2: Success acceptance
-  late AnimationController _radarController;
-  late AnimationController _vibrateController;
-  late AnimationController _successController;
-  
-  @override
-  void initState() {
-    super.initState();
-    
-    // Radar controller for concentric pulses
-    _radarController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
-
-    // Vibrate controller for shaking worker phone
-    _vibrateController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    )..repeat();
-
-    // Success checkmark scaling
-    _successController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-
-    // Auto-transition from State 0 (Radar) to State 1 (Worker Perspective) after 2.5 seconds
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        setState(() {
-          _currentState = 1;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _radarController.dispose();
-    _vibrateController.dispose();
-    _successController.dispose();
-    super.dispose();
-  }
-
-  String? _jobId;
-
-  void _onAccept(WorkerModel worker, JobPostingArguments job) {
-    setState(() {
-      _currentState = 2;
-    });
-    _successController.forward();
-
-    if (_jobId != null) {
-      updateJobStatus(_jobId!, 'accepted');
-    }
-    
-    // Auto-route to tracking screen after 2 seconds
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      if (mounted) {
-        Navigator.pushReplacementNamed(
-          context,
-          AppRoutes.tracking,
-          arguments: TrackingArguments(worker: worker, job: job),
-        );
-      }
-    });
-  }
-
-  void _onDecline() {
-    if (_jobId != null) {
-      updateJobStatus(_jobId!, 'rejected');
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          bilingual(
-            context,
-            'Offer declined by worker. Please choose another match.',
-            'ورکر نے پیشکش مسترد کر دی ہے۔ براہ کرم دوسرا انتخاب کریں۔'
-          ),
-        ),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as SimulatorArguments?;
-    final worker = args?.worker;
-    final job = args?.job ?? JobPostingArguments(
-      descriptionEn: 'Service',
-      descriptionUr: 'سروس',
-      price: 1000,
-      categoryKey: 'other',
-    );
-    _jobId = args?.jobId;
-
-    if (worker == null) {
-      return Scaffold(
-        body: Center(
-          child: Text(bilingual(context, 'Worker data not available', 'ورکر کا ڈیٹا دستیاب نہیں')),
-        ),
-      );
-    }
-    
-    final isUrdu = AppScope.of(context).isUrdu;
-
-    return MzScaffold(
-      showBottomNav: false,
-      showBack: _currentState == 0,
-      background: const Color(0xFF0F172A), // Premium Dark Slate Background
-      title: _currentState == 0 
-          ? bilingual(context, 'Finding Worker', 'ورکر تلاش کیا جا رہا ہے')
-          : _currentState == 1 
-              ? bilingual(context, 'Worker Perspective', 'ورکر کا نقطہ نظر')
-              : bilingual(context, 'Match Confirmed!', 'میچ کی تصدیق ہو گئی!'),
-      child: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: _buildCurrentState(worker, job, isUrdu),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCurrentState(WorkerModel worker, JobPostingArguments job, bool isUrdu) {
-    switch (_currentState) {
-      case 0:
-        return _buildRadarState(worker, job);
-      case 1:
-        return _buildSmartphoneChassisState(worker, job, isUrdu);
-      case 2:
-        return _buildSuccessState(worker);
-      default:
-        return Container();
-    }
-  }
-
-  // State 0: Customer View Radar Scan
-  Widget _buildRadarState(WorkerModel worker, JobPostingArguments job) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        SizedBox(
-          height: 280,
-          width: 280,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Concentric expanding glassmorphic pulses
-              ...List.generate(3, (index) {
-                final delayVal = index * 0.33;
-                return AnimatedBuilder(
-                  animation: _radarController,
-                  builder: (context, child) {
-                    double progress = _radarController.value + delayVal;
-                    if (progress > 1.0) progress -= 1.0;
-                    return Container(
-                      width: 280 * progress,
-                      height: 280 * progress,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFF0D9488).withOpacity((1.0 - progress) * 0.4),
-                          width: 2,
-                        ),
-                        color: const Color(0xFF0D9488).withOpacity((1.0 - progress) * 0.08),
-                      ),
-                    );
-                  },
-                );
-              }),
-              // Customer Avatar in Center
-              Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF0D9488).withOpacity(0.2),
-                  border: Border.all(color: const Color(0xFF0D9488), width: 3),
-                ),
-                child: const CircleAvatar(
-                  radius: 34,
-                  backgroundColor: Color(0xFF1E293B),
-                  child: Icon(Icons.person, color: Color(0xFF2DD4BF), size: 40),
-                ),
-              ),
-              // Floating Worker Avatar on Radar Edge
-              AnimatedBuilder(
-                animation: _radarController,
-                builder: (context, child) {
-                  final angle = _radarController.value * 2 * math.pi;
-                  final radius = 100.0;
-                  final x = math.cos(angle) * radius;
-                  final y = math.sin(angle) * radius;
-                  return Transform.translate(
-                    offset: Offset(x, y),
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.amber.shade500,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.amber.withOpacity(0.5),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                          )
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Image.network(
-                          worker.image,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const CircleAvatar(radius: 20, child: Icon(Icons.person)),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 40),
-        // Custom Pulse offer texts
-        Text(
-          bilingual(context, 'Sending Job Offer...', 'ملازمت کی پیشکش بھیجی جا رہی ہے...'),
-          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: Text(
-            '${bilingual(context, "Offered Budget:", "پیشکش بجٹ:")} ${worker.price}',
-            style: const TextStyle(color: Color(0xFF2DD4BF), fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          bilingual(
-            context,
-            'Requesting acceptance from ${worker.name}...',
-            '${worker.name} سے قبولیت کی درخواست کی جا رہی ہے...'
-          ),
-          style: const TextStyle(color: Colors.white60, fontSize: 13),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 16),
-        const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2DD4BF)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // State 1: Simulated Worker Smartphone Chassis and Alert Modal
-  Widget _buildSmartphoneChassisState(WorkerModel worker, JobPostingArguments job, bool isUrdu) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.amber.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, color: Colors.amber, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    bilingual(
-                      context,
-                      "VIRTUAL SIMULATOR: See how the incoming job looks on the worker's smartphone!",
-                      "ورچوئل سمیلیٹر: دیکھیں کہ آنے والی نوکری ورکر کے اسمارٹ فون پر کیسی لگتی ہے!"
-                    ),
-                    style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        // Vibrating Smartphone Chassis Frame
-        AnimatedBuilder(
-          animation: _vibrateController,
-          builder: (context, child) {
-            // Vibration offsets (small side to side shake)
-            double offsetX = 0.0;
-            if (_currentState == 1) {
-              offsetX = math.sin(_vibrateController.value * 2 * math.pi * 4) * 2.5;
-            }
-            return Transform.translate(
-              offset: Offset(offsetX, 0),
-              child: child,
-            );
-          },
-          child: Container(
-            width: 320,
-            height: 580,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(40),
-              border: Border.all(color: const Color(0xFF334155), width: 10), // Sleek metallic slate chassis
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.6),
-                  blurRadius: 30,
-                  offset: const Offset(0, 15),
-                ),
-                BoxShadow(
-                  color: const Color(0xFF0D9488).withOpacity(0.15),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                )
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Lockscreen gradient background with abstract pattern
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF1E1E38), Color(0xFF0F172A), Color(0xFF090D16)],
-                      ),
-                    ),
-                  ),
-                  // Background Grid Mesh design
-                  Positioned.fill(
-                    child: Opacity(
-                      opacity: 0.05,
-                      child: GridView.builder(
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5),
-                        itemCount: 40,
-                        itemBuilder: (_, __) => Container(decoration: BoxDecoration(border: Border.all(color: Colors.white, width: 0.5))),
-                      ),
-                    ),
-                  ),
-                  // Upper Notch of smartphone
-                  Positioned(
-                    top: 0,
-                    left: 110,
-                    right: 110,
-                    child: Container(
-                      height: 18,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF334155),
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(12),
-                          bottomRight: Radius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Container(width: 30, height: 3, decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(2))),
-                          Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Smartphone status bar elements
-                  Positioned(
-                    top: 6,
-                    left: 20,
-                    right: 20,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text('12:00', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                        Row(
-                          children: [
-                            Icon(Icons.signal_cellular_4_bar, color: Colors.white70, size: 10),
-                            SizedBox(width: 4),
-                            Icon(Icons.wifi, color: Colors.white70, size: 10),
-                            SizedBox(width: 4),
-                            Icon(Icons.battery_std, color: Colors.white70, size: 10),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Main Screen Content: Incoming Call Notification Card & Actions
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 24),
-                        // Spinning incoming phone glow ring
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF0D9488).withOpacity(0.3), width: 1),
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF0D9488).withOpacity(0.1),
-                            ),
-                            child: const Icon(Icons.phone_in_talk, color: Color(0xFF2DD4BF), size: 36),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        // Gorgeous incoming offer card (Bilingual UI)
-                        Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.95),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.4),
-                                blurRadius: 15,
-                                offset: const Offset(0, 8),
-                              )
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Card Header Banner
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF0D9488),
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(20),
-                                    topRight: Radius.circular(20),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.psychology, color: Colors.white, size: 16),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        isUrdu ? 'ملازمت کی نئی پیشکش!' : 'NEW JOB OFFER RECEIVED!',
-                                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(14),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Customer info
-                                    Row(
-                                      children: [
-                                        const CircleAvatar(
-                                          radius: 18,
-                                          backgroundColor: Color(0xFFCCFBF1),
-                                          child: Icon(Icons.person, color: Color(0xFF0D9488), size: 20),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Text(
-                                              'Immad Ahmed (Customer)',
-                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87),
-                                            ),
-                                            Row(
-                                              children: const [
-                                                Icon(Icons.star, color: Colors.amber, size: 12),
-                                                SizedBox(width: 2),
-                                                Text('4.9 Rating', style: TextStyle(fontSize: 10, color: Colors.black54)),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    const Divider(height: 20, color: Colors.black12),
-                                    // Task subcategory description
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Icon(Icons.work_outline, color: Color(0xFF0D9488), size: 16),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                isUrdu ? 'مطلوبہ کام' : 'Requested Work',
-                                                style: const TextStyle(color: Colors.black45, fontSize: 10, fontWeight: FontWeight.bold),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                bilingual(context, job.descriptionEn, job.descriptionUr),
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    // Budget offered
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.payments_outlined, color: Color(0xFF0D9488), size: 16),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                isUrdu ? 'طے شدہ بجٹ' : 'Offered Budget',
-                                                style: const TextStyle(color: Colors.black45, fontSize: 10, fontWeight: FontWeight.bold),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                worker.price,
-                                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF0D9488)),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    // Location
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.location_on_outlined, color: Color(0xFF0D9488), size: 16),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                isUrdu ? 'مقام' : 'Location',
-                                                style: const TextStyle(color: Colors.black45, fontSize: 10, fontWeight: FontWeight.bold),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                isUrdu ? 'گلبرگ، لاہور (2.5 کلومیٹر دور)' : 'Gulberg, Lahore (2.5 km away)',
-                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-                        // Slide-to-Accept or Simple Glowing accept/decline action buttons
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(24),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.red.withOpacity(0.2),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    )
-                                  ],
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: _onDecline,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFDA4AF).withOpacity(0.2),
-                                    foregroundColor: const Color(0xFFF43F5E),
-                                    side: const BorderSide(color: Color(0xFFF43F5E), width: 1),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    bilingual(context, 'Decline', 'مسترد کریں'),
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Container(
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(24),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF10B981).withOpacity(0.3),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    )
-                                  ],
-                                ),
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _onAccept(worker, job),
-                                  icon: const Icon(Icons.check, size: 18),
-                                  label: Text(
-                                    bilingual(context, 'Accept', 'قبول کریں'),
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF10B981),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                    elevation: 0,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // State 2: Success acceptance popup
-  Widget _buildSuccessState(WorkerModel worker) {
-    return ScaleTransition(
-      scale: CurvedAnimation(parent: _successController, curve: Curves.elasticOut),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF10B981).withOpacity(0.12),
-              border: Border.all(color: const Color(0xFF10B981), width: 4),
-            ),
-            child: const Icon(Icons.check, color: Color(0xFF10B981), size: 80),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            bilingual(context, 'Job Offer Accepted!', 'ملازمت کی پیشکش قبول کر لی گئی!'),
-            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '${worker.name} ${bilingual(context, "is on the way to your location.", "آپ کے مقام کی طرف آ رہے ہیں۔")}',
-            style: const TextStyle(color: Colors.white70, fontSize: 15),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          const SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class FavoriteWorkersScreen extends StatefulWidget {
   const FavoriteWorkersScreen({super.key});

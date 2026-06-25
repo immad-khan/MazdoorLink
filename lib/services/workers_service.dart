@@ -125,6 +125,7 @@ Future<String?> createJobOffer({
   String paymentMethod = 'Cash',
   double? customerLatitude,
   double? customerLongitude,
+  int visibilityDurationMinutes = 10,
 }) async {
   final customer = FirebaseAuth.instance.currentUser;
   if (customer == null || workerId == null) return null;
@@ -133,6 +134,7 @@ Future<String?> createJobOffer({
   final customerName = customerDoc.data()?['name']?.toString() ?? customer.displayName ?? 'Customer';
 
   final pin = '${1000 + Random().nextInt(9000)}';
+  final expiresAt = DateTime.now().add(Duration(minutes: visibilityDurationMinutes));
 
   final docRef = await FirebaseFirestore.instance.collection('jobs').add({
     'customerId': customer.uid,
@@ -149,6 +151,8 @@ Future<String?> createJobOffer({
     if (customerLatitude != null) 'customerLatitude': customerLatitude,
     if (customerLongitude != null) 'customerLongitude': customerLongitude,
     'createdAt': FieldValue.serverTimestamp(),
+    'expiresAt': expiresAt.toIso8601String(),
+    'visibilityDurationMinutes': visibilityDurationMinutes,
   });
 
   return docRef.id;
@@ -165,7 +169,6 @@ Stream<QuerySnapshot> streamWorkerJobs(String workerId) {
       .collection('jobs')
       .where('workerId', isEqualTo: workerId)
       .where('status', isEqualTo: 'pending')
-      .orderBy('createdAt', descending: true)
       .snapshots();
 }
 

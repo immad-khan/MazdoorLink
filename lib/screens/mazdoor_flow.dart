@@ -3411,8 +3411,6 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
 
   String? _trackingDetail(BuildContext context) {
     switch (_trackingState) {
-      case 1:
-        return bilingual(context, 'Worker has accepted the job', 'ورکر نے کام قبول کر لیا ہے');
       case 3:
         return bilingual(context, 'Please confirm the worker is at your location.', 'براہ کرم تصدیق کریں کہ ورکر آپ کے مقام پر موجود ہے۔');
       case 4:
@@ -5535,6 +5533,29 @@ class BookingHistoryScreen extends StatefulWidget {
 class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   bool activeTab = true;
 
+  String _bookingStatusLabel(BuildContext context, String status) {
+    switch (status) {
+      case 'pending':
+        return bilingual(context, 'Pending', 'زیر التوا');
+      case 'accepted':
+        return bilingual(context, 'Worker on the way', 'ورکر راستے میں ہے');
+      case 'arrival_pending':
+        return bilingual(context, 'Arrival confirmation pending', 'آمد کی تصدیق باقی ہے');
+      case 'working':
+        return bilingual(context, 'Working at customer', 'کسٹمر کے مقام پر کام جاری ہے');
+      case 'worker_completed':
+        return bilingual(context, 'Customer completion pending', 'کسٹمر کی تکمیل تصدیق باقی ہے');
+      case 'completed':
+        return bilingual(context, 'Completed', 'مکمل');
+      case 'arrival_declined':
+        return bilingual(context, 'Arrival declined', 'آمد مسترد');
+      case 'rejected':
+        return bilingual(context, 'Rejected', 'مسترد');
+      default:
+        return status;
+    }
+  }
+
   Stream<QuerySnapshot> _buildStream() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const Stream.empty();
@@ -5602,7 +5623,17 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                     return Card(
                       child: InkWell(
                         onTap: () async {
-                          if (activeTab) {
+                          if (activeTab && AppScope.of(context).role == UserRole.worker) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => WorkerTrackingScreen(
+                                  jobPrice: (price as num?)?.toDouble() ?? 0,
+                                  jobId: doc.id,
+                                ),
+                              ),
+                            );
+                          } else if (activeTab) {
                             final workerId = data['workerId']?.toString() ?? '';
                             if (workerId.isNotEmpty) {
                               final workerDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
@@ -5635,7 +5666,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                           leading: Icon(status == 'completed' ? Icons.check_circle : Icons.schedule,
                               color: status == 'completed' ? Colors.green : Colors.amber.shade700),
                           title: Text(isUrdu ? descUr : descEn),
-                          subtitle: Text(timeStr),
+                          subtitle: Text('$timeStr • ${_bookingStatusLabel(context, status)}'),
                           trailing: Text(priceStr, style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
                         ),
                       ),

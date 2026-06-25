@@ -740,7 +740,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$workerName approved!')));
   }
 
-  void _showWorkerDetail(BuildContext context, Map<String, dynamic> w) {
+  void _showWorkerDetail(BuildContext context, Map<String, dynamic> w, String docId) {
     final name = w['name'] ?? 'Unknown';
     final email = w['email'] ?? 'No email';
     final phone = w['phone'] ?? 'No phone';
@@ -940,6 +940,47 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                         ],
                       ),
                     ),
+                  if (status == 'pending') ...[
+                    const Divider(height: 24),
+                    const Text('Actions', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _rejectWorker(context, docId, name.toString());
+                            },
+                            icon: const Icon(Icons.close_rounded, size: 16),
+                            label: const Text('Reject'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFEF4444),
+                              side: const BorderSide(color: Color(0xFFEF4444)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _approveWorker(context, docId, name.toString());
+                            },
+                            icon: const Icon(Icons.check_rounded, size: 16),
+                            label: const Text('Approve'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 20),
                 ],
               ),
@@ -1024,7 +1065,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                 elevation: 0,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(14),
-                  onTap: () => _showWorkerDetail(context, w),
+                  onTap: () => _showWorkerDetail(context, w, docId),
                   child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -1086,39 +1127,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                           label: const Text('View ID Images'),
                         ),
                       ],
-                      if (status == 'pending') ...[
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _rejectWorker(context, docId, name),
-                                icon: const Icon(Icons.close_rounded, size: 16),
-                                label: const Text('Reject'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFFEF4444),
-                                  side: const BorderSide(color: Color(0xFFEF4444)),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => _approveWorker(context, docId, name),
-                                icon: const Icon(Icons.check_rounded, size: 16),
-                                label: const Text('Approve'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF10B981),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  elevation: 0,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+
                     ],                      // close children list
                   ),
                 ),

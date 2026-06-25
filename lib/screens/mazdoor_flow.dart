@@ -24,6 +24,7 @@ import 'privacy_settings_screen.dart';
 import 'voice_navigation_screen.dart';
 import 'issue_selection_screen.dart';
 import 'worker_services_setup_screen.dart';
+import 'signup_data.dart';
 import '../services/cloudinary_service.dart';
 import '../services/workers_service.dart';
 import 'recommendation_arguments.dart';
@@ -83,7 +84,6 @@ class ConversationArguments {
 
   ConversationArguments({required this.conversationId, required this.otherName});
 }
-
 
 class AppRoutes {
   static const welcome = '/';
@@ -918,8 +918,8 @@ final _phone = TextEditingController();
     if (image != null) {
       final file = File(image.path);
       final sizeInMb = file.lengthSync() / (1024 * 1024);
-      if (sizeInMb > 10) {
-        setState(() => _imageSizeError = 'Police certificate must be less than 10MB');
+      if (sizeInMb > 2) {
+        setState(() => _imageSizeError = 'Police certificate must be less than 2MB (current: ${sizeInMb.toStringAsFixed(1)}MB)');
         return;
       }
       setState(() {
@@ -933,7 +933,16 @@ final _phone = TextEditingController();
   Future<void> _pickCertification() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      setState(() => _certificationFile = File(image.path));
+      final file = File(image.path);
+      final sizeInMb = file.lengthSync() / (1024 * 1024);
+      if (sizeInMb > 2) {
+        setState(() => _imageSizeError = 'Certificate must be less than 2MB (current: ${sizeInMb.toStringAsFixed(1)}MB)');
+        return;
+      }
+      setState(() {
+        _certificationFile = file;
+        _imageSizeError = null;
+      });
     }
   }
 
@@ -1017,6 +1026,23 @@ final _phone = TextEditingController();
             if (_certificationFile != null) {
               certificationUrl = await _uploadToCloudinary(_certificationFile!);
             }
+
+            setState(() => _isUploading = false);
+
+            if (mounted) {
+              final signupData = WorkerSignupData(
+                name: _fullNameController.text.trim(),
+                email: _emailController.text.trim(),
+                password: _password.text,
+                phone: _phone.text.trim(),
+                idFrontUrl: frontUrl!,
+                idBackUrl: backUrl!,
+                policeCertUrl: policeCertUrl!,
+                certificationUrl: certificationUrl,
+              );
+              Navigator.pushReplacementNamed(context, AppRoutes.workerCategorySelect, arguments: signupData);
+            }
+            return;
           }
 
           final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -1030,19 +1056,9 @@ final _phone = TextEditingController();
             'name': _fullNameController.text.trim(),
             'email': _emailController.text.trim(),
             'phone': _phone.text.trim(),
-            'role': role == UserRole.worker ? 'worker' : 'customer',
+            'role': 'customer',
             'createdAt': FieldValue.serverTimestamp(),
           };
-
-          if (role == UserRole.worker) {
-            userData['status'] = 'pending';
-            userData['idFrontUrl'] = frontUrl!;
-            userData['idBackUrl'] = backUrl!;
-            userData['policeCertUrl'] = policeCertUrl!;
-            if (certificationUrl != null) {
-              userData['certificationUrl'] = certificationUrl;
-            }
-          }
 
           await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
           
@@ -1073,17 +1089,11 @@ final _phone = TextEditingController();
                       const Text('Registration Submitted!',
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                       const SizedBox(height: 12),
-                      role == UserRole.worker
-                          ? const Text(
-                              'A verification email has been sent.\n\nYour profile is under admin review. You can log in once your account is approved.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
-                            )
-                          : const Text(
-                              'A verification email has been sent. Please verify your email before logging in.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
-                            ),
+                      const Text(
+                        'A verification email has been sent. Please verify your email before logging in.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
+                      ),
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
@@ -1628,7 +1638,7 @@ final _phone = TextEditingController();
               ],
             ),
             const SizedBox(height: 6),
-            Text('Upload image of your police certificate (max 10MB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            Text('Upload image of your police certificate (max 2MB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
             const SizedBox(height: 10),
             InkWell(
               onTap: _pickPoliceCert,
@@ -1686,7 +1696,7 @@ final _phone = TextEditingController();
               ],
             ),
             const SizedBox(height: 6),
-            Text('Upload any trade certificate, specialization diploma, etc.', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            Text('Upload any trade certificate, specialization diploma, etc. (max 2MB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
             const SizedBox(height: 10),
             InkWell(
               onTap: _pickCertification,
@@ -4002,6 +4012,7 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
   String? _selected;
   bool _isSaving = false;
   bool _isLoading = true;
+  WorkerSignupData? _signupData;
 
   static const _categories = [
     {
@@ -4019,6 +4030,15 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
       'color': Color(0xFFF59E0B),
     },
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is WorkerSignupData) {
+      _signupData = args;
+    }
+  }
 
   @override
   void initState() {
@@ -4066,18 +4086,35 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
     }
     setState(() => _isSaving = true);
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-          'category': _selected,
-        });
-      }
-      if (mounted) {
-        Navigator.pushReplacementNamed(
-          context,
-          AppRoutes.workerServicesSetup,
-          arguments: _categoryKeyToIndex(_selected!),
-        );
+      if (_signupData != null) {
+        // Signup mode - pass data forward
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            AppRoutes.workerServicesSetup,
+            arguments: ServicesSetupArguments(
+              categoryIndex: _categoryKeyToIndex(_selected!),
+              signupData: _signupData,
+            ),
+          );
+        }
+      } else {
+        // Existing user mode - save category to Firestore first
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+            'category': _selected,
+          });
+        }
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            AppRoutes.workerServicesSetup,
+            arguments: ServicesSetupArguments(
+              categoryIndex: _categoryKeyToIndex(_selected!),
+            ),
+          );
+        }
       }
     } catch (e) {
       setState(() => _isSaving = false);

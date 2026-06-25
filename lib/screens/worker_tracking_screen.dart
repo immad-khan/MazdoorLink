@@ -246,6 +246,53 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
     });
   }
 
+  void _requestArrivalConfirmation() {
+    final isUrdu = AppScope.of(context).isUrdu;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text(isUrdu ? 'کیا آپ پہنچ گئے ہیں؟' : 'Have you arrived?'),
+        content: Text(isUrdu
+            ? 'ہاں کرنے پر کسٹمر سے آپ کی آمد کی تصدیق لی جائے گی۔'
+            : 'If you tap yes, the customer will be asked to confirm your arrival.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(isUrdu ? 'نہیں' : 'No'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await updateJobStatus(widget.jobId, 'arrival_pending');
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(isUrdu
+                    ? 'کسٹمر کو آپ کی آمد کی تصدیق بھیج دی گئی ہے۔'
+                    : 'Customer has been asked to confirm your arrival.'),
+                backgroundColor: const Color(0xFF0D9488),
+              ));
+            },
+            child: Text(isUrdu ? 'ہاں' : 'Yes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _requestCompletionConfirmation() async {
+    await updateJobStatus(widget.jobId, 'worker_completed');
+    if (!mounted) return;
+    final isUrdu = AppScope.of(context).isUrdu;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(isUrdu
+          ? 'کسٹمر کو کام مکمل ہونے کی تصدیق بھیج دی گئی ہے۔'
+          : 'Customer has been asked to confirm the job is completed.'),
+      backgroundColor: const Color(0xFF0D9488),
+    ));
+  }
+
   Widget _buildCustomerInfoTile(bool isUrdu) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -469,12 +516,48 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: _onArrived,
+                        onPressed: _requestArrivalConfirmation,
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: const Color(0xFF0D9488),
                         ),
                         child: Text(isUrdu ? 'کیا آپ پہنچ گئے ہیں؟' : 'Have you arrived?', style: const TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                  ]
+                  // Status 4: Waiting for customer arrival confirmation
+                  else if (_status == 4) ...[
+                    const CircularProgressIndicator(color: Color(0xFF0D9488)),
+                    const SizedBox(height: 16),
+                    Text(
+                      isUrdu
+                          ? 'کسٹمر کی آمد کی تصدیق کا انتظار ہے...'
+                          : 'Waiting for customer to confirm your arrival...',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildCustomerInfoTile(isUrdu),
+                  ]
+                  // Status 5: Customer declined arrival
+                  else if (_status == 5) ...[
+                    const Icon(Icons.cancel, color: Colors.redAccent, size: 56),
+                    const SizedBox(height: 12),
+                    Text(
+                      isUrdu
+                          ? 'کسٹمر نے آپ کی موجودگی قبول نہیں کی۔'
+                          : 'Customer declined your presence.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildCustomerInfoTile(isUrdu),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(isUrdu ? 'ڈیش بورڈ پر واپس جائیں' : 'Back to Dashboard'),
                       ),
                     ),
                   ]
@@ -505,7 +588,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: _onWorkCompleted,
+                        onPressed: _requestCompletionConfirmation,
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: const Color(0xFF0D9488),

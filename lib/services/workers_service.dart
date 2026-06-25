@@ -161,9 +161,34 @@ Future<String?> createJobOffer({
 }
 
 Future<void> updateJobStatus(String jobId, String status) async {
-  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+  final updates = <String, dynamic>{
     'status': status,
-  });
+    'statusUpdatedAt': FieldValue.serverTimestamp(),
+  };
+
+  switch (status) {
+    case 'accepted':
+      updates['acceptedAt'] = FieldValue.serverTimestamp();
+      break;
+    case 'arrival_pending':
+      updates['workerArrivedAt'] = FieldValue.serverTimestamp();
+      break;
+    case 'working':
+      updates['customerConfirmedArrivalAt'] = FieldValue.serverTimestamp();
+      break;
+    case 'arrival_declined':
+      updates['customerDeclinedArrivalAt'] = FieldValue.serverTimestamp();
+      break;
+    case 'worker_completed':
+      updates['workerCompletedAt'] = FieldValue.serverTimestamp();
+      break;
+    case 'completed':
+      updates['customerCompletedAt'] = FieldValue.serverTimestamp();
+      updates['completedAt'] = FieldValue.serverTimestamp();
+      break;
+  }
+
+  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update(updates);
 }
 
 Stream<QuerySnapshot> streamWorkerJobs(String workerId) {
@@ -178,7 +203,7 @@ Stream<QuerySnapshot> streamWorkerActiveJobs(String workerId) {
   return FirebaseFirestore.instance
       .collection('jobs')
       .where('workerId', isEqualTo: workerId)
-      .where('status', whereIn: ['pending', 'accepted'])
+      .where('status', whereIn: ['pending', 'accepted', 'arrival_pending', 'working', 'worker_completed'])
       .orderBy('createdAt', descending: true)
       .snapshots();
 }
@@ -206,9 +231,7 @@ Stream<QuerySnapshot> streamAllJobs() {
 }
 
 Future<void> updateJobCompleted(String jobId) async {
-  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
-    'status': 'completed',
-  });
+  await updateJobStatus(jobId, 'completed');
 }
 
 Stream<DocumentSnapshot> streamJobById(String jobId) {

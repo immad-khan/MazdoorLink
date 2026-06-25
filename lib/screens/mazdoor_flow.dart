@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../main.dart';
@@ -891,6 +892,28 @@ final _phone = TextEditingController();
   File? _certificationFile;    // Optional for worker
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
+  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final email = prefs.getString('remembered_email') ?? '';
+      final password = prefs.getString('remembered_password') ?? '';
+      if (email.isNotEmpty && password.isNotEmpty) {
+        setState(() {
+          _emailController.text = email;
+          _password.text = password;
+          _rememberMe = true;
+        });
+      }
+    } catch (_) {}
+  }
 
   Future<void> _pickImage(bool isFront) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -1158,6 +1181,11 @@ final _phone = TextEditingController();
         // Fetch user data from Firestore
         final doc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
         if (doc.exists && mounted) {
+          if (_rememberMe) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('remembered_email', _emailController.text.trim());
+            await prefs.setString('remembered_password', _password.text);
+          }
           final data = doc.data()!;
           if (data['role'] == 'worker') {
             final status = data['status'] ?? 'pending';
@@ -2791,7 +2819,10 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                               color: _favouriteIds.contains(matchedWorkers[i].id) ? Colors.red : Colors.grey,
                               size: 22,
                             ),
-                            onPressed: () {
+                            onPressed: () async {
+                              if (jobId != null) {
+                                await updateJobStatus(jobId, 'working');
+                              }
                               final wid = matchedWorkers[i].id;
                               if (wid == null) return;
                               if (_favouriteIds.contains(wid)) {
@@ -3313,8 +3344,14 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       setState(() {
         if (status == 'accepted') {
           _trackingState = 1;
-        } else if (status == 'completed') {
+        } else if (status == 'arrival_pending') {
+          _trackingState = 3;
+        } else if (status == 'working') {
+          _trackingState = 4;
+        } else if (status == 'worker_completed') {
           _trackingState = 2;
+        } else if (status == 'completed') {
+          _trackingState = 5;
         } else {
           _trackingState = 0;
         }
@@ -3351,6 +3388,38 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     _jobSub?.cancel();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  String _trackingTitle(BuildContext context) {
+    switch (_trackingState) {
+      case 0:
+        return bilingual(context, 'Waiting for worker to accept...', 'ورکر کے قبول کرنے کا انتظار ہے...');
+      case 1:
+        return bilingual(context, 'Worker is on the way', 'ورکر راستے میں ہے');
+      case 2:
+        return bilingual(context, 'Worker claims job is completed', 'ورکر کا دعویٰ ہے کہ کام مکمل ہو گیا');
+      case 3:
+        return bilingual(context, 'Worker has arrived', 'ورکر پہنچ گیا ہے');
+      case 4:
+        return bilingual(context, 'Worker is working at your location', 'ورکر آپ کے مقام پر کام کر رہا ہے');
+      case 5:
+        return bilingual(context, 'Job completed', 'کام مکمل ہو گیا');
+      default:
+        return bilingual(context, 'Tracking job', 'کام ٹریک ہو رہا ہے');
+    }
+  }
+
+  String? _trackingDetail(BuildContext context) {
+    switch (_trackingState) {
+      case 1:
+        return bilingual(context, 'Worker has accepted the job', 'ورکر نے کام قبول کر لیا ہے');
+      case 3:
+        return bilingual(context, 'Please confirm the worker is at your location.', 'براہ کرم تصدیق کریں کہ ورکر آپ کے مقام پر موجود ہے۔');
+      case 4:
+        return bilingual(context, 'This job is now working at customer.', 'یہ کام اب کسٹمر کے مقام پر جاری ہے۔');
+      default:
+        return null;
+    }
   }
 
   @override
@@ -3512,6 +3581,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     ],
                   ),
                   if (_trackingState == 1) Text(bilingual(context, 'Worker has accepted the job', 'ورکر نے کام قبول کر لیا ہے')),
+                  if (_trackingDetail(context) != null) Text(_trackingDetail(context)!),
                   if (_trackingState == 2) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -3574,7 +3644,38 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       ],
                     ),
                   ),
-                  if (_trackingState == 2) ...[
+                  if (_trackingState == 3) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () async {
+                              if (jobId != null) {
+                                await updateJobStatus(jobId, 'arrival_declined');
+                              }
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(bilingual(context, 'Worker presence declined.', 'ورکر کی موجودگی مسترد کر دی گئی۔'))),
+                              );
+                            },
+                            child: Text(bilingual(context, 'No', 'نہیں')),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () async {
+                              if (jobId != null) {
+                                await updateJobStatus(jobId, 'working');
+                              }
+                            },
+                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                            child: Text(bilingual(context, 'Yes', 'ہاں')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if (_trackingState == 2) ...[
                     Row(
                       children: [
                         Expanded(
@@ -5476,8 +5577,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                 final filtered = docs.where((doc) {
                   final status = (doc.data() as Map<String, dynamic>)['status']?.toString() ?? '';
                   return activeTab
-                      ? (status == 'pending' || status == 'accepted')
-                      : (status == 'completed' || status == 'rejected');
+                      ? (status == 'pending' || status == 'accepted' || status == 'arrival_pending' || status == 'working' || status == 'worker_completed')
+                      : (status == 'completed' || status == 'rejected' || status == 'arrival_declined');
                 }).toList();
 
                 if (filtered.isEmpty) {

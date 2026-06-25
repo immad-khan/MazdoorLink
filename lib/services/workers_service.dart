@@ -104,12 +104,14 @@ Future<void> updateProfileImage(String imageUrl) async {
 Future<void> updateUserProfile({
   String? name,
   String? phone,
+  String? birthday,
 }) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;
   final Map<String, dynamic> updates = {};
   if (name != null) updates['name'] = name;
   if (phone != null) updates['phone'] = phone;
+  if (birthday != null && birthday.isNotEmpty) updates['birthday'] = birthday;
   if (updates.isNotEmpty) {
     await FirebaseFirestore.instance.collection('users').doc(user.uid).update(updates);
   }

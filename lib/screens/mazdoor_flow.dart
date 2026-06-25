@@ -802,6 +802,13 @@ class _AuthScreenState extends State<AuthScreen> {
   String? _idFrontError;
   String? _idBackError;
   String? _imageSizeError;
+  String? _policeCertError;
+
+  // Password strength tracking
+  bool _pwHasMinLength = false;
+  bool _pwHasUppercase = false;
+  bool _pwHasDigit = false;
+  bool _pwHasSpecial = false;
 
   void _validateEmail(String val) {
     if (val.isEmpty) {
@@ -815,10 +822,26 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _validatePassword(String val) {
-    if (val.isEmpty) {
-      setState(() => _passwordError = null);
-      return;
-    }
+    setState(() {
+      _pwHasMinLength = val.length >= 8;
+      _pwHasUppercase = val.contains(RegExp(r'[A-Z]'));
+      _pwHasDigit = val.contains(RegExp(r'[0-9]'));
+      _pwHasSpecial = val.contains(RegExp(r'[!@#\$%^&*(),.?":{}<>]'));
+      if (val.isEmpty) {
+        _passwordError = null;
+      } else if (!_pwHasMinLength) {
+        _passwordError = 'Must be at least 8 characters';
+      } else if (!_pwHasUppercase) {
+        _passwordError = 'Must contain at least 1 uppercase letter';
+      } else if (!_pwHasDigit) {
+        _passwordError = 'Must contain at least 1 number';
+      } else if (!_pwHasSpecial) {
+        _passwordError = 'Must contain at least 1 special character';
+      } else {
+        _passwordError = null;
+      }
+    });
+  }
     bool hasUppercase = val.contains(RegExp(r'[A-Z]'));
     bool hasDigits = val.contains(RegExp(r'[0-9]'));
     bool hasSpecialCharacters = val.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
@@ -854,8 +877,9 @@ class _AuthScreenState extends State<AuthScreen> {
           ? 'Please confirm your password'
           : (_password.text != _confirmPassword.text ? 'Passwords must match' : null);
       if (role == UserRole.worker) {
-        _idFrontError = _idFrontImage == null ? 'Front ID image is required' : null;
-        _idBackError = _idBackImage == null ? 'Back ID image is required' : null;
+        _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;
+        _idBackError = _idBackImage == null ? 'Back CNIC image is required' : null;
+        _policeCertError = _policeCertFile == null ? 'Police certificate is required' : null;
       }
     });
   }
@@ -875,6 +899,8 @@ final _phone = TextEditingController();
   
   File? _idFrontImage;
   File? _idBackImage;
+  File? _policeCertFile;       // Required for worker
+  File? _certificationFile;    // Optional for worker
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
 
@@ -902,6 +928,30 @@ final _phone = TextEditingController();
     }
   }
 
+  Future<void> _pickPoliceCert() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final file = File(image.path);
+      final sizeInMb = file.lengthSync() / (1024 * 1024);
+      if (sizeInMb > 10) {
+        setState(() => _imageSizeError = 'Police certificate must be less than 10MB');
+        return;
+      }
+      setState(() {
+        _policeCertFile = file;
+        _policeCertError = null;
+        _imageSizeError = null;
+      });
+    }
+  }
+
+  Future<void> _pickCertification() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() => _certificationFile = File(image.path));
+    }
+  }
+
   Future<String?> _uploadToCloudinary(File imageFile) async {
     return CloudinaryService.uploadImage(imageFile);
   }
@@ -920,12 +970,6 @@ final _phone = TextEditingController();
     for (final n in _otpNodes) {
       n.dispose();
     }
-    _imageSizeError = null;
-    _nameError = null;
-    _phoneError = null;
-    _confirmPasswordError = null;
-    _idFrontError = null;
-    _idBackError = null;
     super.dispose();
   }
 
@@ -956,7 +1000,11 @@ final _phone = TextEditingController();
           return;
         }
         if (role == UserRole.worker && (_idFrontError != null || _idBackError != null)) {
-          showToast('Please upload both front and back of your ID card');
+          showToast('Please upload both front and back of your CNIC');
+          return;
+        }
+        if (role == UserRole.worker && _policeCertError != null) {
+          showToast('Please upload your police character certificate');
           return;
         }
 
@@ -965,13 +1013,24 @@ final _phone = TextEditingController();
         try {
           String? frontUrl;
           String? backUrl;
+          String? policeCertUrl;
+          String? certificationUrl;
           if (role == UserRole.worker) {
             frontUrl = await _uploadToCloudinary(_idFrontImage!);
             backUrl = await _uploadToCloudinary(_idBackImage!);
             if (frontUrl == null || backUrl == null) {
               setState(() => _isUploading = false);
-              if (mounted) showToast('Failed to upload ID images. Try again.');
+              if (mounted) showToast('Failed to upload CNIC images. Try again.');
               return;
+            }
+            policeCertUrl = await _uploadToCloudinary(_policeCertFile!);
+            if (policeCertUrl == null) {
+              setState(() => _isUploading = false);
+              if (mounted) showToast('Failed to upload police certificate. Try again.');
+              return;
+            }
+            if (_certificationFile != null) {
+              certificationUrl = await _uploadToCloudinary(_certificationFile!);
             }
           }
 
@@ -982,7 +1041,7 @@ final _phone = TextEditingController();
           
           await userCredential.user?.sendEmailVerification();
           
-          final userData = {
+          final userData = <String, dynamic>{
             'name': _fullNameController.text.trim(),
             'email': _emailController.text.trim(),
             'phone': _phone.text.trim(),
@@ -994,6 +1053,10 @@ final _phone = TextEditingController();
             userData['status'] = 'pending';
             userData['idFrontUrl'] = frontUrl!;
             userData['idBackUrl'] = backUrl!;
+            userData['policeCertUrl'] = policeCertUrl!;
+            if (certificationUrl != null) {
+              userData['certificationUrl'] = certificationUrl;
+            }
           }
 
           await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
@@ -1003,11 +1066,59 @@ final _phone = TextEditingController();
           await FirebaseAuth.instance.signOut();
 
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Account created! Please check your email to verify your account before logging in.'),
-              duration: Duration(seconds: 5),
-            ));
-            Navigator.pushReplacementNamed(context, AppRoutes.login);
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 80, height: 80,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFFDCFCE7),
+                        ),
+                        child: const Icon(Icons.mark_email_read_outlined, color: Color(0xFF059669), size: 44),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text('Registration Submitted!',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                      const SizedBox(height: 12),
+                      role == UserRole.worker
+                          ? const Text(
+                              'A verification email has been sent.\n\nYour profile is under admin review. You can log in once your account is approved.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
+                            )
+                          : const Text(
+                              'A verification email has been sent. Please verify your email before logging in.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
+                            ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            Navigator.pushReplacementNamed(context, AppRoutes.login);
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D9488),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Go to Login'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
           }
           return;
         } catch (e) {
@@ -1274,6 +1385,37 @@ final _phone = TextEditingController();
     );
   }
 
+  Widget _pwRequirementRow(String text, bool met) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 16, height: 16,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: met ? const Color(0xFF059669) : Colors.grey.shade300,
+            ),
+            child: met
+                ? const Icon(Icons.check, size: 10, color: Colors.white)
+                : null,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: met ? const Color(0xFF059669) : Colors.grey.shade500,
+              fontWeight: met ? FontWeight.w600 : FontWeight.normal,
+              decoration: met ? TextDecoration.none : TextDecoration.none,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _signupFlow() {
     final role = AppScope.of(context).role;
     
@@ -1381,14 +1523,35 @@ final _phone = TextEditingController();
               ),
             ),
           ),
-          const SizedBox(height: 6),
-          const Text('Password must be at least 8 characters with letters and numbers', style: TextStyle(fontSize: 11, color: Colors.black54)),
+          const SizedBox(height: 10),
+          // Dynamic password strength indicator
+          if (_password.text.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Password requirements:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                  const SizedBox(height: 6),
+                  _pwRequirementRow('At least 8 characters', _pwHasMinLength),
+                  _pwRequirementRow('At least 1 uppercase letter', _pwHasUppercase),
+                  _pwRequirementRow('At least 1 number', _pwHasDigit),
+                  _pwRequirementRow('At least 1 special character (!@#\$...)', _pwHasSpecial),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           
           if (role == UserRole.worker) ...[
             const Divider(),
             const SizedBox(height: 16),
-            const Text('ID Card Images (Front & Back)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+            const Text('CNIC Images (Front & Back)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
             const SizedBox(height: 2),
             Text('Max 5MB per image', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
             const SizedBox(height: 8),
@@ -1462,6 +1625,122 @@ final _phone = TextEditingController();
                   ],
                 ),
               ),
+            const SizedBox(height: 20),
+            // Police Certificate (Required)
+            const Divider(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.policy_outlined, size: 18, color: Color(0xFF0D9488)),
+                const SizedBox(width: 8),
+                const Text('Police Character Certificate', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(4)),
+                  child: const Text('Required', style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text('Upload image of your police certificate (max 10MB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: _pickPoliceCert,
+              child: Container(
+                width: double.infinity,
+                height: 80,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: _policeCertFile != null ? const Color(0xFFF0FDFA) : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _policeCertError != null ? Colors.red : (_policeCertFile != null ? const Color(0xFF0D9488) : Colors.grey.shade300),
+                    width: _policeCertFile != null ? 1.5 : 1,
+                  ),
+                ),
+                child: _policeCertFile != null
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.check_circle, color: Color(0xFF0D9488), size: 22),
+                          const SizedBox(width: 10),
+                          Text('Certificate uploaded', style: TextStyle(color: const Color(0xFF0D9488), fontWeight: FontWeight.w600, fontSize: 13)),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.upload_file_outlined, color: Colors.grey, size: 26),
+                          const SizedBox(width: 10),
+                          Text('Tap to upload certificate', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                        ],
+                      ),
+              ),
+            ),
+            if (_policeCertError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(_policeCertError!, style: const TextStyle(color: Colors.red, fontSize: 11)),
+              ),
+            const SizedBox(height: 20),
+            // Certification / Specialization (Optional)
+            const Divider(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.workspace_premium_outlined, size: 18, color: Color(0xFF0D9488)),
+                const SizedBox(width: 8),
+                const Text('Certification / Specialization', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(4)),
+                  child: const Text('Optional', style: TextStyle(fontSize: 10, color: Color(0xFF0369A1), fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text('Upload any trade certificate, specialization diploma, etc.', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: _pickCertification,
+              child: Container(
+                width: double.infinity,
+                height: 80,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: _certificationFile != null ? const Color(0xFFF0FDFA) : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _certificationFile != null ? const Color(0xFF0D9488) : Colors.grey.shade300,
+                    width: _certificationFile != null ? 1.5 : 1,
+                  ),
+                ),
+                child: _certificationFile != null
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.check_circle, color: Color(0xFF0D9488), size: 22),
+                          const SizedBox(width: 10),
+                          Text('Certificate uploaded', style: TextStyle(color: const Color(0xFF0D9488), fontWeight: FontWeight.w600, fontSize: 13)),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => setState(() => _certificationFile = null),
+                            child: const Icon(Icons.close, size: 16, color: Colors.grey),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.upload_file_outlined, color: Colors.grey, size: 26),
+                          const SizedBox(width: 10),
+                          Text('Tap to upload (optional)', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                        ],
+                      ),
+              ),
+            ),
             const SizedBox(height: 24),
           ],
           SizedBox(
@@ -3750,37 +4029,9 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
     {
       'key': 'electrician',
       'title': 'Electrician',
-      'subtitle': 'Wiring, fittings, panels & electrician repairs',
+      'subtitle': 'Wiring, fittings, panels & electrical repairs',
       'icon': Icons.electrical_services,
       'color': Color(0xFFF59E0B),
-    },
-    {
-      'key': 'carpenter',
-      'title': 'Carpenter',
-      'subtitle': 'Woodwork, furniture, doors & cabinets',
-      'icon': Icons.handyman,
-      'color': Color(0xFF8B5CF6),
-    },
-    {
-      'key': 'acmechanic',
-      'title': 'AC Mechanic',
-      'subtitle': 'AC repair, service, installation & gas refill',
-      'icon': Icons.ac_unit,
-      'color': Color(0xFF06B6D4),
-    },
-    {
-      'key': 'painter',
-      'title': 'Painter',
-      'subtitle': 'Wall painting, polish, texture & finishing',
-      'icon': Icons.format_paint,
-      'color': Color(0xFFEC4899),
-    },
-    {
-      'key': 'cleaner',
-      'title': 'Cleaner',
-      'subtitle': 'Deep cleaning, sofa, kitchen & full house',
-      'icon': Icons.cleaning_services,
-      'color': Color(0xFF10B981),
     },
   ];
 
@@ -3817,10 +4068,6 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
     switch (key) {
       case 'plumber': return 0;
       case 'electrician': return 1;
-      case 'carpenter': return 2;
-      case 'acmechanic': return 3;
-      case 'painter': return 4;
-      case 'cleaner': return 5;
       default: return 0;
     }
   }

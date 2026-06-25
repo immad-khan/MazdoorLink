@@ -18,6 +18,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _birthdayController = TextEditingController();
   late AnimationController _fadeController;
 
   String _profileImageUrl = '';
@@ -51,6 +52,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
         _emailController.text = (data['email']?.toString() ?? user.email ?? '') as String;
         _profileImageUrl = data['profileImage']?.toString() ?? '';
         _isWorker = data['role'] == 'worker';
+        _birthdayController.text = data['birthday']?.toString() ?? '';
       }
     } catch (_) {}
     if (mounted) {
@@ -64,6 +66,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _birthdayController.dispose();
     _fadeController.dispose();
     super.dispose();
   }
@@ -115,6 +118,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
       await updateUserProfile(
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
+        birthday: _birthdayController.text.trim(),
       );
 
       if (imageUrl != null) {
@@ -347,6 +351,37 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                         labelText: 'Phone Number',
                         prefixIcon: Icon(Icons.phone,
                             color: Theme.of(context).primaryColor, size: 20),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: TextField(
+                      controller: _birthdayController,
+                      readOnly: true,
+                      onTap: () async {
+                        final parsed = _birthdayController.text.isNotEmpty
+                            ? DateTime.tryParse(_birthdayController.text)
+                            : null;
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: parsed ?? DateTime(1990),
+                          firstDate: DateTime(1940),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          _birthdayController.text =
+                              "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+                          setState(() {});
+                        }
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Date of Birth',
+                        hintText: 'YYYY-MM-DD',
+                        prefixIcon: Icon(Icons.cake_outlined,
+                            color: Theme.of(context).primaryColor, size: 20),
+                        suffixIcon: Icon(Icons.calendar_today_outlined,
+                            color: Colors.grey.shade400, size: 18),
                       ),
                     ),
                   ),

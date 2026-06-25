@@ -1,65 +1,39 @@
 #!/usr/bin/env python3
 """Patch mazdoor_flow.dart with all required signup and category changes."""
+import re as re_module
 
 FILE = 'lib/screens/mazdoor_flow.dart'
 
 with open(FILE, 'rb') as f:
     content = f.read()
 
-def patch(old_bytes, new_bytes, label):
+def check_patch(old_bytes, label):
     if old_bytes not in content:
         raise ValueError(f"Patch '{label}' not found in file!")
-    return content.replace(old_bytes, new_bytes, 1)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Add new state vars: policeCertError + password strength tracking
 # ─────────────────────────────────────────────────────────────────────────────
-content = patch(
-    b'  String? _idFrontError;\r\n  String? _idBackError;\r\n  String? _imageSizeError;\r\n',
-    (
-        b'  String? _idFrontError;\r\n'
-        b'  String? _idBackError;\r\n'
-        b'  String? _imageSizeError;\r\n'
-        b'  String? _policeCertError;\r\n'
-        b'\r\n'
-        b'  // Password strength tracking\r\n'
-        b'  bool _pwHasMinLength = false;\r\n'
-        b'  bool _pwHasUppercase = false;\r\n'
-        b'  bool _pwHasDigit = false;\r\n'
-        b'  bool _pwHasSpecial = false;\r\n'
-    ),
-    'STATE_VARS'
+old1 = b'  String? _idFrontError;\r\n  String? _idBackError;\r\n  String? _imageSizeError;\r\n'
+new1 = (
+    b'  String? _idFrontError;\r\n'
+    b'  String? _idBackError;\r\n'
+    b'  String? _imageSizeError;\r\n'
+    b'  String? _policeCertError;\r\n'
+    b'\r\n'
+    b'  // Password strength tracking\r\n'
+    b'  bool _pwHasMinLength = false;\r\n'
+    b'  bool _pwHasUppercase = false;\r\n'
+    b'  bool _pwHasDigit = false;\r\n'
+    b'  bool _pwHasSpecial = false;\r\n'
 )
+check_patch(old1, 'STATE_VARS')
+content = content.replace(old1, new1, 1)
 print("Patch 1 (state vars) OK")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Replace _validatePassword to track individual booleans
 # ─────────────────────────────────────────────────────────────────────────────
-content = patch(
-    (
-        b'  void _validatePassword(String val) {\r\n'
-        b'    if (val.isEmpty) {\r\n'
-        b'      setState(() => _passwordError = null);\r\n'
-        b'      return;\r\n'
-        b'    }\r\n'
-        b'    bool hasUppercase = val.contains(RegExp(r\'[A-Z]\'));\r\n'
-        b'    bool hasDigits = val.contains(RegExp(r\'[0-9]\'));\r\n'
-        b'    bool hasSpecialCharacters = val.contains(RegExp(r\'[!@#$%^&*(),.?\":{}\r\n'
-        b'|<>]\'));\r\n'
-    ),
-    b'PLACEHOLDER_NOT_USED\r\n',
-    'PLACEHOLDER_NOT_USED'  # We'll use a different approach below
-)
-
-print("Will use regex approach instead")
-
-# Reload original
-with open(FILE, 'rb') as f:
-    content = f.read()
-
-import re as re_module
-
-# Find and replace _validatePassword using a regex on the binary content
 old_vp_pattern = rb'  void _validatePassword\(String val\) \{.*?  \}\r\n'
 old_vp_match = re_module.search(old_vp_pattern, content, re_module.DOTALL)
 if not old_vp_match:
@@ -71,7 +45,7 @@ new_vp = (
     b"      _pwHasMinLength = val.length >= 8;\r\n"
     b"      _pwHasUppercase = val.contains(RegExp(r'[A-Z]'));\r\n"
     b"      _pwHasDigit = val.contains(RegExp(r'[0-9]'));\r\n"
-    b"      _pwHasSpecial = val.contains(RegExp(r'[!@#$%^&*(),.?\":{}<>]'));\r\n"
+    b"      _pwHasSpecial = val.contains(RegExp(r'[!@#\$%^&*(),.?\":{}<>]'));\r\n"
     b"      if (val.isEmpty) {\r\n"
     b"        _passwordError = null;\r\n"
     b"      } else if (!_pwHasMinLength) {\r\n"
@@ -94,34 +68,33 @@ print("Patch 2 (_validatePassword) OK")
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Add policeCertError to _validateSignupFields
 # ─────────────────────────────────────────────────────────────────────────────
-old_worker_id_check = (
+old3 = (
     b"      if (role == UserRole.worker) {\r\n"
     b"        _idFrontError = _idFrontImage == null ? 'Front ID image is required' : null;\r\n"
     b"        _idBackError = _idBackImage == null ? 'Back ID image is required' : null;\r\n"
     b"      }\r\n"
 )
-new_worker_id_check = (
+new3 = (
     b"      if (role == UserRole.worker) {\r\n"
     b"        _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;\r\n"
     b"        _idBackError = _idBackImage == null ? 'Back CNIC image is required' : null;\r\n"
     b"        _policeCertError = _policeCertFile == null ? 'Police certificate is required' : null;\r\n"
     b"      }\r\n"
 )
-if old_worker_id_check not in content:
-    raise ValueError("Patch 3 not found")
-content = content.replace(old_worker_id_check, new_worker_id_check, 1)
+check_patch(old3, 'VALIDATE_FIELDS')
+content = content.replace(old3, new3, 1)
 print("Patch 3 (_validateSignupFields) OK")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Add _policeCertFile and _certificationFile fields
 # ─────────────────────────────────────────────────────────────────────────────
-old_file_fields = (
+old4 = (
     b'  File? _idFrontImage;\r\n'
     b'  File? _idBackImage;\r\n'
     b'  bool _isUploading = false;\r\n'
     b'  final ImagePicker _picker = ImagePicker();\r\n'
 )
-new_file_fields = (
+new4 = (
     b'  File? _idFrontImage;\r\n'
     b'  File? _idBackImage;\r\n'
     b'  File? _policeCertFile;       // Required for worker\r\n'
@@ -129,20 +102,19 @@ new_file_fields = (
     b'  bool _isUploading = false;\r\n'
     b'  final ImagePicker _picker = ImagePicker();\r\n'
 )
-if old_file_fields not in content:
-    raise ValueError("Patch 4 not found")
-content = content.replace(old_file_fields, new_file_fields, 1)
+check_patch(old4, 'FILE_FIELDS')
+content = content.replace(old4, new4, 1)
 print("Patch 4 (file fields) OK")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. Add _pickPoliceCert / _pickCertification after _pickImage method
+# 5. Add _pickPoliceCert / _pickCertification after _uploadToCloudinary
 # ─────────────────────────────────────────────────────────────────────────────
-old_upload_method = (
+old5 = (
     b'  Future<String?> _uploadToCloudinary(File imageFile) async {\r\n'
     b'    return CloudinaryService.uploadImage(imageFile);\r\n'
     b'  }\r\n'
 )
-new_upload_method = (
+new5 = (
     b'  Future<void> _pickPoliceCert() async {\r\n'
     b'    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);\r\n'
     b'    if (image != null) {\r\n'
@@ -171,15 +143,14 @@ new_upload_method = (
     b'    return CloudinaryService.uploadImage(imageFile);\r\n'
     b'  }\r\n'
 )
-if old_upload_method not in content:
-    raise ValueError("Patch 5 not found")
-content = content.replace(old_upload_method, new_upload_method, 1)
+check_patch(old5, 'UPLOAD_METHOD')
+content = content.replace(old5, new5, 1)
 print("Patch 5 (pick methods) OK")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 6. Remove redundant null assignments in dispose()
 # ─────────────────────────────────────────────────────────────────────────────
-old_dispose_extras = (
+old6 = (
     b'    _imageSizeError = null;\r\n'
     b'    _nameError = null;\r\n'
     b'    _phoneError = null;\r\n'
@@ -188,22 +159,21 @@ old_dispose_extras = (
     b'    _idBackError = null;\r\n'
     b'    super.dispose();\r\n'
 )
-new_dispose = b'    super.dispose();\r\n'
-if old_dispose_extras not in content:
-    raise ValueError("Patch 6 not found")
-content = content.replace(old_dispose_extras, new_dispose, 1)
-print("Patch 6 (dispose cleanup) OK")
+new6 = b'    super.dispose();\r\n'
+check_patch(old6, 'DISPOSE')
+content = content.replace(old6, new6, 1)
+print("Patch 6 (dispose) OK")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. Update _next() signup logic
+# 7a. Update _next() ID card check message + add police cert check
 # ─────────────────────────────────────────────────────────────────────────────
-old_next_check = (
+old7a = (
     b"        if (role == UserRole.worker && (_idFrontError != null || _idBackError != null)) {\r\n"
     b"          showToast('Please upload both front and back of your ID card');\r\n"
     b"          return;\r\n"
     b"        }\r\n"
 )
-new_next_check = (
+new7a = (
     b"        if (role == UserRole.worker && (_idFrontError != null || _idBackError != null)) {\r\n"
     b"          showToast('Please upload both front and back of your CNIC');\r\n"
     b"          return;\r\n"
@@ -213,13 +183,14 @@ new_next_check = (
     b"          return;\r\n"
     b"        }\r\n"
 )
-if old_next_check not in content:
-    raise ValueError("Patch 7a not found")
-content = content.replace(old_next_check, new_next_check, 1)
+check_patch(old7a, 'NEXT_CHECK')
+content = content.replace(old7a, new7a, 1)
 print("Patch 7a (next check) OK")
 
-# Update the upload section - add police cert and certification uploads
-old_upload_section = (
+# ─────────────────────────────────────────────────────────────────────────────
+# 7b. Add police cert + certification uploads
+# ─────────────────────────────────────────────────────────────────────────────
+old7b = (
     b"          String? frontUrl;\r\n"
     b"          String? backUrl;\r\n"
     b"          if (role == UserRole.worker) {\r\n"
@@ -232,7 +203,7 @@ old_upload_section = (
     b"            }\r\n"
     b"          }\r\n"
 )
-new_upload_section = (
+new7b = (
     b"          String? frontUrl;\r\n"
     b"          String? backUrl;\r\n"
     b"          String? policeCertUrl;\r\n"
@@ -256,13 +227,14 @@ new_upload_section = (
     b"            }\r\n"
     b"          }\r\n"
 )
-if old_upload_section not in content:
-    raise ValueError("Patch 7b not found")
-content = content.replace(old_upload_section, new_upload_section, 1)
+check_patch(old7b, 'UPLOAD_SECTION')
+content = content.replace(old7b, new7b, 1)
 print("Patch 7b (upload section) OK")
 
-# Fix userData type and add new fields
-old_userdata = (
+# ─────────────────────────────────────────────────────────────────────────────
+# 7c. Fix userData type and add new document URL fields
+# ─────────────────────────────────────────────────────────────────────────────
+old7c = (
     b"          final userData = {\r\n"
     b"            'name': _fullNameController.text.trim(),\r\n"
     b"            'email': _emailController.text.trim(),\r\n"
@@ -277,7 +249,7 @@ old_userdata = (
     b"            userData['idBackUrl'] = backUrl!;\r\n"
     b"          }\r\n"
 )
-new_userdata = (
+new7c = (
     b"          final userData = <String, dynamic>{\r\n"
     b"            'name': _fullNameController.text.trim(),\r\n"
     b"            'email': _emailController.text.trim(),\r\n"
@@ -296,13 +268,14 @@ new_userdata = (
     b"            }\r\n"
     b"          }\r\n"
 )
-if old_userdata not in content:
-    raise ValueError("Patch 7c not found")
-content = content.replace(old_userdata, new_userdata, 1)
+check_patch(old7c, 'USERDATA')
+content = content.replace(old7c, new7c, 1)
 print("Patch 7c (userData) OK")
 
-# Replace snackbar success with dialog
-old_success = (
+# ─────────────────────────────────────────────────────────────────────────────
+# 7d. Replace snackbar with success dialog
+# ─────────────────────────────────────────────────────────────────────────────
+old7d = (
     b"          if (mounted) {\r\n"
     b"            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(\r\n"
     b"              content: Text('Account created! Please check your email to verify your account before logging in.'),\r\n"
@@ -313,7 +286,7 @@ old_success = (
     b"          return;\r\n"
     b"        } catch (e) {\r\n"
 )
-new_success = (
+new7d = (
     b"          if (mounted) {\r\n"
     b"            showDialog(\r\n"
     b"              context: context,\r\n"
@@ -372,9 +345,8 @@ new_success = (
     b"          return;\r\n"
     b"        } catch (e) {\r\n"
 )
-if old_success not in content:
-    raise ValueError("Patch 7d (success dialog) not found")
-content = content.replace(old_success, new_success, 1)
+check_patch(old7d, 'SUCCESS_DIALOG')
+content = content.replace(old7d, new7d, 1)
 print("Patch 7d (success dialog) OK")
 
 with open(FILE, 'wb') as f:

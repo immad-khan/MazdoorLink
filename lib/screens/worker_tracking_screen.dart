@@ -16,7 +16,7 @@ class WorkerTrackingScreen extends StatefulWidget {
 }
 
 class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
-  int _status = 0; // 0: tracking, 1: arrived/working, 2: completing, 3: completed
+  int _status = 0; // 0: en route, 1: working, 2: waiting completion, 3: completed, 4: waiting arrival, 5: arrival declined
   LatLng? _customerLocation;
   String _pin = '';
   Set<Marker> _markers = {};
@@ -50,6 +50,20 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
       }
       if (!mounted) return;
       setState(() {
+        final jobStatus = data['status']?.toString() ?? 'accepted';
+        if (jobStatus == 'arrival_pending') {
+          _status = 4;
+        } else if (jobStatus == 'working') {
+          _status = 1;
+        } else if (jobStatus == 'worker_completed') {
+          _status = 2;
+        } else if (jobStatus == 'completed') {
+          _status = 3;
+        } else if (jobStatus == 'arrival_declined') {
+          _status = 5;
+        } else {
+          _status = 0;
+        }
         if (lat != null && lng != null) _customerLocation = LatLng(lat, lng);
         _pin = data['pin']?.toString() ?? '';
         _customerName = data['customerName']?.toString() ?? 'Customer';

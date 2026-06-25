@@ -4341,7 +4341,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               stream: streamWorkerJobs(user.uid),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Text(bilingual(context, 'Error loading jobs', 'ملازمین لوڈ کرنے میں خرابی'));
+                  debugPrint('WorkerJobsError: ${snapshot.error}');
+                  return const SizedBox.shrink();
                 }
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());

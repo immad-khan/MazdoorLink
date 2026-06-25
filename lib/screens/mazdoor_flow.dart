@@ -943,9 +943,9 @@ final _phone = TextEditingController();
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       final file = File(image.path);
-      final sizeInMb = file.lengthSync() / (1024 * 1024);
-      if (sizeInMb > 2) {
-        setState(() => _imageSizeError = 'Police certificate must be less than 2MB (current: ${sizeInMb.toStringAsFixed(1)}MB)');
+      final sizeInKb = file.lengthSync() / 1024;
+      if (sizeInKb > 100) {
+        setState(() => _imageSizeError = 'Police certificate must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)');
         return;
       }
       setState(() {
@@ -960,9 +960,9 @@ final _phone = TextEditingController();
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       final file = File(image.path);
-      final sizeInMb = file.lengthSync() / (1024 * 1024);
-      if (sizeInMb > 2) {
-        setState(() => _imageSizeError = 'Certificate must be less than 2MB (current: ${sizeInMb.toStringAsFixed(1)}MB)');
+      final sizeInKb = file.lengthSync() / 1024;
+      if (sizeInKb > 100) {
+        setState(() => _imageSizeError = 'Certificate must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)');
         return;
       }
       setState(() {
@@ -1669,7 +1669,7 @@ final _phone = TextEditingController();
               ],
             ),
             const SizedBox(height: 6),
-            Text('Upload image of your police certificate (max 2MB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            Text('Upload image of your police certificate (max 100KB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
             const SizedBox(height: 10),
             InkWell(
               onTap: _pickPoliceCert,
@@ -1727,7 +1727,7 @@ final _phone = TextEditingController();
               ],
             ),
             const SizedBox(height: 6),
-            Text('Upload any trade certificate, specialization diploma, etc. (max 2MB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            Text('Upload any trade certificate, specialization diploma, etc. (max 100KB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
             const SizedBox(height: 10),
             InkWell(
               onTap: _pickCertification,
@@ -3566,11 +3566,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          _trackingState == 0 
-                              ? bilingual(context, 'Waiting for worker to accept...', 'ورکر کے قبول کرنے کا انتظار ہے...')
-                              : _trackingState == 1 
-                                  ? bilingual(context, 'Worker is on the way', 'ورکر راستے میں ہے')
-                                  : bilingual(context, 'Worker claims job is completed', 'ورکر کا دعویٰ ہے کہ کام مکمل ہو گیا'),
+                          _trackingTitle(context),
                           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                         ),
                       ),
@@ -3678,7 +3674,10 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: () { 
+                            onPressed: () async {
+                              if (jobId != null) {
+                                await updateJobStatus(jobId, 'working');
+                              }
                               // explicitly stay on the current screen/state
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text(bilingual(context, 'Waiting for worker to finish.', 'ورکر کا انتظار کیا جا رہا ہے۔'))),

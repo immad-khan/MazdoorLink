@@ -182,7 +182,17 @@ Future<void> updateJobStatus(String jobId, String status) async {
     case 'worker_completed':
       updates['workerCompletedAt'] = FieldValue.serverTimestamp();
       break;
+    case 'payment_pending':
+      updates['customerConfirmedWorkAt'] = FieldValue.serverTimestamp();
+      break;
+    case 'worker_payment_pending':
+      updates['customerMarkedPaidAt'] = FieldValue.serverTimestamp();
+      break;
+    case 'payment_disputed':
+      updates['paymentDisputedAt'] = FieldValue.serverTimestamp();
+      break;
     case 'completed':
+      updates['workerConfirmedPaymentAt'] = FieldValue.serverTimestamp();
       updates['customerCompletedAt'] = FieldValue.serverTimestamp();
       updates['completedAt'] = FieldValue.serverTimestamp();
       break;
@@ -203,7 +213,7 @@ Stream<QuerySnapshot> streamWorkerActiveJobs(String workerId) {
   return FirebaseFirestore.instance
       .collection('jobs')
       .where('workerId', isEqualTo: workerId)
-      .where('status', whereIn: ['pending', 'accepted', 'arrival_pending', 'working', 'worker_completed'])
+      .where('status', whereIn: ['pending', 'accepted', 'arrival_pending', 'working', 'worker_completed', 'payment_pending', 'worker_payment_pending', 'payment_disputed'])
       .orderBy('createdAt', descending: true)
       .snapshots();
 }
@@ -214,7 +224,7 @@ Stream<double> streamWorkerEarnings() {
   return FirebaseFirestore.instance
       .collection('jobs')
       .where('workerId', isEqualTo: user.uid)
-      .where('status', whereIn: ['accepted', 'completed'])
+      .where('status', isEqualTo: 'completed')
       .snapshots()
       .map((snapshot) => snapshot.docs.fold<double>(0, (total, doc) {
             final data = doc.data();
@@ -232,6 +242,26 @@ Stream<QuerySnapshot> streamAllJobs() {
 
 Future<void> updateJobCompleted(String jobId) async {
   await updateJobStatus(jobId, 'completed');
+}
+
+Future<void> submitPaymentComplaint({
+  required String jobId,
+  required String reason,
+  required double amount,
+  required String paymentMethod,
+}) async {
+  final user = FirebaseAuth.instance.currentUser;
+  await FirebaseFirestore.instance.collection('complaints').add({
+    'jobId': jobId,
+    'customerId': user?.uid,
+    'type': 'payment_not_made',
+    'reason': reason,
+    'amount': amount,
+    'paymentMethod': paymentMethod,
+    'status': 'pending',
+    'resolved': false,
+    'createdAt': FieldValue.serverTimestamp(),
+  });
 }
 
 Stream<DocumentSnapshot> streamJobById(String jobId) {

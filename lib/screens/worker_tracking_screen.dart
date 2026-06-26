@@ -16,7 +16,7 @@ class WorkerTrackingScreen extends StatefulWidget {
 }
 
 class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
-  int _status = 0; // 0: en route, 1: working, 2: waiting completion, 3: completed, 4: waiting arrival, 5: arrival declined
+  int _status = 0; // 0: en route, 1: working, 2: waiting completion, 3: completed, 4: waiting arrival, 5: arrival declined, 6: confirm payment
   LatLng? _customerLocation;
   String _pin = '';
   Set<Marker> _markers = {};
@@ -25,6 +25,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   String _customerName = 'Customer';
   String _customerPhone = '';
   String _jobDesc = '';
+  String _paymentMethod = 'Cash';
 
   @override
   void initState() {
@@ -57,6 +58,10 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
           _status = 1;
         } else if (jobStatus == 'worker_completed') {
           _status = 2;
+        } else if (jobStatus == 'payment_pending') {
+          _status = 2;
+        } else if (jobStatus == 'worker_payment_pending') {
+          _status = 6;
         } else if (jobStatus == 'completed') {
           _status = 3;
         } else if (jobStatus == 'arrival_declined') {
@@ -68,6 +73,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
         _pin = data['pin']?.toString() ?? '';
         _customerName = data['customerName']?.toString() ?? 'Customer';
         _customerPhone = phone;
+        _paymentMethod = data['paymentMethod']?.toString() ?? 'Cash';
         _jobDesc = isUrdu
             ? (data['descriptionUr']?.toString() ?? '')
             : (data['descriptionEn']?.toString() ?? '');
@@ -189,63 +195,6 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
     );
   }
 
-  void _onWorkCompleted() {
-    setState(() {
-      _status = 2;
-    });
-    // simulate customer agreeing
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) return;
-      
-      final isUrdu = AppScope.of(context).isUrdu;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check_circle, color: Color(0xFF0D9488), size: 48),
-              const SizedBox(height: 16),
-              Text(
-                isUrdu ? 'گاہک نے تصدیق کر دی ہے کہ کام مکمل ہو گیا ہے۔' : 'Customer agrees work is done.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-      );
-
-      Future.delayed(const Duration(seconds: 5), () {
-        if (!mounted) return;
-        Navigator.pop(context); // close first dialog
-        
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => AlertDialog(
-            title: Text(isUrdu ? 'ادائیگی موصول کریں' : 'Payment Received?'),
-            content: Text(isUrdu 
-              ? 'گاہک نے آپ کو ${widget.jobPrice.toStringAsFixed(0)} روپے ہینڈ ٹو ہینڈ دیئے ہیں۔ کیا آپ کو یہ رقم مل گئی ہے؟' 
-              : 'Customer has made PKR ${widget.jobPrice.toStringAsFixed(0)} with hand. Did you receive it?'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    _status = 3;
-                  });
-                },
-                child: Text(isUrdu ? 'جی ہاں' : 'Yes'),
-              ),
-            ],
-          ),
-        );
-      });
-    });
-  }
-
   void _requestArrivalConfirmation() {
     final isUrdu = AppScope.of(context).isUrdu;
 
@@ -291,6 +240,42 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
           : 'Customer has been asked to confirm the job is completed.'),
       backgroundColor: const Color(0xFF0D9488),
     ));
+  }
+
+  Future<void> _confirmPaymentReceived() async {
+    await updateJobCompleted(widget.jobId);
+    if (!mounted) return;
+    final isUrdu = AppScope.of(context).isUrdu;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(isUrdu
+          ? 'ادائیگی موصول ہو گئی۔ رسید تیار ہے۔'
+          : 'Payment received. Receipt is ready.'),
+      backgroundColor: const Color(0xFF0D9488),
+    ));
+  }
+
+  Widget _buildReceiptCard(bool isUrdu) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(isUrdu ? 'رسید' : 'Receipt',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Divider(),
+          _ReceiptLine(label: isUrdu ? 'کام' : 'Job', value: _jobDesc.isEmpty ? 'Service' : _jobDesc),
+          _ReceiptLine(label: isUrdu ? 'کسٹمر' : 'Customer', value: _customerName),
+          _ReceiptLine(label: isUrdu ? 'ادائیگی' : 'Payment', value: _paymentMethod),
+          _ReceiptLine(label: isUrdu ? 'رقم' : 'Amount', value: 'PKR ${widget.jobPrice.toStringAsFixed(0)}'),
+        ],
+      ),
+    );
   }
 
   Widget _buildCustomerInfoTile(bool isUrdu) {
@@ -606,6 +591,32 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                       style: const TextStyle(fontSize: 16, color: Colors.black54),
                     ),
                   ]
+                  // Status 6: Customer says payment was made
+                  else if (_status == 6) ...[
+                    const Icon(Icons.payments, color: Color(0xFF0D9488), size: 56),
+                    const SizedBox(height: 12),
+                    Text(
+                      isUrdu
+                          ? 'کسٹمر کہتا ہے کہ ادائیگی کر دی گئی ہے۔'
+                          : 'Customer says the amount has been paid.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'PKR ${widget.jobPrice.toStringAsFixed(0)} • $_paymentMethod',
+                      style: const TextStyle(fontSize: 16, color: Color(0xFF0D9488), fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _confirmPaymentReceived,
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                        child: Text(isUrdu ? 'ہاں، رقم مل گئی' : 'Yes, I received it'),
+                      ),
+                    ),
+                  ]
                   // Status 3: Completed
                   else if (_status == 3) ...[
                     const Icon(Icons.task_alt, color: Color(0xFF059669), size: 64),
@@ -619,6 +630,8 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                       isUrdu ? 'وصول کیے گئے: PKR ${widget.jobPrice.toStringAsFixed(0)}' : 'Received: PKR ${widget.jobPrice.toStringAsFixed(0)}',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
+                    const SizedBox(height: 12),
+                    _buildReceiptCard(isUrdu),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -669,6 +682,34 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                   ]
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReceiptLine extends StatelessWidget {
+  const _ReceiptLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(color: Colors.black54)),
+          const Spacer(),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

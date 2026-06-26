@@ -2820,9 +2820,6 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                               size: 22,
                             ),
                             onPressed: () async {
-                              if (jobId != null) {
-                                await updateJobStatus(jobId, 'working');
-                              }
                               final wid = matchedWorkers[i].id;
                               if (wid == null) return;
                               if (_favouriteIds.contains(wid)) {
@@ -3441,19 +3438,42 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       title: bilingual(context, 'Service Tracking', 'سروس ٹریکنگ'),
       child: Stack(
         children: [
-          GoogleMap(
-            mapType: MapType.normal,
-            initialCameraPosition: CameraPosition(
-              target: _customerLocation ?? const LatLng(31.5204, 74.3587),
-              zoom: 15,
+          if (_trackingState >= 1)
+            GoogleMap(
+              mapType: MapType.normal,
+              initialCameraPosition: CameraPosition(
+                target: _customerLocation ?? const LatLng(31.5204, 74.3587),
+                zoom: 15,
+              ),
+              markers: _markers,
+              onMapCreated: (controller) => _mapController = controller,
             ),
-            markers: _markers,
-            onMapCreated: (controller) => _mapController = controller,
-          ),
-          Positioned(
-            top: 20,
-            right: 20,
-            child: FloatingActionButton.extended(
+          if (_trackingState == 0)
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 100),
+                  const CircularProgressIndicator(color: Color(0xFF0D9488)),
+                  const SizedBox(height: 24),
+                  Text(
+                    bilingual(context, 'Request sent to worker...', 'ورکر کو درخواست بھیج دی گئی...'),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    bilingual(context, 'Waiting for them to accept your offer', 'ان کے آپ کی پیشکش قبول کرنے کا انتظار ہے'),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          if (_trackingState >= 1)
+            Positioned(
+              top: 20,
+              right: 20,
+              child: FloatingActionButton.extended(
               heroTag: 'customer_sos',
               backgroundColor: Colors.red,
               onPressed: () {
@@ -3508,7 +3528,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                 ),
               ),
             ),
-          Positioned(
+          if (_trackingState >= 1)
+            Positioned(
             top: 110,
             left: 80,
             child: Column(
@@ -3538,7 +3559,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
               ],
             ),
           ),
-          Positioned(
+          if (_trackingState >= 1)
+            Positioned(
             top: 240,
             right: 70,
             child: Column(
@@ -3691,7 +3713,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                           child: FilledButton(
                             onPressed: () {
                               if (jobId != null) {
-                                updateJobCompleted(jobId);
+                                updateJobStatus(jobId, 'payment_pending');
                               }
                               Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: args);
                             },
@@ -3758,6 +3780,7 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   final _senderName = TextEditingController();
   final _mobileNumber = TextEditingController();
   final _payAmount = TextEditingController(text: '1050');
+  final _paymentIssue = TextEditingController();
 
   // Rating
   int rating = 0;
@@ -3770,8 +3793,96 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
     _senderName.dispose();
     _mobileNumber.dispose();
     _payAmount.dispose();
+    _paymentIssue.dispose();
     review.dispose();
     super.dispose();
+  }
+
+  TrackingArguments? _trackingArgs(BuildContext context) {
+    return ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
+  }
+
+  double _jobAmount(BuildContext context) {
+    return _trackingArgs(context)?.job?.price ?? 0;
+  }
+
+  String _jobPaymentMethod(BuildContext context) {
+    return _trackingArgs(context)?.job?.paymentMethod ?? 'Cash';
+  }
+
+  String? _jobId(BuildContext context) {
+    return _trackingArgs(context)?.jobId;
+  }
+
+  Future<void> _markCustomerPaid(BuildContext context) async {
+    final jobId = _jobId(context);
+    if (jobId != null) {
+      await updateJobStatus(jobId, 'worker_payment_pending');
+    }
+    if (!mounted) return;
+    setState(() => _step = PostJobStep.workerConfirmationWaiting);
+  }
+
+  Future<void> _completeOnlinePayment(BuildContext context) async {
+    final jobId = _jobId(context);
+    if (jobId != null) {
+      await updateJobCompleted(jobId);
+    }
+    if (!mounted) return;
+    setState(() => _step = PostJobStep.paymentSuccessTick);
+  }
+
+  Future<void> _submitPaymentIssue(BuildContext context) async {
+    final reason = _paymentIssue.text.trim();
+    if (reason.isEmpty) {
+      showToast(bilingual(context, 'Please explain why you are not paying.', 'براہ کرم وجہ لکھیں کہ ادائیگی کیوں نہیں کر رہے۔'));
+      return;
+    }
+    final jobId = _jobId(context);
+    final amount = _jobAmount(context);
+    final paymentMethod = _jobPaymentMethod(context);
+    if (jobId != null) {
+      await submitPaymentComplaint(
+        jobId: jobId,
+        reason: reason,
+        amount: amount,
+        paymentMethod: paymentMethod,
+      );
+      await updateJobStatus(jobId, 'payment_disputed');
+    }
+    if (!mounted) return;
+    showToast(bilingual(context, 'Payment issue sent to admin.', 'ادائیگی کا مسئلہ ایڈمن کو بھیج دیا گیا۔'));
+    setState(() => _step = PostJobStep.completed);
+  }
+
+  void _showCashPaidDialog(BuildContext context, double amount) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(bilingual(context, 'Have you paid?', 'کیا آپ نے ادائیگی کر دی؟')),
+        content: Text(bilingual(
+          context,
+          'Have you paid Rs. ${amount.toStringAsFixed(0)} to the worker by hand?',
+          'کیا آپ نے ورکر کو ${amount.toStringAsFixed(0)} روپے نقد ادا کر دیے ہیں؟',
+        )),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => _step = PostJobStep.complaintForm);
+            },
+            child: Text(bilingual(context, 'No', 'نہیں')),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _markCustomerPaid(context);
+            },
+            child: Text(bilingual(context, 'Yes', 'ہاں')),
+          ),
+        ],
+      ),
+    );
   }
 
   String _getTitle(BuildContext context) {
@@ -3819,6 +3930,10 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   }
 
   Widget _buildChooseAction(BuildContext context) {
+    final amount = _jobAmount(context);
+    final paymentMethod = _jobPaymentMethod(context);
+    final isCash = paymentMethod.toLowerCase() == 'cash';
+
     return ListView(
       key: const ValueKey('choose'),
       padding: const EdgeInsets.all(24),
@@ -3827,14 +3942,15 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         const SizedBox(height: 16),
         Text(bilingual(context, 'Job Completed!', 'کام مکمل ہو گیا!'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
         const SizedBox(height: 24),
-        const Card(
+        Card(
           child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _BillRow('Service Fee', 'Rs. 1,000'),
-                Divider(),
-                _BillRow('Total Paid', 'Rs. 1,000', bold: true),
+                _BillRow('Service Fee', 'Rs. ${amount.toStringAsFixed(0)}'),
+                _BillRow('Payment Method', paymentMethod),
+                const Divider(),
+                _BillRow('Total', 'Rs. ${amount.toStringAsFixed(0)}', bold: true),
               ],
             ),
           ),
@@ -3842,20 +3958,11 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         const SizedBox(height: 32),
         FilledButton(
           onPressed: () {
-            final args = ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
-            final paymentMethod = (args?.job)?.paymentMethod ?? 'Cash';
-            if (paymentMethod == 'Cash') {
-              setState(() => _step = PostJobStep.workerConfirmationWaiting);
-              Future.delayed(const Duration(seconds: 4), () {
-                if (mounted && _step == PostJobStep.workerConfirmationWaiting) {
-                  setState(() => _step = PostJobStep.paymentSuccessTick);
-                  Future.delayed(const Duration(seconds: 2), () {
-                    if (mounted) setState(() => _step = PostJobStep.ratingForm);
-                  });
-                }
-              });
+            if (isCash) {
+              _showCashPaidDialog(context, amount);
             } else {
               _selectedProvider = paymentMethod;
+              _payAmount.text = amount.toStringAsFixed(0);
               setState(() => _step = PostJobStep.onlinePaymentForm);
             }
           },
@@ -3873,7 +3980,7 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         Text(bilingual(context, 'File a Complaint', 'ایک شکایت درج کریں'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
         TextField(
-          controller: _claimDesc,
+          controller: _paymentIssue,
           maxLines: 3,
           decoration: InputDecoration(
             labelText: bilingual(context, 'Description / Issue', 'تفصیل / مسئلہ'),
@@ -3927,11 +4034,8 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         ),
         const SizedBox(height: 32),
         FilledButton(
-          onPressed: () {
-            showToast(bilingual(context, 'Complaint Submitted', 'شکایت جمع کر دی گئی'));
-            setState(() => _step = PostJobStep.ratingForm);
-          },
-          child: Text(bilingual(context, 'Submit Complaint', 'شکایت جمع کریں')),
+          onPressed: () => _submitPaymentIssue(context),
+          child: Text(bilingual(context, 'Submit to Admin', 'ایڈمن کو بھیجیں')),
         ),
       ],
     );
@@ -3975,6 +4079,23 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   }
 
   Widget _buildCashWaiting(BuildContext context) {
+    final jobId = _jobId(context);
+    if (jobId != null) {
+      return StreamBuilder<DocumentSnapshot>(
+        stream: streamJobById(jobId),
+        builder: (context, snapshot) {
+          final data = snapshot.data?.data() as Map<String, dynamic>?;
+          if (data?['status'] == 'completed') {
+            return _buildTickSuccess(context);
+          }
+          return _buildCashWaitingContent(context);
+        },
+      );
+    }
+    return _buildCashWaitingContent(context);
+  }
+
+  Widget _buildCashWaitingContent(BuildContext context) {
     return Center(
       key: const ValueKey('cashWait'),
       child: Padding(
@@ -3994,6 +4115,11 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   }
 
   Widget _buildTickSuccess(BuildContext context) {
+    final amount = _jobAmount(context);
+    final method = _jobPaymentMethod(context);
+    final workerName = _trackingArgs(context)?.worker?.name ?? 'Worker';
+    final receiptId = (_jobId(context) ?? 'JOB');
+
     return Center(
       key: const ValueKey('tickSuccess'),
       child: Column(
@@ -4002,7 +4128,27 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           const Icon(Icons.check_circle, color: Colors.green, size: 100),
           const SizedBox(height: 20),
           Text(bilingual(context, 'Payment Successful!', 'ادائیگی کامیاب!'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
-          const SizedBox(height: 30),
+          const SizedBox(height: 18),
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                children: [
+                  _BillRow(
+                    'Receipt',
+                    '#${receiptId.length > 6 ? receiptId.substring(0, 6) : receiptId}',
+                    bold: true,
+                  ),
+                  const Divider(),
+                  _BillRow('Worker', workerName),
+                  _BillRow('Payment', method),
+                  _BillRow('Amount', 'Rs. ${amount.toStringAsFixed(0)}', bold: true),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           FilledButton(
             onPressed: () => setState(() => _step = PostJobStep.ratingForm),
             child: Text(bilingual(context, 'Continue to Rating', 'درجہ بندی پر جائیں')),
@@ -4082,12 +4228,7 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         ),
         const SizedBox(height: 30),
         FilledButton(
-          onPressed: () {
-            setState(() => _step = PostJobStep.workerConfirmationWaiting);
-            Future.delayed(const Duration(seconds: 2), () {
-              if (mounted) setState(() => _step = PostJobStep.paymentSuccessTick);
-            });
-          },
+          onPressed: () => _completeOnlinePayment(context),
           child: Text(bilingual(context, 'Send Payment', 'ادائیگی بھیجیں')),
         ),
       ],

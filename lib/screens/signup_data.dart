@@ -4,6 +4,7 @@ class WorkerSignupData {
   final String password;
   final String phone;
   final String? profilePicUrl;
+  final String? cnicNumber;
   final String idFrontUrl;
   final String idBackUrl;
   final String? policeCertUrl;
@@ -15,6 +16,7 @@ class WorkerSignupData {
     required this.password,
     required this.phone,
     this.profilePicUrl,
+    this.cnicNumber,
     required this.idFrontUrl,
     required this.idBackUrl,
     this.policeCertUrl,

@@ -814,6 +814,7 @@ class _AuthScreenState extends State<AuthScreen> {
   String? _idBackError;
   String? _imageSizeError;
   String? _policeCertError;
+  String? _cnicError;
 
   // Password strength tracking
   bool _pwHasMinLength = false;
@@ -861,6 +862,8 @@ class _AuthScreenState extends State<AuthScreen> {
           ? 'Please confirm your password'
           : (_password.text != _confirmPassword.text ? 'Passwords must match' : null);
       if (role == UserRole.worker) {
+        final cnic = _cnicController.text.trim();
+        _cnicError = !RegExp(r'^\d{5}-\d{7}-\d{1}$').hasMatch(cnic) ? 'Enter a valid CNIC (e.g. 42201-1234567-1)' : null;
         _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;
         _idBackError = _idBackImage == null ? 'Back CNIC image is required' : null;
         _policeCertError = null; // Optional for worker
@@ -966,6 +969,16 @@ final _phone = TextEditingController();
         _imageSizeError = null;
       });
     }
+  }
+
+  String _formatCnic(String value) {
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    final buf = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 5 || i == 12) buf.write('-');
+      buf.write(digits[i]);
+    }
+    return buf.toString();
   }
 
   Future<void> _pickCertification() async {
@@ -1075,6 +1088,7 @@ final _phone = TextEditingController();
                 password: _password.text,
                 phone: _phone.text.trim(),
                 profilePicUrl: profilePicUrl,
+                cnicNumber: _cnicController.text.trim(),
                 idFrontUrl: frontUrl!,
                 idBackUrl: backUrl!,
                 policeCertUrl: policeCertUrl,
@@ -1635,6 +1649,50 @@ final _phone = TextEditingController();
                           Text('Tap to upload', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                         ],
                       ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // CNIC Number
+            const Divider(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.badge_outlined, size: 18, color: Color(0xFF0D9488)),
+                const SizedBox(width: 8),
+                const Text('CNIC Number', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(4)),
+                  child: const Text('Required', style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text('Enter your CNIC number with dashes (e.g. 42201-1234567-1)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _cnicController,
+              keyboardType: TextInputType.number,
+              onChanged: (val) {
+                final formatted = _formatCnic(val);
+                if (formatted != val) {
+                  _cnicController.value = TextEditingValue(
+                    text: formatted,
+                    selection: TextSelection.collapsed(offset: formatted.length),
+                  );
+                }
+                if (_cnicError != null) setState(() => _cnicError = null);
+              },
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.credit_card_outlined),
+                hintText: '42201-1234567-1',
+                errorText: _cnicError,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -4623,7 +4681,20 @@ class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen>
         }
       }
     }
-    if (mounted) setState(() => _isLoading = false);
+    if (mounted) {
+      // Existing user with a category — skip category picker, go straight to services
+      if (_signupData == null && _selected != null) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            AppRoutes.workerServicesSetup,
+            arguments: _categoryKeyToIndex(_selected!),
+          );
+        }
+        return;
+      }
+      setState(() => _isLoading = false);
+    }
   }
 
   int _categoryKeyToIndex(String key) {

@@ -744,6 +744,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     final name = w['name'] ?? 'Unknown';
     final email = w['email'] ?? 'No email';
     final phone = w['phone'] ?? 'No phone';
+    final cnicNumber = w['cnicNumber'];
     final status = w['status'] ?? 'pending';
     final idFrontUrl = w['idFrontUrl'];
     final idBackUrl = w['idBackUrl'];
@@ -820,6 +821,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                   // Personal Info
                   _detailField('Email', email, Icons.email_outlined),
                   _detailField('Phone', phone, Icons.phone_outlined),
+                  if (cnicNumber != null) _detailField('CNIC Number', cnicNumber.toString(), Icons.badge_outlined),
                   if (category != null) _detailField('Category (Key)', category.toString(), Icons.category_outlined),
                   if (categoryNameEn != null) _detailField('Category (English)', categoryNameEn.toString(), Icons.translate),
                   if (categoryNameUr != null) _detailField('Category (Urdu)', categoryNameUr.toString(), Icons.translate),

@@ -322,6 +322,9 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
           'categoryNameUr': _skillNamesUr[_categoryIndex],
           'setupComplete': true,
         };
+        if (_signupData!.cnicNumber != null && _signupData!.cnicNumber!.isNotEmpty) {
+          userData['cnicNumber'] = _signupData!.cnicNumber;
+        }
         if (_signupData!.profilePicUrl != null) {
           userData['profilePicUrl'] = _signupData!.profilePicUrl;
         }

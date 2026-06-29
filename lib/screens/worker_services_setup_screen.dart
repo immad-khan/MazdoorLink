@@ -316,13 +316,18 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
           'createdAt': FieldValue.serverTimestamp(),
           'idFrontUrl': _signupData!.idFrontUrl,
           'idBackUrl': _signupData!.idBackUrl,
-          'policeCertUrl': _signupData!.policeCertUrl,
           'category': categoryKey,
           'skills': selectedServices,
           'categoryNameEn': _skillNamesEn[_categoryIndex],
           'categoryNameUr': _skillNamesUr[_categoryIndex],
           'setupComplete': true,
         };
+        if (_signupData!.profilePicUrl != null) {
+          userData['profilePicUrl'] = _signupData!.profilePicUrl;
+        }
+        if (_signupData!.policeCertUrl != null) {
+          userData['policeCertUrl'] = _signupData!.policeCertUrl;
+        }
         if (_signupData!.certificationUrl != null) {
           userData['certificationUrl'] = _signupData!.certificationUrl;
         }

@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:service_frontend/app_theme.dart';
 
 class DocumentUploadScreen extends StatefulWidget {
@@ -33,7 +35,23 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen>
     super.dispose();
   }
 
-  void _simulateUpload(bool isFront) {
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickAndUpload(bool isFront) async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+    final file = File(image.path);
+    final sizeInKb = file.lengthSync() / 1024;
+    if (sizeInKb > 100) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Image size must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
     setState(() {
       if (isFront) {
         _cnicFrontUploaded = true;
@@ -41,7 +59,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen>
         _cnicBackUploaded = true;
       }
     });
-
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -73,7 +91,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen>
         ),
       ),
       child: GestureDetector(
-        onTap: () => _simulateUpload(isFront),
+        onTap: () => _pickAndUpload(isFront),
         child: Container(
           padding: EdgeInsets.all(24),
           decoration: BoxDecoration(

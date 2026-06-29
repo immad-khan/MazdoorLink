@@ -79,6 +79,13 @@ class TrackingArguments {
   TrackingArguments({this.worker, this.job, this.jobId});
 }
 
+class LocationPickArguments {
+  final double? customerLatitude;
+  final double? customerLongitude;
+
+  LocationPickArguments({this.customerLatitude, this.customerLongitude});
+}
+
 class ConversationArguments {
   final String conversationId;
   final String otherName;
@@ -831,19 +838,7 @@ class _AuthScreenState extends State<AuthScreen> {
       _pwHasUppercase = val.contains(RegExp(r'[A-Z]'));
       _pwHasDigit = val.contains(RegExp(r'[0-9]'));
       _pwHasSpecial = val.contains(RegExp(r'[!@#\$%^&*(),.?":{}<>]'));
-      if (val.isEmpty) {
-        _passwordError = null;
-      } else if (!_pwHasMinLength) {
-        _passwordError = 'Must be at least 8 characters';
-      } else if (!_pwHasUppercase) {
-        _passwordError = 'Must contain at least 1 uppercase letter';
-      } else if (!_pwHasDigit) {
-        _passwordError = 'Must contain at least 1 number';
-      } else if (!_pwHasSpecial) {
-        _passwordError = 'Must contain at least 1 special character';
-      } else {
-        _passwordError = null;
-      }
+      _passwordError = null;
     });
   }
 
@@ -868,7 +863,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (role == UserRole.worker) {
         _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;
         _idBackError = _idBackImage == null ? 'Back CNIC image is required' : null;
-        _policeCertError = _policeCertFile == null ? 'Police certificate is required' : null;
+        _policeCertError = null; // Optional for worker
       }
     });
   }
@@ -888,7 +883,8 @@ final _phone = TextEditingController();
   
   File? _idFrontImage;
   File? _idBackImage;
-  File? _policeCertFile;       // Required for worker
+  File? _profilePicFile;      // Optional for worker
+  File? _policeCertFile;       // Optional for worker
   File? _certificationFile;    // Optional for worker
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
@@ -919,10 +915,10 @@ final _phone = TextEditingController();
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       final file = File(image.path);
-      final sizeInMb = file.lengthSync() / (1024 * 1024);
-      if (sizeInMb > 5) {
+      final sizeInKb = file.lengthSync() / 1024;
+      if (sizeInKb > 100) {
         setState(() {
-          _imageSizeError = 'Image size must be less than 5MB (current: ${sizeInMb.toStringAsFixed(1)}MB)';
+          _imageSizeError = 'Image size must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)';
         });
         return;
       }
@@ -951,6 +947,22 @@ final _phone = TextEditingController();
       setState(() {
         _policeCertFile = file;
         _policeCertError = null;
+        _imageSizeError = null;
+      });
+    }
+  }
+
+  Future<void> _pickProfilePic() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final file = File(image.path);
+      final sizeInKb = file.lengthSync() / 1024;
+      if (sizeInKb > 100) {
+        setState(() => _imageSizeError = 'Profile picture must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)');
+        return;
+      }
+      setState(() {
+        _profilePicFile = file;
         _imageSizeError = null;
       });
     }
@@ -1023,16 +1035,12 @@ final _phone = TextEditingController();
           showToast('Please upload both front and back of your CNIC');
           return;
         }
-        if (role == UserRole.worker && _policeCertError != null) {
-          showToast('Please upload your police character certificate');
-          return;
-        }
-
         setState(() => _isUploading = true);
 
         try {
           String? frontUrl;
           String? backUrl;
+          String? profilePicUrl;
           String? policeCertUrl;
           String? certificationUrl;
           if (role == UserRole.worker) {
@@ -1043,11 +1051,16 @@ final _phone = TextEditingController();
               if (mounted) showToast('Failed to upload CNIC images. Try again.');
               return;
             }
-            policeCertUrl = await _uploadToCloudinary(_policeCertFile!);
-            if (policeCertUrl == null) {
-              setState(() => _isUploading = false);
-              if (mounted) showToast('Failed to upload police certificate. Try again.');
-              return;
+            if (_profilePicFile != null) {
+              profilePicUrl = await _uploadToCloudinary(_profilePicFile!);
+            }
+            if (_policeCertFile != null) {
+              policeCertUrl = await _uploadToCloudinary(_policeCertFile!);
+              if (policeCertUrl == null) {
+                setState(() => _isUploading = false);
+                if (mounted) showToast('Failed to upload police certificate. Try again.');
+                return;
+              }
             }
             if (_certificationFile != null) {
               certificationUrl = await _uploadToCloudinary(_certificationFile!);
@@ -1061,9 +1074,10 @@ final _phone = TextEditingController();
                 email: _emailController.text.trim(),
                 password: _password.text,
                 phone: _phone.text.trim(),
+                profilePicUrl: profilePicUrl,
                 idFrontUrl: frontUrl!,
                 idBackUrl: backUrl!,
-                policeCertUrl: policeCertUrl!,
+                policeCertUrl: policeCertUrl,
                 certificationUrl: certificationUrl,
               );
               Navigator.pushReplacementNamed(context, AppRoutes.workerCategorySelect, arguments: signupData);
@@ -1551,7 +1565,7 @@ final _phone = TextEditingController();
           ),
           const SizedBox(height: 10),
           // Dynamic password strength indicator
-          if (_password.text.isNotEmpty) ...[
+          if (_password.text.isNotEmpty || _confirmPassword.text.isNotEmpty) ...[
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -1575,6 +1589,55 @@ final _phone = TextEditingController();
           const SizedBox(height: 24),
           
           if (role == UserRole.worker) ...[
+            // Profile Picture (Optional)
+            const Divider(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.person_outline, size: 18, color: Color(0xFF0D9488)),
+                const SizedBox(width: 8),
+                const Text('Profile Picture', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(4)),
+                  child: const Text('Optional', style: TextStyle(fontSize: 10, color: Color(0xFF0369A1), fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text('Upload your profile picture (max 100KB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: _pickProfilePic,
+              child: Container(
+                width: double.infinity,
+                height: 120,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: _profilePicFile != null ? const Color(0xFFF0FDFA) : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _profilePicFile != null ? const Color(0xFF0D9488) : Colors.grey.shade300,
+                    width: _profilePicFile != null ? 1.5 : 1,
+                  ),
+                ),
+                child: _profilePicFile != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(_profilePicFile!, fit: BoxFit.cover),
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
+                          const SizedBox(height: 6),
+                          Text('Tap to upload', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                        ],
+                      ),
+              ),
+            ),
+            const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 16),
             const Text('CNIC Images (Front & Back)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
@@ -1652,7 +1715,7 @@ final _phone = TextEditingController();
                 ),
               ),
             const SizedBox(height: 20),
-            // Police Certificate (Required)
+            // Police Certificate (Optional)
             const Divider(),
             const SizedBox(height: 16),
             Row(
@@ -1663,8 +1726,8 @@ final _phone = TextEditingController();
                 const SizedBox(width: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('Required', style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
+                  decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(4)),
+                  child: const Text('Optional', style: TextStyle(fontSize: 10, color: Color(0xFF0369A1), fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -2460,6 +2523,13 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
 
   void _confirmLocation() {
     final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is LocationPickArguments) {
+      Navigator.pop(context, {
+        'lat': _selectedLocation.latitude,
+        'lng': _selectedLocation.longitude,
+      });
+      return;
+    }
     if (args is JobPostingArguments) {
       Navigator.pushReplacementNamed(
         context,
@@ -3159,31 +3229,42 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                              );
                              return;
                            }
-                           final jobDesc = args?.job ?? JobPostingArguments(
-                             descriptionEn: 'Scheduled Service',
-                             descriptionUr: 'شیڈولڈ سروس',
-                             price: offerPrice,
-                             categoryKey: worker.category.toLowerCase(),
-                           );
-                             final loc = jobDesc.customerLatitude == null || jobDesc.customerLongitude == null
-                                 ? await getCurrentLocation()
-                                 : null;
-                             final jobId = await createJobOffer(
-                               workerId: worker.id,
-                               workerName: worker.name,
-                               descriptionEn: jobDesc.descriptionEn,
-                               descriptionUr: jobDesc.descriptionUr,
-                               price: offerPrice,
-                               categoryKey: jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey : worker.category.toLowerCase(),
-                               paymentMethod: jobDesc.paymentMethod,
-                               customerLatitude: jobDesc.customerLatitude ?? loc?.latitude,
-                               customerLongitude: jobDesc.customerLongitude ?? loc?.longitude,
-                               visibilityDurationMinutes: _visibilityMinutes,
-                             );
-                             if (context.mounted) {
-                               Navigator.pushReplacementNamed(
-                                 context,
-                                 AppRoutes.tracking,
+                            final jobDesc = args?.job ?? JobPostingArguments(
+                              descriptionEn: 'Scheduled Service',
+                              descriptionUr: 'شیڈولڈ سروس',
+                              price: offerPrice,
+                              categoryKey: worker.category.toLowerCase(),
+                            );
+                              double? latitude = jobDesc.customerLatitude;
+                              double? longitude = jobDesc.customerLongitude;
+                              if (latitude == null || longitude == null) {
+                                final loc = await Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.confirmLocation,
+                                  arguments: LocationPickArguments(),
+                                );
+                                if (loc is Map && loc['lat'] != null && loc['lng'] != null) {
+                                  latitude = (loc['lat'] as num).toDouble();
+                                  longitude = (loc['lng'] as num).toDouble();
+                                }
+                                if (!context.mounted) return;
+                              }
+                              final jobId = await createJobOffer(
+                                workerId: worker.id,
+                                workerName: worker.name,
+                                descriptionEn: jobDesc.descriptionEn,
+                                descriptionUr: jobDesc.descriptionUr,
+                                price: offerPrice,
+                                categoryKey: jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey : worker.category.toLowerCase(),
+                                paymentMethod: jobDesc.paymentMethod,
+                                customerLatitude: latitude,
+                                customerLongitude: longitude,
+                                visibilityDurationMinutes: _visibilityMinutes,
+                              );
+                              if (context.mounted) {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  AppRoutes.tracking,
                                  arguments: TrackingArguments(
                                    worker: worker,
                                    job: jobDesc,
@@ -3219,9 +3300,20 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         price: offerPrice,
                         categoryKey: worker.category.toLowerCase(),
                       );
-                      final loc = jobDesc.customerLatitude == null || jobDesc.customerLongitude == null
-                          ? await getCurrentLocation()
-                          : null;
+                      double? latitude = jobDesc.customerLatitude;
+                      double? longitude = jobDesc.customerLongitude;
+                      if (latitude == null || longitude == null) {
+                        final loc = await Navigator.pushNamed(
+                          context,
+                          AppRoutes.confirmLocation,
+                          arguments: LocationPickArguments(),
+                        );
+                        if (loc is Map && loc['lat'] != null && loc['lng'] != null) {
+                          latitude = (loc['lat'] as num).toDouble();
+                          longitude = (loc['lng'] as num).toDouble();
+                        }
+                        if (!context.mounted) return;
+                      }
                       final jobId = await createJobOffer(
                         workerId: worker.id,
                         workerName: worker.name,
@@ -3230,8 +3322,8 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         price: offerPrice,
                         categoryKey: jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey : worker.category.toLowerCase(),
                         paymentMethod: jobDesc.paymentMethod,
-                        customerLatitude: jobDesc.customerLatitude ?? loc?.latitude,
-                        customerLongitude: jobDesc.customerLongitude ?? loc?.longitude,
+                        customerLatitude: latitude,
+                        customerLongitude: longitude,
                         visibilityDurationMinutes: _visibilityMinutes,
                       );
                       if (context.mounted) {

@@ -3,9 +3,10 @@ class WorkerSignupData {
   final String email;
   final String password;
   final String phone;
+  final String? profilePicUrl;
   final String idFrontUrl;
   final String idBackUrl;
-  final String policeCertUrl;
+  final String? policeCertUrl;
   final String? certificationUrl;
 
   WorkerSignupData({
@@ -13,9 +14,10 @@ class WorkerSignupData {
     required this.email,
     required this.password,
     required this.phone,
+    this.profilePicUrl,
     required this.idFrontUrl,
     required this.idBackUrl,
-    required this.policeCertUrl,
+    this.policeCertUrl,
     this.certificationUrl,
   });
 }

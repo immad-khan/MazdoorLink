@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../app_state.dart';
 import 'mazdoor_flow.dart';
@@ -45,14 +46,13 @@ class IssueSelectionScreen extends StatefulWidget {
   State<IssueSelectionScreen> createState() => _IssueSelectionScreenState();
 }
 
-class _IssueSelectionScreenState extends State<IssueSelectionScreen> with SingleTickerProviderStateMixin {
-  final _customDescController = TextEditingController();
-  final _customPriceController = TextEditingController();
+class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
   final Set<int> _selectedIndices = <int>{};
-  bool _showCustomFields = false;
   String _paymentMethod = 'Cash';
-  late AnimationController _animationController;
-  late Animation<double> _expandAnimation;
+  String _categoryKey = 'electrician';
+  bool _initialized = false;
+  List<IssueItem> _customSkills = [];
+  bool _loadingCustomSkills = true;
   final List<IssueItem> _electricalIssues = const [
     IssueItem(titleEn: 'Broken Switch', titleUr: 'خراب سوئچ', price: 300, icon: Icons.toggle_off),
     IssueItem(titleEn: 'Short Circuit', titleUr: 'شارٹ سرکٹ', price: 400, icon: Icons.flash_on),
@@ -78,60 +78,65 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _expandAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final args = ModalRoute.of(context)?.settings.arguments as String?;
+      if (args != null) _categoryKey = args;
+      _initialized = true;
+      _loadCustomSkills();
+    }
   }
 
   @override
   void dispose() {
-    _customDescController.dispose();
-    _customPriceController.dispose();
-    _animationController.dispose();
     super.dispose();
   }
 
-  void _submitCustomIssue(String categoryKey, bool isUrdu) {
-    final desc = _customDescController.text.trim();
-    final priceText = _customPriceController.text.trim();
-
-    if (desc.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isUrdu ? 'براہ کرم مسئلہ بیان کریں' : 'Please describe the issue'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
+  String _categoryKeyToName(String key) {
+    switch (key.toLowerCase()) {
+      case 'electrician': return 'Electrician';
+      case 'plumber': return 'Plumber';
+      default: return key;
     }
+  }
 
-    final price = double.tryParse(priceText);
-    if (price == null || price <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isUrdu ? 'براہ کرم درست رقم درج کریں' : 'Please enter a valid amount'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
+  Future<void> _loadCustomSkills() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'worker')
+          .where('status', isEqualTo: 'approved')
+          .where('categoryNameEn', isEqualTo: _categoryKeyToName(_categoryKey))
+          .get();
+      final predefinedTitles = _categoryKey == 'electrician'
+          ? _electricalIssues.map((e) => e.titleEn).toSet()
+          : _PlumberIssues.map((e) => e.titleEn).toSet();
+      final seen = <String>{};
+      final skills = <IssueItem>[];
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final skillsData = data['skills'] as List<dynamic>? ?? [];
+        for (final s in skillsData) {
+          final map = s as Map<String, dynamic>;
+          final title = map['titleEn']?.toString() ?? '';
+          if (title.isNotEmpty && !predefinedTitles.contains(title) && seen.add(title)) {
+            skills.add(IssueItem(
+              titleEn: title,
+              titleUr: map['titleUr']?.toString() ?? title,
+              price: (map['price'] as num?)?.toDouble() ?? 0,
+              icon: Icons.handyman,
+            ));
+          }
+        }
+      }
+      if (mounted) setState(() { _customSkills = skills; _loadingCustomSkills = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loadingCustomSkills = false);
     }
-
-    Navigator.pushNamed(
-      context,
-      '/customer/job-posting',
-      arguments: JobPostingArguments(
-        descriptionEn: desc,
-        descriptionUr: desc,
-        price: price,
-        categoryKey: categoryKey,
-        paymentMethod: _paymentMethod,
-      ),
-    );
   }
 
   void _showPaymentOptions(bool isUrdu) {
@@ -205,14 +210,13 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
 
   @override
   Widget build(BuildContext context) {
-    final categoryKey = ModalRoute.of(context)?.settings.arguments as String? ?? 'electrician';
     final controller = AppScope.of(context);
     final isUrdu = controller.isUrdu;
 
-    final issuesList = categoryKey == 'electrician' ? _electricalIssues : _PlumberIssues;
+    final issuesList = _categoryKey == 'electrician' ? _electricalIssues : _PlumberIssues;
     
-    final titleEn = categoryKey == 'electrician' ? 'Select Electrician Issue' : 'Select Plumber Issue';
-    final titleUr = categoryKey == 'electrician' ? 'الیکٹریکل مسئلہ منتخب کریں' : 'پلمبنگ مسئلہ منتخب کریں';
+    final titleEn = _categoryKey == 'electrician' ? 'Select Electrician Issue' : 'Select Plumber Issue';
+    final titleUr = _categoryKey == 'electrician' ? 'الیکٹریکل مسئلہ منتخب کریں' : 'پلمبنگ مسئلہ منتخب کریں';
 
     return Directionality(
       textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
@@ -320,11 +324,11 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
                               Navigator.pushNamed(
                                 context,
                                 AppRoutes.confirmLocation,
-                                arguments: RecommendationArguments(selectedIssues: selectedIssues, categoryKey: categoryKey, paymentMethod: _paymentMethod),
+                                arguments: RecommendationArguments(selectedIssues: selectedIssues, categoryKey: _categoryKey, paymentMethod: _paymentMethod),
                               );
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFC0D72F), // Bright Indrive-like Green/Yellow
+                              backgroundColor: const Color(0xFFC0D72F),
                               foregroundColor: Colors.black87,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -340,169 +344,56 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> with Single
                     ),
                   ),
 
-                // Others/Custom Issue Card
-                Card(
-                  margin: const EdgeInsets.only(bottom: 24),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color: _showCustomFields ? const Color(0xFF0D9488) : const Color(0xFFE5E7EB), 
-                      width: _showCustomFields ? 2 : 1,
+                // Custom Skills from Workers
+                if (_loadingCustomSkills)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                if (!_loadingCustomSkills && _customSkills.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  Text(
+                    isUrdu ? 'ورکرز کی طرف سے شامل کردہ خدمات' : 'Services added by workers',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                  ),
+                  const SizedBox(height: 10),
+                  for (int index = 0; index < _customSkills.length; index++) ...[
+                    Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: const Color(0xFFE5E7EB), width: 1),
+                      ),
+                      elevation: 0.5,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 14,
+                              backgroundColor: const Color(0xFFF59E0B).withValues(alpha:0.08),
+                              child: const Icon(Icons.handyman, color: Color(0xFFF59E0B), size: 16),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                isUrdu ? _customSkills[index].titleUr : _customSkills[index].titleEn,
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.darkerText),
+                              ),
+                            ),
+                            Text(
+                              'Rs. ${_customSkills[index].price.toStringAsFixed(0)}',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                  elevation: 1,
-                  child: Column(
-                    children: [
-                      InkWell(
-                        onTap: () {
-                          setState(() {
-                            _showCustomFields = !_showCustomFields;
-                            if (_showCustomFields) {
-                              _animationController.forward();
-                            } else {
-                              _animationController.reverse();
-                            }
-                          });
-                        },
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(16),
-                          topRight: const Radius.circular(16),
-                          bottomLeft: Radius.circular(_showCustomFields ? 0 : 16),
-                          bottomRight: Radius.circular(_showCustomFields ? 0 : 16),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: const Color(0xFFF59E0B).withValues(alpha:0.08),
-                                child: const Icon(Icons.add_circle_outline, color: Color(0xFFF59E0B)),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      isUrdu ? 'دیگر مسائل (اپنی مرضی کا کام)' : 'Others (Custom issue)',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.darkerText,
-                                        fontFamily: AppTheme.fontName,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      isUrdu ? 'اپنا مسئلہ اور بجٹ خود درج کریں' : 'Define your own task and price',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade500,
-                                        fontFamily: AppTheme.fontName,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                _showCustomFields ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                                color: Colors.grey,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      // Animated Expansion for Custom Fields
-                      SizeTransition(
-                        sizeFactor: _expandAnimation,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Divider(height: 16),
-                              Text(
-                                isUrdu ? 'مسئلہ کیا ہے؟' : 'Describe the issue:',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF475569),
-                                  fontFamily: AppTheme.fontName,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _customDescController,
-                                minLines: 2,
-                                maxLines: 3,
-                                textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
-                                decoration: InputDecoration(
-                                  hintText: isUrdu 
-                                      ? 'مثلاً نل کے نیچے سے پائپ تبدیل کرنا ہے' 
-                                      : 'E.g., Need to change the pipe under the kitchen sink',
-                                  hintStyle: TextStyle(color: Colors.grey.shade400),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                isUrdu ? 'تخمینہ بجٹ (روپے میں):' : 'Proposed Price (Rs.):',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF475569),
-                                  fontFamily: AppTheme.fontName,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _customPriceController,
-                                keyboardType: TextInputType.number,
-                                textDirection: TextDirection.ltr,
-                                decoration: InputDecoration(
-                                  prefixIcon: Container(
-                                    width: 40,
-                                    alignment: Alignment.center,
-                                    child: const Text('PKR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                  ),
-                                  hintText: 'E.g., 600',
-                                  hintStyle: TextStyle(color: Colors.grey.shade400),
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              Row(
-                                children: [
-                                  _buildPaymentSelectorButton(isUrdu),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: () => _submitCustomIssue(categoryKey, isUrdu),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFFC0D72F), // Bright Indrive-like Green/Yellow
-                                        foregroundColor: Colors.black87,
-                                        elevation: 0,
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      ),
-                                      child: Text(
-                                        isUrdu ? 'بجٹ کے ساتھ ورکر تلاش کریں' : 'Find Workers',
-                                        style: const TextStyle(
-                                          fontFamily: AppTheme.fontName,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                  ],
+                  const SizedBox(height: 8),
+                ],
               ],
             ),
           ),

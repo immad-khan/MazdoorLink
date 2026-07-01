@@ -320,7 +320,8 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () {
-                              final selectedIssues = _selectedIndices.map((i) => issuesList[i]).toList();
+                              final allIssues = [...issuesList, ..._customSkills];
+                              final selectedIssues = _selectedIndices.map((i) => allIssues[i]).toList();
                               Navigator.pushNamed(
                                 context,
                                 AppRoutes.confirmLocation,
@@ -344,56 +345,62 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
                     ),
                   ),
 
-                // Custom Skills from Workers
-                if (_loadingCustomSkills)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                if (!_loadingCustomSkills && _customSkills.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  const Divider(),
-                  const SizedBox(height: 12),
-                  Text(
-                    isUrdu ? 'ورکرز کی طرف سے شامل کردہ خدمات' : 'Services added by workers',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-                  ),
-                  const SizedBox(height: 10),
-                  for (int index = 0; index < _customSkills.length; index++) ...[
-                    Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: const Color(0xFFE5E7EB), width: 1),
+                // Custom Skills from Workers (blended in)
+                if (!_loadingCustomSkills)
+                  for (int index = 0; index < _customSkills.length; index++)
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: Duration(milliseconds: 200 + (issuesList.length + index) * 50),
+                      builder: (context, value, child) => Transform.scale(
+                        scale: 0.95 + value * 0.05,
+                        child: Opacity(opacity: value, child: child),
                       ),
-                      elevation: 0.5,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1),
+                        ),
+                        elevation: 1,
                         child: Row(
                           children: [
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundColor: const Color(0xFFF59E0B).withValues(alpha:0.08),
-                              child: const Icon(Icons.handyman, color: Color(0xFFF59E0B), size: 16),
+                            Checkbox(
+                              value: _selectedIndices.contains(issuesList.length + index),
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  if (value == true) {
+                                    _selectedIndices.add(issuesList.length + index);
+                                  } else {
+                                    _selectedIndices.remove(issuesList.length + index);
+                                  }
+                                });
+                              },
                             ),
-                            const SizedBox(width: 12),
+                            CircleAvatar(
+                              backgroundColor: const Color(0xFF0D9488).withValues(alpha:0.08),
+                              child: const Icon(Icons.handyman, color: Color(0xFF0D9488)),
+                            ),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Text(
                                 isUrdu ? _customSkills[index].titleUr : _customSkills[index].titleEn,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.darkerText),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.darkerText,
+                                  fontFamily: AppTheme.fontName,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'Rs. ${_customSkills[index].price.toStringAsFixed(0)}',
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 8),
-                ],
+                if (_loadingCustomSkills)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
               ],
             ),
           ),

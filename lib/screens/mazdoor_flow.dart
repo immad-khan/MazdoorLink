@@ -813,6 +813,7 @@ class _AuthScreenState extends State<AuthScreen> {
   String? _idFrontError;
   String? _idBackError;
   String? _imageSizeError;
+  String? _profilePicError;
   String? _policeCertError;
   String? _cnicError;
 
@@ -864,6 +865,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (role == UserRole.worker) {
         final cnic = _cnicController.text.trim();
         _cnicError = !RegExp(r'^\d{5}-\d{7}-\d{1}$').hasMatch(cnic) ? 'Enter a valid CNIC (e.g. 42201-1234567-1)' : null;
+        _profilePicError = _profilePicFile == null ? 'Profile picture is required' : null;
         _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;
         _idBackError = _idBackImage == null ? 'Back CNIC image is required' : null;
         _policeCertError = null; // Optional for worker
@@ -966,6 +968,7 @@ final _phone = TextEditingController();
       }
       setState(() {
         _profilePicFile = file;
+        _profilePicError = null;
         _imageSizeError = null;
       });
     }
@@ -1044,8 +1047,8 @@ final _phone = TextEditingController();
           showToast('Please fill all required fields correctly');
           return;
         }
-        if (role == UserRole.worker && (_idFrontError != null || _idBackError != null)) {
-          showToast('Please upload both front and back of your CNIC');
+        if (role == UserRole.worker && (_cnicError != null || _profilePicError != null || _idFrontError != null || _idBackError != null)) {
+          showToast('Please fill all worker required fields');
           return;
         }
         setState(() => _isUploading = true);
@@ -1603,7 +1606,40 @@ final _phone = TextEditingController();
           const SizedBox(height: 24),
           
           if (role == UserRole.worker) ...[
-            // Profile Picture (Optional)
+            // CNIC Number
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text('CNIC Number', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+            const SizedBox(height: 6),
+            Text('Enter your CNIC number with dashes (e.g. 42201-1234567-1)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _cnicController,
+              keyboardType: TextInputType.number,
+              onChanged: (val) {
+                final formatted = _formatCnic(val);
+                if (formatted != val) {
+                  _cnicController.value = TextEditingValue(
+                    text: formatted,
+                    selection: TextSelection.collapsed(offset: formatted.length),
+                  );
+                }
+                if (_cnicError != null) setState(() => _cnicError = null);
+              },
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.credit_card_outlined),
+                hintText: '42201-1234567-1',
+                errorText: _cnicError,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Profile Picture (Required)
             const Divider(),
             const SizedBox(height: 16),
             Row(
@@ -1614,8 +1650,8 @@ final _phone = TextEditingController();
                 const SizedBox(width: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('Optional', style: TextStyle(fontSize: 10, color: Color(0xFF0369A1), fontWeight: FontWeight.w600)),
+                  decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(4)),
+                  child: const Text('Required', style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -1651,50 +1687,19 @@ final _phone = TextEditingController();
                       ),
               ),
             ),
-            const SizedBox(height: 20),
-            // CNIC Number
-            const Divider(),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Icon(Icons.badge_outlined, size: 18, color: Color(0xFF0D9488)),
-                const SizedBox(width: 8),
-                const Text('CNIC Number', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('Required', style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text('Enter your CNIC number with dashes (e.g. 42201-1234567-1)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _cnicController,
-              keyboardType: TextInputType.number,
-              onChanged: (val) {
-                final formatted = _formatCnic(val);
-                if (formatted != val) {
-                  _cnicController.value = TextEditingValue(
-                    text: formatted,
-                    selection: TextSelection.collapsed(offset: formatted.length),
-                  );
-                }
-                if (_cnicError != null) setState(() => _cnicError = null);
-              },
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.credit_card_outlined),
-                hintText: '42201-1234567-1',
-                errorText: _cnicError,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+            if (_profilePicError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber, color: Colors.red, size: 14),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(_profilePicError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                    ),
+                  ],
                 ),
               ),
-            ),
             const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 16),

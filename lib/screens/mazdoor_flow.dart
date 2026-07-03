@@ -4804,8 +4804,91 @@ class WorkerDashboardScreen extends StatefulWidget {
   State<WorkerDashboardScreen> createState() => _WorkerDashboardScreenState();
 }
 
-class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
-  bool online = true;
+class _WorkerDashboardScreenState extends State<WorkerDashboardScreen>
+    with WidgetsBindingObserver {
+  bool online = false;
+  bool _loadingOnline = true;
+  Timer? _heartbeat;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadOnlineStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _heartbeat?.cancel();
+    _setOnlineInFirestore(false);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      _setOnlineInFirestore(false);
+      _heartbeat?.cancel();
+      if (mounted) setState(() => online = false);
+    } else if (state == AppLifecycleState.resumed && online) {
+      _setOnlineInFirestore(true);
+      _startHeartbeat();
+    }
+  }
+
+  Future<void> _loadOnlineStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) setState(() => _loadingOnline = false);
+      return;
+    }
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final data = doc.data();
+      final isOn = data?['isOnline'] as bool? ?? false;
+      if (mounted) setState(() { online = isOn; _loadingOnline = false; });
+      if (isOn) _startHeartbeat();
+    } catch (_) {
+      if (mounted) setState(() => _loadingOnline = false);
+    }
+  }
+
+  Future<void> _setOnlineInFirestore(bool value) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'isOnline': value,
+        'lastSeenAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
+  }
+
+  void _startHeartbeat() {
+    _heartbeat?.cancel();
+    _heartbeat = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!online) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'lastSeenAt': FieldValue.serverTimestamp(),
+        }).catchError((_) {});
+      }
+    });
+  }
+
+  Future<void> _toggleOnline(bool value) async {
+    setState(() => online = value);
+    await _setOnlineInFirestore(value);
+    if (value) {
+      _startHeartbeat();
+    } else {
+      _heartbeat?.cancel();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -4865,7 +4948,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     ),
                   ),
                 ),
-                Switch(value: online, onChanged: (v) => setState(() => online = v)),
+                Switch(
+                  value: online,
+                  activeColor: Colors.white,
+                  onChanged: _loadingOnline ? null : _toggleOnline,
+                ),
               ],
             ),
           ),

@@ -21,6 +21,7 @@ Future<List<WorkerModel>> getWorkersByCategory(String categoryKey) async {
       .collection('users')
       .where('role', isEqualTo: 'worker')
       .where('status', isEqualTo: 'approved')
+      .where('isOnline', isEqualTo: true)
       .where('categoryNameEn', isEqualTo: categoryName)
       .get();
 
@@ -92,6 +93,7 @@ Stream<List<WorkerModel>> streamWorkersByCategory(String categoryKey) {
       .collection('users')
       .where('role', isEqualTo: 'worker')
       .where('status', isEqualTo: 'approved')
+      .where('isOnline', isEqualTo: true)
       .where('categoryNameEn', isEqualTo: categoryName)
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) {

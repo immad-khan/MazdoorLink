@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart' hide TextDirection;
@@ -856,15 +858,24 @@ class _AuthScreenState extends State<AuthScreen> {
       _phoneError = _phone.text.trim().isEmpty ? 'Mobile number is required' : null;
       if (_password.text.isEmpty) {
         _passwordError = 'Password is required';
-      } else if (_passwordError == null) {
-        _validatePassword(_password.text);
+      } else {
+        _pwHasMinLength = _password.text.length >= 8;
+        _pwHasUppercase = _password.text.contains(RegExp(r'[A-Z]'));
+        _pwHasDigit = _password.text.contains(RegExp(r'[0-9]'));
+        _pwHasSpecial = _password.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}<>]'));
+        
+        if (!_pwHasMinLength || !_pwHasUppercase || !_pwHasDigit || !_pwHasSpecial) {
+          _passwordError = 'Password does not meet requirements';
+        } else {
+          _passwordError = null;
+        }
       }
       _confirmPasswordError = _confirmPassword.text.isEmpty
           ? 'Please confirm your password'
           : (_password.text != _confirmPassword.text ? 'Passwords must match' : null);
+      final cnic = _cnicController.text.trim();
+      _cnicError = !RegExp(r'^\d{5}-\d{7}-\d{1}$').hasMatch(cnic) ? 'Enter a valid CNIC (e.g. 42201-1234567-1)' : null;
       if (role == UserRole.worker) {
-        final cnic = _cnicController.text.trim();
-        _cnicError = !RegExp(r'^\d{5}-\d{7}-\d{1}$').hasMatch(cnic) ? 'Enter a valid CNIC (e.g. 42201-1234567-1)' : null;
         _profilePicError = _profilePicFile == null ? 'Profile picture is required' : null;
         _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;
         _idBackError = _idBackImage == null ? 'Back CNIC image is required' : null;
@@ -1043,11 +1054,11 @@ final _phone = TextEditingController();
       if (step == 0) {
         _validateSignupFields();
         final role = AppScope.of(context).role;
-        if (_nameError != null || _emailError != null || _phoneError != null || _passwordError != null || _confirmPasswordError != null) {
+        if (_nameError != null || _emailError != null || _phoneError != null || _passwordError != null || _confirmPasswordError != null || _cnicError != null) {
           showToast('Please fill all required fields correctly');
           return;
         }
-        if (role == UserRole.worker && (_cnicError != null || _profilePicError != null || _idFrontError != null || _idBackError != null)) {
+        if (role == UserRole.worker && (_profilePicError != null || _idFrontError != null || _idBackError != null)) {
           showToast('Please fill all worker required fields');
           return;
         }
@@ -1113,6 +1124,7 @@ final _phone = TextEditingController();
             'name': _fullNameController.text.trim(),
             'email': _emailController.text.trim(),
             'phone': _phone.text.trim(),
+            'cnic': _cnicController.text.trim(),
             'role': 'customer',
             'createdAt': FieldValue.serverTimestamp(),
           };
@@ -1543,6 +1555,34 @@ final _phone = TextEditingController();
             ),
           ),
           const SizedBox(height: 16),
+          const Text('CNIC Number', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const SizedBox(height: 6),
+          Text('Enter your CNIC number with dashes (e.g. 42201-1234567-1)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _cnicController,
+            keyboardType: TextInputType.number,
+            onChanged: (val) {
+              final formatted = _formatCnic(val);
+              if (formatted != val) {
+                _cnicController.value = TextEditingValue(
+                  text: formatted,
+                  selection: TextSelection.collapsed(offset: formatted.length),
+                );
+              }
+              if (_cnicError != null) setState(() => _cnicError = null);
+            },
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.credit_card_outlined),
+              hintText: '42201-1234567-1',
+              errorText: _cnicError,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+              ),
+            ),
+          ),\n          const SizedBox(height: 16),
           const Text('Password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
           const SizedBox(height: 8),
           TextField(
@@ -1606,39 +1646,6 @@ final _phone = TextEditingController();
           const SizedBox(height: 24),
           
           if (role == UserRole.worker) ...[
-            // CNIC Number
-            const SizedBox(height: 8),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text('CNIC Number', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-            const SizedBox(height: 6),
-            Text('Enter your CNIC number with dashes (e.g. 42201-1234567-1)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _cnicController,
-              keyboardType: TextInputType.number,
-              onChanged: (val) {
-                final formatted = _formatCnic(val);
-                if (formatted != val) {
-                  _cnicController.value = TextEditingValue(
-                    text: formatted,
-                    selection: TextSelection.collapsed(offset: formatted.length),
-                  );
-                }
-                if (_cnicError != null) setState(() => _cnicError = null);
-              },
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.credit_card_outlined),
-                hintText: '42201-1234567-1',
-                errorText: _cnicError,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
             // Profile Picture (Required)
             const Divider(),
             const SizedBox(height: 16),
@@ -2525,11 +2532,12 @@ class ConfirmLocationScreen extends StatefulWidget {
 }
 
 class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
-  static const LatLng _fallbackLocation = LatLng(31.5204, 74.3587);
   GoogleMapController? _mapController;
-  LatLng _selectedLocation = _fallbackLocation;
+  LatLng _selectedLocation = const LatLng(31.5204, 74.3587);
   bool _loadingLocation = true;
   bool _initialized = false;
+  final TextEditingController _searchController = TextEditingController();
+  bool _searching = false;
 
   @override
   void didChangeDependencies() {
@@ -2560,6 +2568,7 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
   @override
   void dispose() {
     _mapController?.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -2568,18 +2577,53 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
     final location = await getCurrentLocation();
     if (!mounted) return;
 
+    if (location == null) {
+      setState(() => _loadingLocation = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(bilingual(context, 'Enable location permission to use current location, or search for a place above.', 'لوکیشن کی اجازت فعال کریں یا اوپر جگہ تلاش کریں۔')),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     setState(() {
-      _selectedLocation = location ?? _fallbackLocation;
+      _selectedLocation = location;
       _loadingLocation = false;
     });
 
-    if (_mapController != null) {
-      _mapController!.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation, 16));
-    }
+    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation, 16));
+  }
 
-    if (location == null) {
+  Future<void> _searchLocation(String query) async {
+    if (query.trim().isEmpty) return;
+    setState(() => _searching = true);
+    try {
+      final key = 'AIzaSyCGHY7A6zdFd-t27sflz0-AQTgulg_s_II';
+      final uri = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?address=${Uri.encodeComponent(query)}&key=$key');
+      final res = await http.get(uri);
+      if (!mounted) return;
+      final data = json.decode(res.body);
+      if (data['status'] == 'OK' && data['results'].isNotEmpty) {
+        final loc = data['results'][0]['geometry']['location'];
+        final latLng = LatLng(loc['lat'], loc['lng']);
+        setState(() {
+          _selectedLocation = latLng;
+          _searching = false;
+        });
+        _mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 16));
+      } else {
+        setState(() => _searching = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(bilingual(context, 'Location not found. Try a different search.', 'مقام نہیں ملا۔ مختلف تلاش کریں۔'))),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _searching = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(bilingual(context, 'Location permission unavailable. Move the pin manually.', 'لوکیشن دستیاب نہیں۔ پن کو خود منتقل کریں۔'))),
+        SnackBar(content: Text(bilingual(context, 'Search failed. Try again.', 'تلاش ناکام۔ دوبارہ کوشش کریں۔'))),
       );
     }
   }
@@ -2664,6 +2708,45 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
               color: Colors.white.withOpacity(0.65),
               child: const Center(child: CircularProgressIndicator()),
             ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 60,
+            left: 12,
+            right: 12,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2))],
+              ),
+              child: TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+                decoration: InputDecoration(
+                  hintText: bilingual(context, 'Search place…', 'مقام تلاش کریں…'),
+                  prefixIcon: _searching
+                      ? const SizedBox(width: 24, height: 24, child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ))
+                      : const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (value) => _searchLocation(value),
+              ),
+            ),
+          ),
           Positioned(
             left: 16,
             right: 16,

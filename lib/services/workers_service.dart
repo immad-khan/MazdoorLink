@@ -29,6 +29,32 @@ Future<List<WorkerModel>> getWorkersByCategory(String categoryKey) async {
   }).toList();
 }
 
+/// Returns workers in [categoryKey] who have at least one skill matching
+/// any of the [selectedSkillTitles]. Filtering is done client-side because
+/// Firestore cannot query on nested array-of-map fields.
+/// If [selectedSkillTitles] is empty, all workers in the category are returned.
+Future<List<WorkerModel>> getWorkersByCategoryAndSkills(
+  String categoryKey,
+  List<String> selectedSkillTitles,
+) async {
+  // Fetch all approved workers in the right category first.
+  final allInCategory = await getWorkersByCategory(categoryKey);
+
+  if (selectedSkillTitles.isEmpty) return allInCategory;
+
+  final normalised = selectedSkillTitles
+      .map((t) => t.trim().toLowerCase())
+      .toSet();
+
+  // Keep only workers whose skills list contains at least one match.
+  return allInCategory.where((worker) {
+    final workerSkills = worker.skillsEn
+        .map((s) => s.trim().toLowerCase())
+        .toSet();
+    return workerSkills.intersection(normalised).isNotEmpty;
+  }).toList();
+}
+
 String _categoryKeyToName(String key) {
   switch (key.toLowerCase()) {
     case 'electrician':

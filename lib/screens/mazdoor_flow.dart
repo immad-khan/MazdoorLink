@@ -26,8 +26,8 @@ import 'profile_management_screen.dart';
 import 'privacy_settings_screen.dart';
 import 'voice_navigation_screen.dart';
 import 'issue_selection_screen.dart';
-import 'worker_services_setup_screen.dart';
 import 'signup_data.dart';
+import 'worker_services_setup_screen.dart';
 import '../services/cloudinary_service.dart';
 import '../services/workers_service.dart';
 import 'recommendation_arguments.dart';
@@ -110,13 +110,12 @@ class AppRoutes {
   static const tracking = '/customer/tracking';
   static const rating = '/customer/rating';
   static const workerOnboarding = '/worker/onboarding';
-  static const workerCategorySelect = '/worker/category-select';
-  static const workerDashboard = '/worker/dashboard';
+    static const workerDashboard = '/worker/dashboard';
+  static const workerServicesSetup = '/worker/services-setup';
   static const workerEarnings = '/worker/earnings';
   static const priceEstimation = '/shared/price-estimation';
   static const documentUpload = '/worker/document-upload';
-  static const workerServicesSetup = '/worker/services-setup';
-  static const biometricVerification = '/worker/biometric-verification';
+    static const biometricVerification = '/worker/biometric-verification';
   static const voiceNavigation = '/worker/voice-navigation';
   static const notificationPreferences = '/shared/notification-preferences';
   static const profileManagement = '/shared/profile-management';
@@ -159,18 +158,16 @@ Route<dynamic> buildRoute(RouteSettings settings) {
       return _page(const RatingReviewScreen(), settings);
     case AppRoutes.workerOnboarding:
       return _page(const WorkerOnboardingScreen(), settings);
-    case AppRoutes.workerCategorySelect:
-      return _page(const WorkerCategorySelectScreen(), settings);
     case AppRoutes.workerDashboard:
       return _page(const WorkerDashboardScreen(), settings);
+    case AppRoutes.workerServicesSetup:
+      return _page(const WorkerServicesSetupScreen(), settings);
     case AppRoutes.workerEarnings:
       return _page(const EarningsDashboardScreen(), settings);
     case AppRoutes.priceEstimation:
       return _page(PriceEstimationScreen(), settings);
     case AppRoutes.documentUpload:
       return _page(DocumentUploadScreen(), settings);
-    case AppRoutes.workerServicesSetup:
-      return _page(const WorkerServicesSetupScreen(), settings);
     case AppRoutes.biometricVerification:
       return _page(BiometricVerificationScreen(), settings);
     case AppRoutes.voiceNavigation:
@@ -896,6 +893,7 @@ final _phone = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isForgotPassword = false;
+  String _selectedCategory = 'Plumber';
   
   File? _idFrontImage;
   File? _idBackImage;
@@ -1095,20 +1093,87 @@ final _phone = TextEditingController();
 
             setState(() => _isUploading = false);
 
+            final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+              email: _emailController.text.trim(),
+              password: _password.text,
+            );
+            await userCredential.user?.sendEmailVerification();
+            
+            final categoryKey = _selectedCategory.toLowerCase();
+            final categoryNameUr = categoryKey == 'plumber' ? 'پلمبر' : 'الیکٹریشن';
+
+            final userData = <String, dynamic>{
+              'name': _fullNameController.text.trim(),
+              'email': _emailController.text.trim(),
+              'phone': _phone.text.trim(),
+              'cnicNumber': _cnicController.text.trim(),
+              'role': 'worker',
+              'status': 'pending',
+              'createdAt': FieldValue.serverTimestamp(),
+              'idFrontUrl': frontUrl!,
+              'idBackUrl': backUrl!,
+              'category': categoryKey,
+              'categoryNameEn': _selectedCategory,
+              'categoryNameUr': categoryNameUr,
+              'skills': [],
+              'setupComplete': false,
+            };
+            if (profilePicUrl != null) userData['profilePicUrl'] = profilePicUrl;
+            if (policeCertUrl != null) userData['policeCertUrl'] = policeCertUrl;
+            if (certificationUrl != null) userData['certificationUrl'] = certificationUrl;
+
+            await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
+            
+            await FirebaseAuth.instance.signOut();
+            
             if (mounted) {
-              final signupData = WorkerSignupData(
-                name: _fullNameController.text.trim(),
-                email: _emailController.text.trim(),
-                password: _password.text,
-                phone: _phone.text.trim(),
-                profilePicUrl: profilePicUrl,
-                cnicNumber: _cnicController.text.trim(),
-                idFrontUrl: frontUrl!,
-                idBackUrl: backUrl!,
-                policeCertUrl: policeCertUrl,
-                certificationUrl: certificationUrl,
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) => Dialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 80, height: 80,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFFDCFCE7),
+                          ),
+                          child: const Icon(Icons.mark_email_read_outlined, color: Color(0xFF059669), size: 44),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text('Registration Submitted!',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'A verification email has been sent.\n\nYour profile is under admin review. You can log in once your account is approved.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: () {
+                              Navigator.of(ctx).pop();
+                              Navigator.pushReplacementNamed(context, AppRoutes.login);
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D9488),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('Go to Login'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               );
-              Navigator.pushReplacementNamed(context, AppRoutes.workerCategorySelect, arguments: signupData);
             }
             return;
           }
@@ -1245,11 +1310,7 @@ final _phone = TextEditingController();
             AppScope.of(context).selectRole(UserRole.worker);
             // Check if worker has selected a category yet
             final category = data['category'];
-            if (category == null || category.toString().isEmpty) {
-              Navigator.pushReplacementNamed(context, AppRoutes.workerCategorySelect);
-            } else {
-              Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
-            }
+            Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
           } else {
             AppScope.of(context).selectRole(UserRole.customer);
             Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
@@ -1582,7 +1643,8 @@ final _phone = TextEditingController();
                 borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
               ),
             ),
-          ),\n          const SizedBox(height: 16),
+          ),
+          const SizedBox(height: 16),
           const Text('Password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
           const SizedBox(height: 8),
           TextField(
@@ -1620,6 +1682,37 @@ final _phone = TextEditingController();
               ),
             ),
           ),
+          if (role == UserRole.worker) ...[
+            const SizedBox(height: 16),
+            const Text('Category', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedCategory,
+                  isExpanded: true,
+                  items: ['Plumber', 'Electrician'].map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedCategory = newValue;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           // Dynamic password strength indicator
           if (_password.text.isNotEmpty || _confirmPassword.text.isNotEmpty) ...[
@@ -2874,7 +2967,8 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
       ];
     }
 
-    _workersFuture = getWorkersByCategory(categoryKey);
+    final skillTitles = selectedIssues.map((i) => i.titleEn).toList();
+    _workersFuture = getWorkersByCategoryAndSkills(categoryKey, skillTitles);
   }
 
   @override
@@ -4703,282 +4797,6 @@ class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
 }
 
 // ─────────────────────────────────────────────────────
-// Worker Category Selection Screen (shown on first login)
-// ─────────────────────────────────────────────────────
-class WorkerCategorySelectScreen extends StatefulWidget {
-  const WorkerCategorySelectScreen({super.key});
-  @override
-  State<WorkerCategorySelectScreen> createState() => _WorkerCategorySelectScreenState();
-}
-
-class _WorkerCategorySelectScreenState extends State<WorkerCategorySelectScreen> {
-  String? _selected;
-  bool _isSaving = false;
-  bool _isLoading = true;
-  WorkerSignupData? _signupData;
-
-  static const _categories = [
-    {
-      'key': 'plumber',
-      'title': 'Plumber',
-      'subtitle': 'Pipes, leaks, drainage & water systems',
-      'icon': Icons.plumbing,
-      'color': Color(0xFF0EA5E9),
-    },
-    {
-      'key': 'electrician',
-      'title': 'Electrician',
-      'subtitle': 'Wiring, fittings, panels & electrical repairs',
-      'icon': Icons.electrical_services,
-      'color': Color(0xFFF59E0B),
-    },
-  ];
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is WorkerSignupData) {
-      _signupData = args;
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadExistingCategory();
-  }
-
-  Future<void> _loadExistingCategory() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        final data = doc.data()!;
-        final category = data['category']?.toString();
-        if (category != null && _categories.any((c) => c['key'] == category)) {
-          _selected = category;
-        } else {
-          final nameEn = data['categoryNameEn']?.toString().toLowerCase() ?? '';
-          for (final c in _categories) {
-            if (nameEn.contains(c['key'] as String)) {
-              _selected = c['key'] as String;
-              break;
-            }
-          }
-        }
-      }
-    }
-    if (mounted) {
-      // Existing user with a category — skip category picker, go straight to services
-      if (_signupData == null && _selected != null) {
-        if (mounted) {
-          Navigator.pushReplacementNamed(
-            context,
-            AppRoutes.workerServicesSetup,
-            arguments: _categoryKeyToIndex(_selected!),
-          );
-        }
-        return;
-      }
-      setState(() => _isLoading = false);
-    }
-  }
-
-  int _categoryKeyToIndex(String key) {
-    switch (key) {
-      case 'plumber': return 0;
-      case 'electrician': return 1;
-      default: return 0;
-    }
-  }
-
-  Future<void> _save() async {
-    if (_selected == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category to continue')),
-      );
-      return;
-    }
-    setState(() => _isSaving = true);
-    try {
-      if (_signupData != null) {
-        // Signup mode - pass data forward
-        if (mounted) {
-          Navigator.pushReplacementNamed(
-            context,
-            AppRoutes.workerServicesSetup,
-            arguments: ServicesSetupArguments(
-              categoryIndex: _categoryKeyToIndex(_selected!),
-              signupData: _signupData,
-            ),
-          );
-        }
-      } else {
-        // Existing user mode - save category to Firestore first
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-            'category': _selected,
-          });
-        }
-        if (mounted) {
-          Navigator.pushReplacementNamed(
-            context,
-            AppRoutes.workerServicesSetup,
-            arguments: ServicesSetupArguments(
-              categoryIndex: _categoryKeyToIndex(_selected!),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      setState(() => _isSaving = false);
-      if (mounted) showToast(e.toString());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = AppScope.of(context);
-    final isUrdu = controller.isUrdu;
-
-    return Directionality(
-      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFF8FAFC),
-          elevation: 0,
-          leading: IconButton(
-            onPressed: () => Navigator.maybePop(context),
-            icon: Icon(isUrdu ? Icons.arrow_forward : Icons.arrow_back),
-          ),
-          actions: [
-            TextButton.icon(
-              onPressed: () {
-                controller.toggleLanguage();
-                setState(() {});
-              },
-              icon: const Icon(Icons.translate, size: 18),
-              label: Text(controller.isUrdu ? 'EN' : 'اردو', style: const TextStyle(fontSize: 13)),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 24),
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Color(0xFF0D9488),
-                  child: Icon(Icons.construction, color: Colors.white, size: 30),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  isUrdu ? 'آپ کی خصوصیت کیا ہے؟' : 'What is your specialty?',
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isUrdu
-                      ? 'وہ زمرہ منتخب کریں جو آپ کے پیشے کو بہترین طور پر بیان کرے۔ اس سے آپ کو متعلقہ کام دکھائے جائیں گے۔'
-                      : 'Select the category that best describes your profession. This will show you relevant jobs.',
-                  style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
-                ),
-                const SizedBox(height: 32),
-                ...(_categories.map((cat) {
-                final key = cat['key'] as String;
-                final isSelected = _selected == key;
-                final color = cat['color'] as Color;
-                return GestureDetector(
-                  onTap: () => setState(() => _selected = key),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: isSelected ? color.withOpacity(0.08) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isSelected ? color : Colors.grey.shade200,
-                        width: isSelected ? 2 : 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: color.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(cat['icon'] as IconData, color: color, size: 28),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                cat['title'] as String,
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected ? color : const Color(0xFF1E293B),
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                cat['subtitle'] as String,
-                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (isSelected)
-                          Icon(Icons.check_circle_rounded, color: color, size: 24),
-                      ],
-                    ),
-                  ),
-                );
-              })),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton(
-                  onPressed: _isSaving ? null : _save,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D9488),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: _isSaving
-                      ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text(isUrdu ? 'خدمات کے سیٹ اپ پر جائیں' : 'Continue to Services Setup', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-  }
-}
-
 class WorkerDashboardScreen extends StatefulWidget {
   const WorkerDashboardScreen({super.key});
 
@@ -6139,7 +5957,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           if (isWorker)
             GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRoutes.workerCategorySelect),
+              onTap: () => Navigator.pushNamed(context, AppRoutes.workerServicesSetup),
               child: _SettingsItem(icon: Icons.build, color: const Color(0xFF0D9488), title: bilingual(context, 'Skills & Services', 'مہارتیں اور خدمات')),
             ),
           const SizedBox(height: 8),

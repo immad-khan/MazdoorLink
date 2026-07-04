@@ -876,7 +876,7 @@ class _AuthScreenState extends State<AuthScreen> {
         _profilePicError = _profilePicFile == null ? 'Profile picture is required' : null;
         _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;
         _idBackError = _idBackImage == null ? 'Back CNIC image is required' : null;
-        _policeCertError = null; // Optional for worker
+        _policeCertError = _policeCertFile == null ? 'Police certificate is required' : null;
       }
     });
   }
@@ -893,7 +893,7 @@ final _phone = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isForgotPassword = false;
-  String _selectedCategory = 'Plumber';
+  String _selectedCategory = 'Select a category';
   
   File? _idFrontImage;
   File? _idBackImage;
@@ -1056,7 +1056,7 @@ final _phone = TextEditingController();
           showToast('Please fill all required fields correctly');
           return;
         }
-        if (role == UserRole.worker && (_profilePicError != null || _idFrontError != null || _idBackError != null)) {
+        if (role == UserRole.worker && (_profilePicError != null || _idFrontError != null || _idBackError != null || _policeCertError != null)) {
           showToast('Please fill all worker required fields');
           return;
         }
@@ -1682,37 +1682,6 @@ final _phone = TextEditingController();
               ),
             ),
           ),
-          if (role == UserRole.worker) ...[
-            const SizedBox(height: 16),
-            const Text('Category', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade400),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedCategory,
-                  isExpanded: true,
-                  items: ['Plumber', 'Electrician'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        _selectedCategory = newValue;
-                      });
-                    }
-                  },
-                ),
-              ),
-            ),
-          ],
           const SizedBox(height: 10),
           // Dynamic password strength indicator
           if (_password.text.isNotEmpty || _confirmPassword.text.isNotEmpty) ...[
@@ -1737,6 +1706,38 @@ final _phone = TextEditingController();
             ),
           ],
           const SizedBox(height: 24),
+
+          if (role == UserRole.worker) ...[
+            const SizedBox(height: 16),
+            const Text('Category', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedCategory,
+                  isExpanded: true,
+                  items: ['Select a category', 'Plumber', 'Electrician'].map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedCategory = newValue;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
           
           if (role == UserRole.worker) ...[
             // Profile Picture (Required)
@@ -1889,8 +1890,8 @@ final _phone = TextEditingController();
                 const SizedBox(width: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('Optional', style: TextStyle(fontSize: 10, color: Color(0xFF0369A1), fontWeight: FontWeight.w600)),
+                  decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(4)),
+                  child: const Text('Required', style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -1947,8 +1948,8 @@ final _phone = TextEditingController();
                 const SizedBox(width: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('Optional', style: TextStyle(fontSize: 10, color: Color(0xFF0369A1), fontWeight: FontWeight.w600)),
+                  decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(4)),
+                  child: const Text('Required', style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -2003,7 +2004,7 @@ final _phone = TextEditingController();
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
               child: _isUploading 
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Continue'),
+                  : const Text('Sign up'),
             ),
           ),
           const SizedBox(height: 20),

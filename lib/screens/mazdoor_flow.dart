@@ -871,7 +871,7 @@ class _AuthScreenState extends State<AuthScreen> {
           ? 'Please confirm your password'
           : (_password.text != _confirmPassword.text ? 'Passwords must match' : null);
       final cnic = _cnicController.text.trim();
-      _cnicError = !RegExp(r'^\d{5}-\d{7}-\d{1}$').hasMatch(cnic) ? 'Enter a valid CNIC (e.g. 42201-1234567-1)' : null;
+      _cnicError = !RegExp(r'^\d{13}$').hasMatch(cnic) ? 'Enter a valid 13-digit CNIC' : null;
       if (role == UserRole.worker) {
         _profilePicError = _profilePicFile == null ? 'Profile picture is required' : null;
         _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;
@@ -1617,25 +1617,18 @@ final _phone = TextEditingController();
           ),
           const SizedBox(height: 16),
           const Text('CNIC Number', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-          const SizedBox(height: 6),
-          Text('Enter your CNIC number with dashes (e.g. 42201-1234567-1)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
           const SizedBox(height: 8),
           TextField(
             controller: _cnicController,
             keyboardType: TextInputType.number,
+            maxLength: 13,
             onChanged: (val) {
-              final formatted = _formatCnic(val);
-              if (formatted != val) {
-                _cnicController.value = TextEditingValue(
-                  text: formatted,
-                  selection: TextSelection.collapsed(offset: formatted.length),
-                );
-              }
               if (_cnicError != null) setState(() => _cnicError = null);
             },
             decoration: InputDecoration(
+              counterText: '',
               prefixIcon: const Icon(Icons.credit_card_outlined),
-              hintText: '42201-1234567-1',
+              hintText: '4220112345671',
               errorText: _cnicError,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               focusedBorder: OutlineInputBorder(

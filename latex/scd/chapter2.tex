@@ -1,0 +1,562 @@
+\documentclass[12pt,a4paper]{report}
+
+% Packages required
+\usepackage{float, array, enumitem, multirow, makecell}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{makecell}
+\usepackage[utf8]{inputenc}
+\usepackage[top=1in, bottom=1in, left=1.25in, right=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{pifont}
+\usepackage[edges]{forest}
+\usepackage{tikz}
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{caption}
+\usetikzlibrary{positioning, shapes.geometric, arrows.meta, calc, arrows}
+\usepackage{graphicx} % Required for \resizebox
+\usetikzlibrary{positioning, shadows, fit, arrows.meta}
+% Footer setup
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\footnotesize Capital University of Science and Technology, Islamabad}
+\fancyfoot[R]{\footnotesize Department of Computer Science}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Chapter heading format
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titlespacing*{\chapter}{0pt}{-20pt}{40pt}
+
+\setstretch{1.4}
+
+% Caption styling
+\captionsetup{labelfont={bf}, textfont={normalfont}}
+
+\setcounter{chapter}{1}
+\setcounter{page}{24}
+
+
+\begin{document}
+
+% ==========================================
+% CHAPTER 2
+% ==========================================
+\chapter{Requirement Specification and Analysis}
+
+The emphasis of this chapter is on getting a clear and comprehensive understanding
+of the requirements for the MazdoorLink AI platform. The requirements have been
+gathered through market research, stakeholder interviews with potential customers
+and workers in Pakistan's informal labor sector, and analysis of existing home
+service platforms. The chapter presents both functional and non-functional
+requirements, use case modeling with fully dressed use cases, system sequence
+diagrams for each use case, and a domain model that collectively define the
+expected behavior and architectural foundation of the proposed system.
+
+\subsection*{Requirement Specification}
+
+Requirements specification for MazdoorLink AI involves frequent communication
+with the three primary user groups --- customers seeking home maintenance
+services, skilled workers looking for consistent job opportunities, and
+administrators managing the platform ecosystem --- to determine specific feature
+expectations, resolve conflicts or ambiguity in requirements, and document all
+aspects of the project development process from start to finish. Requirements are
+a description of how the system should behave, or a statement of what the
+application is expected to do, presented in precise, clear, and plain language so
+that they can be reviewed by a business analyst or non-technical stakeholder with
+minimal technical expertise.
+
+\newpage
+
+% ==========================================
+% SECTION 2.1
+% ==========================================
+\section{Functional Requirements}
+
+The Functional Requirements Specification documents the operations and activities that the MazdoorLink AI system must be able to perform. These requirements are organized by user role (Customer, Worker, Administrator) and written in simple, non-technical language.
+
+\begin{longtable}{|c|p{9.5cm}|c|c|}
+\caption{Functional Requirements} \label{tab:functional_req} \\
+\hline
+\textbf{S. No.} & \textbf{Functional Requirement} & \textbf{Type} & \textbf{Status} \\
+\hline
+\endfirsthead
+\multicolumn{4}{c}%
+{\tablename\ \thetable\ -- \textit{Continued from previous page}} \\
+\hline
+\textbf{S. No.} & \textbf{Functional Requirement} & \textbf{Type} & \textbf{Status} \\
+\hline
+\endhead
+\hline \multicolumn{4}{r}{\textit{Continued on next page}} \\
+\endfoot
+\hline
+\endlastfoot
+
+\hline
+FR-C01 & Customers sign up and log into the application using phone number with OTP verification & Core & Pending \\
+\hline
+FR-C02 & Customers search for workers by service category (plumber, electrician, carpenter, painter, etc.) & Core & Pending \\
+\hline
+FR-C03 & Customers filter workers by location, rating, availability, and price range & Core & Pending \\
+\hline
+FR-C04 & Customers use pre-defined job templates for common tasks (e.g., ``Fix Leaking Tap'', ``Install Ceiling Fan'') & Intermediate & Pending \\
+\hline
+FR-C05 & Customers post custom job requests with description and optional photos & Core & Pending \\
+\hline
+FR-C06 & Customers schedule bookings for future dates and specific time slots & Core & Pending \\
+\hline
+FR-C07 & Customers view worker profiles including ratings, reviews, past work photos, and verification status & Core & Pending \\
+\hline
+FR-C08 & Customers receive top 5 most suitable worker recommendations using AI matching algorithm & Core & Pending \\
+\hline
+FR-C09 & Customers save workers to a favourites list for quick rebooking & Intermediate & Pending \\
+\hline
+FR-C10 & Customers track worker's real-time GPS location during active jobs & Core & Pending \\
+\hline
+FR-C11 & Customers view automatic time tracking showing work start time, end time, and total duration & Core & Pending \\
+\hline
+FR-C12 & Customers use in-app chat with automatic English-to-Urdu and Urdu-to-English translation & Core & Pending \\
+\hline
+FR-C13 & Customers initiate voice calls to workers through the application & Intermediate & Pending \\
+\hline
+FR-C14 & Customers view before-and-after service photos uploaded by workers & Intermediate & Pending \\
+\hline
+FR-C15 & Customers make secure in-app payments using JazzCash, Easypaisa, or debit/credit card & Core & Pending \\
+\hline
+FR-C16 & Customers rate workers on a 5-star scale and submit text reviews after job completion & Core & Pending \\
+\hline
+FR-C17 & Customers report damage or service issues with photo evidence and description & Intermediate & Pending \\
+\hline
+FR-C18 & Customers view their complete booking history with job status and payment receipts & Core & Pending \\
+\hline
+FR-C19 & Customers receive push notifications for booking confirmations, worker arrival alerts, and job completion updates & Core & Pending \\
+\hline
+
+\hline
+FR-W01 & Workers register by uploading CNIC (front and back images) and police clearance certificate & Core & Pending \\
+\hline
+FR-W02 & Workers pay a refundable security deposit (PKR 5,000--10,000) before account activation & Core & Pending \\
+\hline
+FR-W03 & Workers verify their phone number using OTP authentication during registration & Core & Pending \\
+\hline
+FR-W04 & Workers use a simplified Urdu-language interface with large touch targets and icon-based navigation & Intermediate & Pending \\
+\hline
+FR-W05 & Workers use voice input (Urdu speech-to-text) for messages and descriptions & Intermediate & Pending \\
+\hline
+FR-W06 & Workers toggle their availability status (Online/Offline) with a single tap & Core & Pending \\
+\hline
+FR-W07 & Workers receive instant push notifications for nearby job opportunities matching their skills & Core & Pending \\
+\hline
+FR-W08 & Workers view full job details including location, description, estimated price, customer rating, and photos & Core & Pending \\
+\hline
+FR-W09 & Workers accept or reject incoming job requests using simple Accept/Reject buttons & Core & Pending \\
+\hline
+FR-W10 & Workers view all scheduled bookings in a calendar view showing date, time, and customer information & Core & Pending \\
+\hline
+FR-W11 & Workers create service packages offering bundled services at a fixed price & Intermediate & Pending \\
+\hline
+FR-W12 & Workers automatically share their current GPS location while they are online & Core & Pending \\
+\hline
+FR-W13 & Workers receive navigation to the customer's job location using Google Maps integration & Core & Pending \\
+\hline
+FR-W14 & Workers upload before-and-after photos of completed work to build their portfolio & Intermediate & Pending \\
+\hline
+FR-W15 & Workers use automatic work duration tracking with a start/stop timer & Core & Pending \\
+\hline
+FR-W16 & Workers use in-app chat with automatic Urdu-to-English and English-to-Urdu translation & Core & Pending \\
+\hline
+FR-W17 & Workers view their earnings dashboard showing daily, weekly, and monthly income summaries & Core & Pending \\
+\hline
+FR-W18 & Workers view their current average rating, total jobs completed, and recent customer reviews & Core & Pending \\
+\hline
+FR-W19 & Workers view and respond to any damage report filed against them & Intermediate & Pending \\
+\hline
+
+\hline
+FR-A01 & Administrators log in using secure OTP-based authentication & Core & Pending \\
+\hline
+FR-A02 & Administrators view all pending worker verification requests with CNIC and police clearance previews & Core & Pending \\
+\hline
+FR-A03 & Administrators approve or reject worker registrations after reviewing submitted documents & Core & Pending \\
+\hline
+FR-A04 & Administrators view all damage reports with customer evidence, worker response, and job details & Core & Pending \\
+\hline
+FR-A05 & Administrators approve or reject damage claims after investigation & Core & Pending \\
+\hline
+FR-A06 & Administrators automatically deduct approved damage compensation from the worker's security deposit & Core & Pending \\
+\hline
+FR-A07 & Administrators suspend or permanently ban any customer or worker from the platform & Core & Pending \\
+\hline
+FR-A08 & Administrators view the platform analytics dashboard showing total users, active jobs, total revenue, and growth metrics & Intermediate & Pending \\
+\hline
+FR-A09 & Administrators add, edit, or remove service categories on the platform & Intermediate & Pending \\
+\hline
+FR-A10 & Administrators configure the platform commission rate (default 5--15\%) & Intermediate & Pending \\
+\hline
+FR-A11 & Administrators process monthly security deposit refunds automatically for workers with no damage claims & Intermediate & Pending \\
+\hline
+FR-A12 & Administrators view and formally resolve disputes between customers and workers & Core & Pending \\
+\hline
+FR-A13 & Administrators view a list of all reported workers with damage history, rating penalties, and account status & Intermediate & Pending \\
+\hline
+\end{longtable}
+
+% ==========================================
+% SECTION 2.2
+% ==========================================
+\section{Non-Functional Requirements}
+
+Non-functional requirements specify criteria that judge the operation of the
+system rather than specific behaviours. The following requirements define the
+quality attributes for the MazdoorLink AI platform.
+
+\begin{longtable}{|c|p{9cm}|c|}
+\caption{Non-Functional Requirements} \label{tab:nonfunctional_req} \\
+\hline
+\textbf{S. No.} & \textbf{Non-Functional Requirement} & \textbf{Category} \\
+\hline
+\endfirsthead
+\multicolumn{3}{c}{\tablename\ \thetable\ -- \textit{Continued from previous page}} \\
+\hline
+\textbf{S. No.} & \textbf{Non-Functional Requirement} & \textbf{Category} \\
+\hline
+\endhead
+\hline \multicolumn{3}{r}{\textit{Continued on next page}} \\
+\endfoot
+\hline
+\endlastfoot
+
+1 & The user interface should be intuitive and accessible for all user roles, ensuring ease of navigation for customers, workers, and administrators & Usability \\
+\hline
+2 & The system should provide real-time feedback for user actions (loading states, success/error messages) & Usability \\
+\hline
+3 & All user passwords and sensitive personal data shall be encrypted using AES-256 encryption & Security \\
+\hline
+4 & All payment transactions shall be processed through PCI-DSS compliant payment gateways & Security \\
+\hline
+5 & The AI job matching algorithm shall recommend suitable workers within 2 seconds of job posting submission & Performance \\
+\hline
+6 & The system shall support a minimum of 10,000 concurrent active users without performance degradation & Scalability \\
+\hline
+7 & The system shall maintain 99\% uptime excluding scheduled maintenance windows & Reliability \\
+\hline
+8 & Push notifications shall be delivered to target devices within 5 seconds of the trigger event & Performance \\
+\hline
+9 & The system shall support Android 7.0 and above and iOS 12.0 and above mobile devices & Compatibility \\
+\hline
+10 & All API responses shall be returned within 3 seconds or the interface shall display an appropriate loading indicator & Performance \\
+\hline
+\end{longtable}
+
+% ==========================================
+% SECTION 2.3
+% ==========================================
+\section{Selected Functional Requirements}
+
+The following functional requirements have been selected for the current development iteration (Phase 1 -- MVP). These represent the core features necessary to launch a functional and usable labor hiring platform and will be fully implemented in the first release.
+
+\begin{longtable}{|c|p{9.8cm}|c|}
+\caption{Selected Functional Requirements for Phase 1} \label{tab:selected_req} \\
+\hline
+\textbf{S. No.} & \textbf{Functional Requirement} & \textbf{Reference} \\
+\hline
+\endfirsthead
+\multicolumn{3}{c}{\tablename\ \thetable\ -- \textit{Continued from previous page}} \\
+\hline
+\textbf{S. No.} & \textbf{Functional Requirement} & \textbf{Reference} \\
+\hline
+\endhead
+\hline \multicolumn{3}{r}{\textit{Continued on next page}} \\
+\endfoot
+\hline
+\endlastfoot
+
+1 & Customers sign up and log into the application using phone number with OTP verification & FR-C01 \\
+\hline
+2 & Workers register by uploading CNIC (front and back images) and police clearance certificate & FR-W01 \\
+\hline
+3 & Customers search for workers by service category and filter by location, rating, and availability & FR-C02, FR-C03 \\
+\hline
+4 & Customers post custom job requests with description and optional photos & FR-C05 \\
+\hline
+5 & Customers receive top 5 most suitable worker recommendations using AI matching algorithm & FR-C08 \\
+\hline
+6 & Workers accept or reject incoming job requests using simple Accept/Reject buttons & FR-W09 \\
+\hline
+7 & Customers make secure in-app payments using JazzCash, Easypaisa, or debit/credit card & FR-C15 \\
+\hline
+8 & Workers view their earnings dashboard showing daily, weekly, and monthly income summaries & FR-W17 \\
+\hline
+9 & Administrators view the platform analytics dashboard showing total users, active jobs, total revenue, and growth metrics & FR-A08 \\
+\hline
+10 & Customers and Workers receive push notifications for booking confirmations, job opportunities, and status updates & FR-C19, FR-W07 \\
+\hline
+\end{longtable}
+\newpage
+% ==========================================
+% SECTION 2.4
+% ==========================================
+\section{System Use Case Modeling}
+
+A use case defines a set of use-case instances where each instance is a sequence
+of actions a system performs that yields an observable result of value to a
+particular actor. The functionality of the MazdoorLink AI system is defined by
+different use cases, each of which represents a specific goal for a particular actor.
+Figure~\ref{fig:usecase} presents the complete use case diagram for the
+MazdoorLink AI system showing all major actors and their associated system
+functions.
+
+% ==========================================
+% USE CASE DIAGRAM
+% ==========================================
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{system_use_case.png}
+\caption{MazdoorLink AI -- System Use Case Diagram}
+\label{fig:usecase}
+\end{figure}
+
+\newpage
+
+% ==========================================
+% USE CASE TABLES (PLACEHOLDERS)
+% ==========================================
+
+\subsection*{Use Case 1: Customer Register and Login with OTP}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_01.png}
+\caption{UC-01: Customer Register and Login with OTP}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 2: Customer Posts Job Request}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_02.png}
+\caption{UC-02: Customer Posts Job Request}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 3: Worker Registers with CNIC and Security Deposit}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_03.png}
+\caption{UC-03: Worker Registers with CNIC and Security Deposit}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 4: Admin Verifies Worker Documents}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_04.png}
+\caption{UC-04: Admin Verifies Worker Documents}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 5: Worker Accepts or Rejects Job Request}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_05.png}
+\caption{UC-05: Worker Accepts or Rejects Job Request}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 6: Real-Time Chat with Automatic Translation}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_06.png}
+\caption{UC-06: Real-Time Chat with Automatic Translation}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 7: Customer Makes In-App Payment}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_07.png}
+\caption{UC-07: Customer Makes In-App Payment}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 8: Customer Rates and Reviews Worker}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_08.png}
+\caption{UC-08: Customer Rates and Reviews Worker}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 9: Customer Reports Damage or Service Issue}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_09.png}
+\caption{UC-09: Customer Reports Damage or Service Issue}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 10: Admin Handles Damage Report and Resolves Claim}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_10.png}
+\caption{UC-10: Admin Handles Damage Report and Resolves Claim}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 11: Worker Toggles Availability and Receives Job Alert}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_11.png}
+\caption{UC-11: Worker Toggles Availability and Receives Job Alert}
+\end{figure}
+
+\newpage
+
+\subsection*{Use Case 12: Worker Uploads Before-and-After Service Photos}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{use_case_12.png}
+\caption{UC-12: Worker Uploads Before-and-After Service Photos}
+\end{figure}
+
+\newpage
+
+% ==========================================
+% SECTION 2.5 -- SYSTEM SEQUENCE DIAGRAMS
+% ==========================================
+\section{System Sequence Diagrams}
+ 
+The following diagrams show the sequence of interactions between actors and the MazdoorLink AI system for each of the primary use cases.
+ 
+\subsection*{SSD 01: Customer Register and Login with OTP}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_01.png}
+\caption{System Sequence Diagram -- UC-01}
+\end{figure}
+\newpage
+
+\subsection*{SSD 02: Customer Posts Job Request}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_02.png}
+\caption{System Sequence Diagram -- UC-02}
+\end{figure}
+\newpage
+
+\subsection*{SSD 03: Worker Registers with CNIC and Security Deposit}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_03.png}
+\caption{System Sequence Diagram -- UC-03}
+\end{figure}
+\newpage
+
+\subsection*{SSD 04: Admin Verifies Worker Documents}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_04.png}
+\caption{System Sequence Diagram -- UC-04}
+\end{figure}
+\newpage
+
+\subsection*{SSD 05: Worker Accepts or Rejects Job Request}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_05.png}
+\caption{System Sequence Diagram -- UC-05}
+\end{figure}
+\newpage
+
+\subsection*{SSD 06: Real-Time Chat with Automatic Translation}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_06.png}
+\caption{System Sequence Diagram -- UC-06}
+\end{figure}
+\newpage
+
+\subsection*{SSD 07: Customer Makes In-App Payment}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_07.png}
+\caption{System Sequence Diagram -- UC-07}
+\end{figure}
+\newpage
+
+\subsection*{SSD 08: Customer Rates and Reviews Worker}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_08.png}
+\caption{System Sequence Diagram -- UC-08}
+\end{figure}
+\newpage
+
+\subsection*{SSD 09: Customer Reports Damage or Service Issue}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_09.png}
+\caption{System Sequence Diagram -- UC-09}
+\end{figure}
+\newpage
+
+\subsection*{SSD 10: Admin Handles Damage Report and Resolves Claim}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_10.png}
+\caption{System Sequence Diagram -- UC-10}
+\end{figure}
+\newpage
+
+\subsection*{SSD 11: Worker Toggles Availability and Receives Job Alert}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_11.png}
+\caption{System Sequence Diagram -- UC-11}
+\end{figure}
+\newpage
+
+\subsection*{SSD 12: Worker Uploads Before-and-After Service Photos}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{ssd_12.png}
+\caption{System Sequence Diagram -- UC-12}
+\end{figure}
+\newpage
+ 
+\newpage
+\section{Domain Model}
+ 
+The domain model represents the conceptual entities and their relationships.
+ 
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{domain_model.png}
+\caption{MazdoorLink AI -- Domain Model}
+\label{fig:domain}
+\end{figure}
+ 
+\end{document}

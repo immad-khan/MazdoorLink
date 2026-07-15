@@ -30,6 +30,7 @@ import 'signup_data.dart';
 import 'worker_services_setup_screen.dart';
 import '../services/cloudinary_service.dart';
 import '../services/workers_service.dart';
+import '../services/smtp_service.dart';
 import 'recommendation_arguments.dart';
 import 'cancel_job_screen.dart';
 import 'customer_support_screen.dart';
@@ -894,6 +895,7 @@ final _phone = TextEditingController();
   bool _obscureConfirmPassword = true;
   bool _isForgotPassword = false;
   String _selectedCategory = 'Select a category';
+  String? _generatedOtp;
   
   File? _idFrontImage;
   File? _idBackImage;
@@ -1062,12 +1064,41 @@ final _phone = TextEditingController();
         }
         setState(() => _isUploading = true);
 
+        // Generate OTP
+        final random = math.Random();
+        _generatedOtp = (1000 + random.nextInt(9000)).toString();
+
+        final sent = await SmtpService.sendOTP(_emailController.text.trim(), _generatedOtp!);
+        
+        setState(() => _isUploading = false);
+
+        if (!sent) {
+          if (mounted) showToast('Failed to send verification code. Try again.');
+          return;
+        }
+
+        setState(() {
+          step = 1;
+        });
+        return;
+      } else if (step == 1) {
+        setState(() => _isUploading = true);
+        
+        final enteredOtp = _otpControllers.map((c) => c.text).join();
+        if (enteredOtp != _generatedOtp) {
+          setState(() => _isUploading = false);
+          if (mounted) showToast('Invalid OTP. Please try again.');
+          return;
+        }
+
         try {
           String? frontUrl;
           String? backUrl;
           String? profilePicUrl;
           String? policeCertUrl;
           String? certificationUrl;
+          final role = AppScope.of(context).role;
+          
           if (role == UserRole.worker) {
             frontUrl = await _uploadToCloudinary(_idFrontImage!);
             backUrl = await _uploadToCloudinary(_idBackImage!);
@@ -1097,7 +1128,6 @@ final _phone = TextEditingController();
               email: _emailController.text.trim(),
               password: _password.text,
             );
-            await userCredential.user?.sendEmailVerification();
             
             final categoryKey = _selectedCategory.toLowerCase();
             final categoryNameUr = categoryKey == 'plumber' ? 'پلمبر' : 'الیکٹریشن';
@@ -1150,7 +1180,7 @@ final _phone = TextEditingController();
                             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                         const SizedBox(height: 12),
                         const Text(
-                          'A verification email has been sent.\n\nYour profile is under admin review. You can log in once your account is approved.',
+                          'Your profile is under admin review. You can log in once your account is approved.',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
                         ),
@@ -1182,8 +1212,6 @@ final _phone = TextEditingController();
             email: _emailController.text.trim(),
             password: _password.text,
           );
-          
-          await userCredential.user?.sendEmailVerification();
           
           final userData = <String, dynamic>{
             'name': _fullNameController.text.trim(),
@@ -1224,7 +1252,7 @@ final _phone = TextEditingController();
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                       const SizedBox(height: 12),
                       const Text(
-                        'A verification email has been sent. Please verify your email before logging in.',
+                        'Your account has been created successfully. You can now log in.',
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
                       ),
@@ -1278,13 +1306,7 @@ final _phone = TextEditingController();
           password: _password.text,
         );
         
-        if (!userCredential.user!.emailVerified) {
-          await FirebaseAuth.instance.signOut();
-          if (mounted) {
-            showToast('Please verify your email first! Check your inbox.');
-          }
-          return;
-        }
+        
         
         // Fetch user data from Firestore
         final doc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
@@ -2026,7 +2048,7 @@ final _phone = TextEditingController();
           ),
           const SizedBox(height: 8),
           Text(
-            'We sent a 4-digit code to +92 ${_phone.text}',
+            'We sent a 4-digit code to ${_emailController.text}',
             style: const TextStyle(fontSize: 15, color: Colors.black54),
           ),
           const SizedBox(height: 32),
@@ -2057,10 +2079,17 @@ final _phone = TextEditingController();
           Align(
             alignment: Alignment.center,
             child: TextButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Verification code resent successfully')),
-                );
+              onPressed: () async {
+                setState(() => _isUploading = true);
+                final random = math.Random();
+                _generatedOtp = (1000 + random.nextInt(9000)).toString();
+                final sent = await SmtpService.sendOTP(_emailController.text.trim(), _generatedOtp!);
+                setState(() => _isUploading = false);
+                if (sent) {
+                  showToast('Verification code resent successfully');
+                } else {
+                  showToast('Failed to resend code');
+                }
               },
               child: const Text('Resend code', style: TextStyle(color: Color(0xFF0D9488))),
             ),

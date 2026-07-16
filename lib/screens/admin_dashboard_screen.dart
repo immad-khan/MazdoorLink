@@ -2615,7 +2615,7 @@ void _snack(BuildContext context, String msg) {
       content: Text(msg),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 7),
     ),
   );
 }

@@ -202,7 +202,7 @@ class _CancelJobScreenState extends State<CancelJobScreen>
                   ),
                   backgroundColor: const Color(0xFF059669),
                   behavior: SnackBarBehavior.floating,
-                  duration: const Duration(seconds: 2),
+                  duration: const Duration(seconds: 7),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               );

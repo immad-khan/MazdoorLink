@@ -47,7 +47,7 @@ void showToast(String message) {
       ),
       behavior: SnackBarBehavior.floating,
       backgroundColor: Colors.redAccent,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 7),
       margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
@@ -2698,7 +2698,7 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(bilingual(context, 'Enable location permission to use current location, or search for a place above.', 'لوکیشن کی اجازت فعال کریں یا اوپر جگہ تلاش کریں۔')),
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 7),
         ),
       );
       return;

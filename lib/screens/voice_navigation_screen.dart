@@ -407,7 +407,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
               SnackBar(
                 content: Text('Command recognized: "$command"'),
                 backgroundColor: const Color(0xFF059669),
-                duration: const Duration(seconds: 2),
+                duration: const Duration(seconds: 7),
                 behavior: SnackBarBehavior.floating,
               ),
             );

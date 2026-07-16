@@ -816,6 +816,7 @@ class _AuthScreenState extends State<AuthScreen> {
   String? _profilePicError;
   String? _policeCertError;
   String? _cnicError;
+  String? _categoryError;
 
   // Password strength tracking
   bool _pwHasMinLength = false;
@@ -853,7 +854,12 @@ class _AuthScreenState extends State<AuthScreen> {
           : (RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(_emailController.text.trim())
               ? null
               : 'Enter a valid email address');
-      _phoneError = _phone.text.trim().isEmpty ? 'Mobile number is required' : null;
+      final phone = _phone.text.trim();
+      _phoneError = phone.isEmpty
+          ? 'Mobile number is required'
+          : (RegExp(r'^\d{10}$').hasMatch(phone)
+              ? null
+              : 'Enter a correct 10-digit mobile number');
       if (_password.text.isEmpty) {
         _passwordError = 'Password is required';
       } else {
@@ -874,10 +880,15 @@ class _AuthScreenState extends State<AuthScreen> {
       final cnic = _cnicController.text.trim();
       _cnicError = !RegExp(r'^\d{13}$').hasMatch(cnic) ? 'Enter a valid 13-digit CNIC' : null;
       if (role == UserRole.worker) {
+        _categoryError = _selectedCategory == 'Select a category'
+            ? 'Please select a worker category'
+            : null;
         _profilePicError = _profilePicFile == null ? 'Profile picture is required' : null;
         _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;
         _idBackError = _idBackImage == null ? 'Back CNIC image is required' : null;
         _policeCertError = _policeCertFile == null ? 'Police certificate is required' : null;
+      } else {
+        _categoryError = null;
       }
     });
   }
@@ -901,7 +912,6 @@ final _phone = TextEditingController();
   File? _idBackImage;
   File? _profilePicFile;      // Optional for worker
   File? _policeCertFile;       // Optional for worker
-  File? _certificationFile;    // Optional for worker
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
   bool _rememberMe = false;

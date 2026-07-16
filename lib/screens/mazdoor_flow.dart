@@ -845,6 +845,26 @@ class _AuthScreenState extends State<AuthScreen> {
     });
   }
 
+  bool _validatePasswordFields() {
+    setState(() {
+      _pwHasMinLength = _password.text.length >= 8;
+      _pwHasUppercase = _password.text.contains(RegExp(r'[A-Z]'));
+      _pwHasDigit = _password.text.contains(RegExp(r'[0-9]'));
+      _pwHasSpecial = _password.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}<>]'));
+      if (_password.text.isEmpty) {
+        _passwordError = 'Password is required';
+      } else if (!_pwHasMinLength || !_pwHasUppercase || !_pwHasDigit || !_pwHasSpecial) {
+        _passwordError = 'Password does not meet requirements';
+      } else {
+        _passwordError = null;
+      }
+      _confirmPasswordError = _confirmPassword.text.isEmpty
+          ? 'Please confirm your password'
+          : (_password.text != _confirmPassword.text ? 'Passwords must match' : null);
+    });
+    return _passwordError == null && _confirmPasswordError == null;
+  }
+
   void _validateSignupFields() {
     final role = AppScope.of(context).role;
     setState(() {
@@ -1042,11 +1062,64 @@ final _phone = TextEditingController();
           return;
         }
         try {
-          await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-          showToast('Password reset email sent!');
+          final random = math.Random();
+          _generatedOtp = (1000 + random.nextInt(9000)).toString();
+          final sent = await SmtpService.sendPasswordResetOTP(email, _generatedOtp!);
+          if (!sent) {
+            showToast('Failed to send reset code. Try again.');
+            return;
+          }
+          setState(() {
+            step = 1;
+            for (final c in _otpControllers) {
+              c.clear();
+            }
+          });
+          showToast('Password reset code sent!');
+        } catch (e) {
+          showToast(e.toString());
+        }
+        return;
+      } else if (step == 1) {
+        final enteredOtp = _otpControllers.map((c) => c.text).join();
+        if (enteredOtp.length != 4 || enteredOtp != _generatedOtp) {
+          showToast('Invalid OTP. Please try again.');
+          return;
+        }
+        setState(() {
+          step = 2;
+          _password.clear();
+          _confirmPassword.clear();
+          _passwordError = null;
+          _confirmPasswordError = null;
+        });
+        return;
+      } else if (step == 2) {
+        if (!_validatePasswordFields()) {
+          showToast('Please enter a valid password and confirmation.');
+          return;
+        }
+        final email = _emailController.text.trim();
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null && user.email == email) {
+            await user.updatePassword(_password.text);
+            await FirebaseAuth.instance.signOut();
+            showToast('Password reset successfully. Please log in again.');
+          } else {
+            await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+            showToast('OTP verified. Check your email to finish resetting your Firebase password.');
+          }
           setState(() {
             _isForgotPassword = false;
+            step = 0;
             _emailController.clear();
+            _password.clear();
+            _confirmPassword.clear();
+            _generatedOtp = null;
+            for (final c in _otpControllers) {
+              c.clear();
+            }
           });
         } catch (e) {
           showToast(e.toString());
@@ -1383,46 +1456,179 @@ final _phone = TextEditingController();
   }
 
   Widget _forgotPasswordFlow() {
+    final title = step == 0
+        ? 'Reset password'
+        : step == 1
+            ? 'Enter OTP'
+            : 'Create new password';
+    final subtitle = step == 0
+        ? 'Enter your email address to receive a reset code'
+        : step == 1
+            ? 'We sent a 4-digit code to ${_emailController.text.trim()}'
+            : 'Enter and confirm your new password';
+
     return Column(
-      key: const ValueKey('forgotPasswordStep0'),
+      key: ValueKey('forgotPasswordStep$step'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Reset password',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Enter your email address to reset your password',
-          style: TextStyle(fontSize: 15, color: Colors.black54),
+        Text(
+          subtitle,
+          style: const TextStyle(fontSize: 15, color: Colors.black54),
         ),
         const SizedBox(height: 24),
-        const Text(
-          'Email',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-        ),
-        const SizedBox(height: 8),
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: TextField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            onChanged: _validateEmail,
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.email_outlined),
-              hintText: 'john@example.com',
-              errorText: _emailError,
+        if (step == 0) ...[
+          const Text(
+            'Email',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+          ),
+          const SizedBox(height: 8),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              onChanged: _validateEmail,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.email_outlined),
+                hintText: 'john@example.com',
+                errorText: _emailError,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: _next,
-            child: const Text('Send Reset Link'),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _next,
+              child: const Text('Send OTP'),
+            ),
           ),
-        ),
+        ] else if (step == 1) ...[
+          Row(
+            children: List.generate(4, (index) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: TextField(
+                    controller: _otpControllers[index],
+                    focusNode: _otpNodes[index],
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
+                    maxLength: 1,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    decoration: const InputDecoration(counterText: ''),
+                    onChanged: (value) {
+                      if (value.isNotEmpty && index < 3) {
+                        _otpNodes[index + 1].requestFocus();
+                      }
+                    },
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.center,
+            child: TextButton(
+              onPressed: () async {
+                final random = math.Random();
+                _generatedOtp = (1000 + random.nextInt(9000)).toString();
+                final sent = await SmtpService.sendPasswordResetOTP(
+                  _emailController.text.trim(),
+                  _generatedOtp!,
+                );
+                if (sent) {
+                  for (final c in _otpControllers) {
+                    c.clear();
+                  }
+                  showToast('Password reset code resent successfully');
+                } else {
+                  showToast('Failed to resend code');
+                }
+              },
+              child: const Text('Resend code', style: TextStyle(color: Color(0xFF0D9488))),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _next,
+              child: const Text('Verify OTP'),
+            ),
+          ),
+        ] else ...[
+          const Text('New password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _password,
+            obscureText: _obscurePassword,
+            onChanged: _validatePassword,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.lock_outline),
+              hintText: 'Enter new password',
+              errorText: _passwordError,
+              suffixIcon: IconButton(
+                icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text('Confirm password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _confirmPassword,
+            obscureText: _obscureConfirmPassword,
+            onChanged: (_) {
+              if (_confirmPasswordError != null) setState(() => _confirmPasswordError = null);
+            },
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.lock_outline),
+              hintText: 'Confirm new password',
+              errorText: _confirmPasswordError,
+              suffixIcon: IconButton(
+                icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (_password.text.isNotEmpty || _confirmPassword.text.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Password requirements:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                  const SizedBox(height: 6),
+                  _pwRequirementRow('At least 8 characters', _pwHasMinLength),
+                  _pwRequirementRow('At least 1 uppercase letter', _pwHasUppercase),
+                  _pwRequirementRow('At least 1 number', _pwHasDigit),
+                  _pwRequirementRow('At least 1 special character (!@#\$...)', _pwHasSpecial),
+                ],
+              ),
+            ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _next,
+              child: const Text('Reset Password'),
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1433,7 +1639,15 @@ final _phone = TextEditingController();
                   _isForgotPassword = false;
                   step = 0;
                   _emailController.clear();
+                  _password.clear();
+                  _confirmPassword.clear();
                   _emailError = null;
+                  _passwordError = null;
+                  _confirmPasswordError = null;
+                  _generatedOtp = null;
+                  for (final c in _otpControllers) {
+                    c.clear();
+                  }
                 });
               },
               child: const Text('Back to Login', style: TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),

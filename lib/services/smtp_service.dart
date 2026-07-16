@@ -26,6 +26,17 @@ class SmtpService {
     return _sendMessage(message);
   }
 
+  static Future<bool> sendPasswordResetOTP(String email, String otp) async {
+    final message = Message()
+      ..from = Address(_emailHostUser, _emailFromName)
+      ..recipients.add(email)
+      ..subject = 'Your MazdoorLink Password Reset Code'
+      ..text =
+          'Your MazdoorLink password reset code is: $otp. Enter this code in the app to continue resetting your password.';
+
+    return _sendMessage(message);
+  }
+
   static Future<bool> sendWorkerApprovalEmail({
     required String email,
     required String workerName,

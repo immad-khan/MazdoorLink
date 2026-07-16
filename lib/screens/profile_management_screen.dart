@@ -33,7 +33,6 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
   String _idFrontUrl = '';
   String _idBackUrl = '';
   String _policeCertUrl = '';
-  String _certificationUrl = '';
   String _selectedCategory = 'Select a category';
   String _status = '';
   bool _isWorker = false;
@@ -74,7 +73,6 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
         _idFrontUrl = data['idFrontUrl']?.toString() ?? '';
         _idBackUrl = data['idBackUrl']?.toString() ?? '';
         _policeCertUrl = data['policeCertUrl']?.toString() ?? '';
-        _certificationUrl = data['certificationUrl']?.toString() ?? '';
         _status = data['status']?.toString() ?? '';
         _selectedCategory =
             data['categoryNameEn']?.toString() ?? _categoryKeyToName(data['category']?.toString());
@@ -189,9 +187,6 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
       final idFrontUrl = await _uploadSelected('idFrontUrl', _idFrontUrl);
       final idBackUrl = await _uploadSelected('idBackUrl', _idBackUrl);
       final policeCertUrl = await _uploadSelected('policeCertUrl', _policeCertUrl);
-      final certificationUrl =
-          await _uploadSelected('certificationUrl', _certificationUrl);
-
       if (_isWorker &&
           (profilePicUrl == null ||
               idFrontUrl == null ||
@@ -227,7 +222,6 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
           'categoryNameUr': _categoryNameUr(_selectedCategory),
         });
         if (policeCertUrl != null) updates['policeCertUrl'] = policeCertUrl;
-        if (certificationUrl != null) updates['certificationUrl'] = certificationUrl;
       } else {
         updates['cnic'] = cnic;
         if (profilePicUrl != null) {
@@ -244,7 +238,6 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
           _idFrontUrl = idFrontUrl ?? '';
           _idBackUrl = idBackUrl ?? '';
           _policeCertUrl = policeCertUrl ?? '';
-          _certificationUrl = certificationUrl ?? '';
           _selectedFiles.clear();
         });
         _showSnack('Profile updated successfully');
@@ -608,11 +601,6 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                       keyName: 'policeCertUrl',
                       currentUrl: _policeCertUrl,
                       requiredFile: true,
-                    ),
-                    _documentTile(
-                      title: 'Professional Certificate',
-                      keyName: 'certificationUrl',
-                      currentUrl: _certificationUrl,
                     ),
                   ],
                 ),

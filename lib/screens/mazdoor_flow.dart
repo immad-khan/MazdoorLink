@@ -1005,22 +1005,6 @@ final _phone = TextEditingController();
     return buf.toString();
   }
 
-  Future<void> _pickCertification() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      final file = File(image.path);
-      final sizeInKb = file.lengthSync() / 1024;
-      if (sizeInKb > 100) {
-        setState(() => _imageSizeError = 'Certificate must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)');
-        return;
-      }
-      setState(() {
-        _certificationFile = file;
-        _imageSizeError = null;
-      });
-    }
-  }
-
   Future<String?> _uploadToCloudinary(File imageFile) async {
     return CloudinaryService.uploadImage(imageFile);
   }
@@ -1045,9 +1029,20 @@ final _phone = TextEditingController();
   Future<void> _next() async {
     if (_isForgotPassword) {
       if (step == 0) {
-        if (_emailController.text.trim().isEmpty) return;
+        final email = _emailController.text.trim();
+        setState(() {
+          _emailError = email.isEmpty
+              ? 'Email is required'
+              : (RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)
+                  ? null
+                  : 'Enter a valid email address');
+        });
+        if (_emailError != null) {
+          showToast('Please enter a valid email address');
+          return;
+        }
         try {
-          await FirebaseAuth.instance.sendPasswordResetEmail(email: _emailController.text.trim());
+          await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
           showToast('Password reset email sent!');
           setState(() {
             _isForgotPassword = false;
@@ -1068,7 +1063,7 @@ final _phone = TextEditingController();
           showToast('Please fill all required fields correctly');
           return;
         }
-        if (role == UserRole.worker && (_profilePicError != null || _idFrontError != null || _idBackError != null || _policeCertError != null)) {
+        if (role == UserRole.worker && (_categoryError != null || _profilePicError != null || _idFrontError != null || _idBackError != null || _policeCertError != null)) {
           showToast('Please fill all worker required fields');
           return;
         }
@@ -1106,7 +1101,6 @@ final _phone = TextEditingController();
           String? backUrl;
           String? profilePicUrl;
           String? policeCertUrl;
-          String? certificationUrl;
           final role = AppScope.of(context).role;
           
           if (role == UserRole.worker) {
@@ -1128,10 +1122,6 @@ final _phone = TextEditingController();
                 return;
               }
             }
-            if (_certificationFile != null) {
-              certificationUrl = await _uploadToCloudinary(_certificationFile!);
-            }
-
             setState(() => _isUploading = false);
 
             final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -1160,7 +1150,6 @@ final _phone = TextEditingController();
             };
             if (profilePicUrl != null) userData['profilePicUrl'] = profilePicUrl;
             if (policeCertUrl != null) userData['policeCertUrl'] = policeCertUrl;
-            if (certificationUrl != null) userData['certificationUrl'] = certificationUrl;
 
             await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
             
@@ -1630,8 +1619,10 @@ final _phone = TextEditingController();
             child: TextField(
               controller: _phone,
               keyboardType: TextInputType.phone,
+              maxLength: 10,
               onChanged: (_) { if (_phoneError != null) setState(() => _phoneError = null); },
               decoration: InputDecoration(
+                counterText: '',
                 prefixIcon: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Text('+92', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
@@ -1756,12 +1747,18 @@ final _phone = TextEditingController();
                     if (newValue != null) {
                       setState(() {
                         _selectedCategory = newValue;
+                        _categoryError = null;
                       });
                     }
                   },
                 ),
               ),
             ),
+            if (_categoryError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(_categoryError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+              ),
           ],
           
           if (role == UserRole.worker) ...[
@@ -1961,64 +1958,6 @@ final _phone = TextEditingController();
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(_policeCertError!, style: const TextStyle(color: Colors.red, fontSize: 11)),
               ),
-            const SizedBox(height: 20),
-            // Certification / Specialization (Optional)
-            const Divider(),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Icon(Icons.workspace_premium_outlined, size: 18, color: Color(0xFF0D9488)),
-                const SizedBox(width: 8),
-                const Text('Certification / Specialization', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('Required', style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text('Upload any trade certificate, specialization diploma, etc. (max 100KB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            const SizedBox(height: 10),
-            InkWell(
-              onTap: _pickCertification,
-              child: Container(
-                width: double.infinity,
-                height: 80,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: _certificationFile != null ? const Color(0xFFF0FDFA) : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: _certificationFile != null ? const Color(0xFF0D9488) : Colors.grey.shade300,
-                    width: _certificationFile != null ? 1.5 : 1,
-                  ),
-                ),
-                child: _certificationFile != null
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.check_circle, color: Color(0xFF0D9488), size: 22),
-                          const SizedBox(width: 10),
-                          Text('Certificate uploaded', style: TextStyle(color: const Color(0xFF0D9488), fontWeight: FontWeight.w600, fontSize: 13)),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => setState(() => _certificationFile = null),
-                            child: const Icon(Icons.close, size: 16, color: Colors.grey),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.upload_file_outlined, color: Colors.grey, size: 26),
-                          const SizedBox(width: 10),
-                          Text('Tap to upload (optional)', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-                        ],
-                      ),
-              ),
-            ),
             const SizedBox(height: 24),
           ],
           SizedBox(

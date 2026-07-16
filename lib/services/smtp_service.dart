@@ -2,18 +2,26 @@ import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 
 class SmtpService {
-  static Future<bool> sendOTP(String email, String otp) async {
-    // Replace with real SMTP credentials
-    String username = 'your_email@gmail.com';
-    String password = 'your_app_password';
+  static const String _emailHost = 'smtp.gmail.com';
+  static const int _emailPort = 587;
+  static const String _emailHostUser = 'immadonline702@gmail.com';
+  static const String _emailHostPassword = 'ivcj icxn jpnl ekbo';
+  static const String _emailFromName = 'Mazdoorlink';
 
-    final smtpServer = gmail(username, password);
+  static Future<bool> sendOTP(String email, String otp) async {
+    final smtpServer = SmtpServer(
+      _emailHost,
+      port: _emailPort,
+      username: _emailHostUser,
+      password: _emailHostPassword,
+    );
 
     final message = Message()
-      ..from = Address(username, 'MazdoorLink')
+      ..from = Address(_emailHostUser, _emailFromName)
       ..recipients.add(email)
       ..subject = 'Your Verification Code'
-      ..text = 'Your verification code for MazdoorLink is: $otp. Please enter this in the app to complete sign up.';
+      ..text =
+          'Your verification code for MazdoorLink is: $otp. Please enter this in the app to complete sign up.';
 
     try {
       await send(message, smtpServer);

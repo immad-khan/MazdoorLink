@@ -6,9 +6,9 @@ import 'package:http/http.dart' as http;
 class CloudinaryService {
   CloudinaryService._();
 
-  static const String _cloudName = 'dcdhsyj86';
-  static const String _apiKey = '921185953673167';
-  static const String _apiSecret = 'P-Vro4fA8_gF9dnTcHgKnOQ-xGI';
+  static const String _cloudName = 'b0vhqrfm';
+  static const String _apiKey = '657242695212519';
+  static const String _apiSecret = 'G9iyrAgMdcns90ZdHuVX9iWrHNU';
 
   static Future<String?> uploadImage(File imageFile) async {
     final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;

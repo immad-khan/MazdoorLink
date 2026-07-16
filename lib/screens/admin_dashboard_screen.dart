@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'admin_jobs_screen.dart';
+import '../services/smtp_service.dart';
 import '../services/workers_service.dart';
 
 // ─────────────────────────────────────────────
@@ -700,7 +701,12 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     );
   }
 
-  void _rejectWorker(BuildContext context, String docId, String workerName) {
+  void _rejectWorker(
+    BuildContext context,
+    String docId,
+    String workerName,
+    String workerEmail,
+  ) {
     final reasonController = TextEditingController();
     showDialog(
       context: context,
@@ -718,13 +724,28 @@ class _WorkerRegistrationsTab extends StatelessWidget {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              if (reasonController.text.trim().isEmpty) return;
+              final reason = reasonController.text.trim();
+              if (reason.isEmpty) return;
               await FirebaseFirestore.instance.collection('users').doc(docId).update({
                 'status': 'rejected',
-                'rejectReason': reasonController.text.trim(),
+                'rejectReason': reason,
               });
+              final emailSent = await SmtpService.sendWorkerRejectionEmail(
+                email: workerEmail,
+                workerName: workerName,
+                reason: reason,
+              );
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Worker rejected')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    emailSent
+                        ? 'Worker rejected and email sent.'
+                        : 'Worker rejected, but email could not be sent.',
+                  ),
+                  duration: const Duration(seconds: 7),
+                ),
+              );
             },
             child: const Text('Reject'),
           ),
@@ -733,11 +754,29 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     );
   }
 
-  void _approveWorker(BuildContext context, String docId, String workerName) async {
+  void _approveWorker(
+    BuildContext context,
+    String docId,
+    String workerName,
+    String workerEmail,
+  ) async {
     await FirebaseFirestore.instance.collection('users').doc(docId).update({
       'status': 'approved',
     });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$workerName approved!')));
+    final emailSent = await SmtpService.sendWorkerApprovalEmail(
+      email: workerEmail,
+      workerName: workerName,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          emailSent
+              ? '$workerName approved and email sent.'
+              : '$workerName approved, but email could not be sent.',
+        ),
+        duration: const Duration(seconds: 7),
+      ),
+    );
   }
 
   void _showWorkerDetail(BuildContext context, Map<String, dynamic> w, String docId) {
@@ -952,7 +991,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                           child: OutlinedButton.icon(
                             onPressed: () {
                               Navigator.pop(context);
-                              _rejectWorker(context, docId, name.toString());
+                              _rejectWorker(context, docId, name.toString(), email.toString());
                             },
                             icon: const Icon(Icons.close_rounded, size: 16),
                             label: const Text('Reject'),
@@ -968,7 +1007,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: () {
                               Navigator.pop(context);
-                              _approveWorker(context, docId, name.toString());
+                              _approveWorker(context, docId, name.toString(), email.toString());
                             },
                             icon: const Icon(Icons.check_rounded, size: 16),
                             label: const Text('Approve'),

@@ -192,8 +192,13 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
       final certificationUrl =
           await _uploadSelected('certificationUrl', _certificationUrl);
 
-      if (_isWorker && (profilePicUrl == null || idFrontUrl == null || idBackUrl == null)) {
-        _showSnack('Worker profile picture and CNIC images are required.', isError: true);
+      if (_isWorker &&
+          (profilePicUrl == null ||
+              idFrontUrl == null ||
+              idBackUrl == null ||
+              policeCertUrl == null)) {
+        _showSnack('Worker profile picture, CNIC images, and police certificate are required.',
+            isError: true);
         setState(() => _isSaving = false);
         return;
       }
@@ -418,7 +423,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: hasFile
-                    ? Image.file(selected, fit: BoxFit.cover)
+                    ? Image.file(selected!, fit: BoxFit.cover)
                     : hasExisting
                         ? Image.network(currentUrl, fit: BoxFit.cover)
                         : const Icon(Icons.add_a_photo_outlined, color: Colors.grey),
@@ -488,6 +493,21 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
       _birthdayController.text =
           '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
       setState(() {});
+    }
+  }
+
+  Future<void> _sendPasswordReset() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showSnack('No email address found for this account.', isError: true);
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _showSnack('Password reset email sent.');
+    } catch (e) {
+      _showSnack('Unable to send password reset email: $e', isError: true);
     }
   }
 
@@ -587,6 +607,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                       title: 'Police Character Certificate',
                       keyName: 'policeCertUrl',
                       currentUrl: _policeCertUrl,
+                      requiredFile: true,
                     ),
                     _documentTile(
                       title: 'Professional Certificate',
@@ -596,6 +617,19 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                   ],
                 ),
               ],
+              const SizedBox(height: 24),
+              _section(
+                'ACCOUNT SECURITY',
+                [
+                  ListTile(
+                    leading: Icon(Icons.lock_reset, color: Theme.of(context).primaryColor),
+                    title: const Text('Change Password'),
+                    subtitle: const Text('Send a password reset link to your email'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _sendPasswordReset,
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,

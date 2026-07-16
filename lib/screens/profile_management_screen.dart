@@ -177,6 +177,11 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
       return;
     }
 
+    if (_isWorker && _categoryNameToKey(_selectedCategory).isEmpty) {
+      _showSnack('Please select a worker category.', isError: true);
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
@@ -313,6 +318,10 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
 
   Widget _imageHeader() {
     final selected = _selectedFiles['profilePicUrl'];
+    final ImageProvider? avatarImage = selected != null
+        ? FileImage(selected)
+        : (_profilePicUrl.isNotEmpty ? NetworkImage(_profilePicUrl) : null);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -328,10 +337,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
               children: [
                 CircleAvatar(
                   radius: 34,
-                  backgroundImage: selected != null
-                      ? FileImage(selected)
-                      : (_profilePicUrl.isNotEmpty ? NetworkImage(_profilePicUrl) : null)
-                          as ImageProvider?,
+                  backgroundImage: avatarImage,
                   child: selected == null && _profilePicUrl.isEmpty
                       ? const Icon(Icons.person, color: Colors.white, size: 34)
                       : null,

@@ -805,6 +805,10 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  static final RegExp _emailRegex = RegExp(
+    r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$",
+  );
+
   String? _emailError;
   String? _passwordError;
   String? _nameError;
@@ -824,14 +828,21 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _pwHasDigit = false;
   bool _pwHasSpecial = false;
 
+  bool _isValidEmail(String email) => _emailRegex.hasMatch(email);
+
+  String? _emailValidationMessage(String email) {
+    if (email.isEmpty) return 'Email is required';
+    return _isValidEmail(email) ? null : 'Enter a valid email address';
+  }
+
   void _validateEmail(String val) {
-    if (val.isEmpty) {
+    final email = val.trim();
+    if (email.isEmpty) {
       setState(() => _emailError = null);
       return;
     }
-    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
     setState(() {
-      _emailError = emailRegex.hasMatch(val) ? null : 'Enter a valid email address';
+      _emailError = _emailValidationMessage(email);
     });
   }
 
@@ -869,11 +880,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final role = AppScope.of(context).role;
     setState(() {
       _nameError = _fullNameController.text.trim().isEmpty ? 'Full name is required' : null;
-      _emailError = _emailController.text.trim().isEmpty
-          ? 'Email is required'
-          : (RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(_emailController.text.trim())
-              ? null
-              : 'Enter a valid email address');
+      _emailError = _emailValidationMessage(_emailController.text.trim());
       final phone = _phone.text.trim();
       _phoneError = phone.isEmpty
           ? 'Mobile number is required'
@@ -1051,11 +1058,7 @@ final _phone = TextEditingController();
       if (step == 0) {
         final email = _emailController.text.trim();
         setState(() {
-          _emailError = email.isEmpty
-              ? 'Email is required'
-              : (RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)
-                  ? null
-                  : 'Enter a valid email address');
+          _emailError = _emailValidationMessage(email);
         });
         if (_emailError != null) {
           showToast('Please enter a valid email address');
@@ -1361,11 +1364,7 @@ final _phone = TextEditingController();
     } else {
       // Login flow
       setState(() {
-        _emailError = _emailController.text.trim().isEmpty
-            ? 'Email is required'
-            : (RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(_emailController.text.trim())
-                ? null
-                : 'Enter a valid email address');
+        _emailError = _emailValidationMessage(_emailController.text.trim());
         _passwordError = _password.text.isEmpty ? 'Password is required' : null;
       });
       if (_emailError != null || _passwordError != null) {

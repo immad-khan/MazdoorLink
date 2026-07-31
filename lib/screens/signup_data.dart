@@ -7,7 +7,6 @@ class WorkerSignupData {
   final String? cnicNumber;
   final String idFrontUrl;
   final String idBackUrl;
-  final String? policeCertUrl;
   final String? certificationUrl;
 
   WorkerSignupData({
@@ -19,7 +18,6 @@ class WorkerSignupData {
     this.cnicNumber,
     required this.idFrontUrl,
     required this.idBackUrl,
-    this.policeCertUrl,
     this.certificationUrl,
   });
 }

@@ -818,7 +818,6 @@ class _AuthScreenState extends State<AuthScreen> {
   String? _idBackError;
   String? _imageSizeError;
   String? _profilePicError;
-  String? _policeCertError;
   String? _cnicError;
   String? _categoryError;
 
@@ -913,7 +912,6 @@ class _AuthScreenState extends State<AuthScreen> {
         _profilePicError = _profilePicFile == null ? 'Profile picture is required' : null;
         _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;
         _idBackError = _idBackImage == null ? 'Back CNIC image is required' : null;
-        _policeCertError = _policeCertFile == null ? 'Police certificate is required' : null;
       } else {
         _categoryError = null;
       }
@@ -938,7 +936,6 @@ final _phone = TextEditingController();
   File? _idFrontImage;
   File? _idBackImage;
   File? _profilePicFile;      // Optional for worker
-  File? _policeCertFile;       // Optional for worker
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
   bool _rememberMe = false;
@@ -984,23 +981,6 @@ final _phone = TextEditingController();
           _idBackImage = file;
           _idBackError = null;
         }
-      });
-    }
-  }
-
-  Future<void> _pickPoliceCert() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      final file = File(image.path);
-      final sizeInKb = file.lengthSync() / 1024;
-      if (sizeInKb > 100) {
-        setState(() => _imageSizeError = 'Police certificate must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)');
-        return;
-      }
-      setState(() {
-        _policeCertFile = file;
-        _policeCertError = null;
-        _imageSizeError = null;
       });
     }
   }
@@ -1139,7 +1119,7 @@ final _phone = TextEditingController();
           showToast('Please fill all required fields correctly');
           return;
         }
-        if (role == UserRole.worker && (_categoryError != null || _profilePicError != null || _idFrontError != null || _idBackError != null || _policeCertError != null)) {
+        if (role == UserRole.worker && (_categoryError != null || _profilePicError != null || _idFrontError != null || _idBackError != null)) {
           showToast('Please fill all worker required fields');
           return;
         }
@@ -1176,7 +1156,6 @@ final _phone = TextEditingController();
           String? frontUrl;
           String? backUrl;
           String? profilePicUrl;
-          String? policeCertUrl;
           final role = AppScope.of(context).role;
           
           if (role == UserRole.worker) {
@@ -1189,14 +1168,6 @@ final _phone = TextEditingController();
             }
             if (_profilePicFile != null) {
               profilePicUrl = await _uploadToCloudinary(_profilePicFile!);
-            }
-            if (_policeCertFile != null) {
-              policeCertUrl = await _uploadToCloudinary(_policeCertFile!);
-              if (policeCertUrl == null) {
-                setState(() => _isUploading = false);
-                if (mounted) showToast('Failed to upload police certificate. Try again.');
-                return;
-              }
             }
             setState(() => _isUploading = false);
 
@@ -1225,7 +1196,6 @@ final _phone = TextEditingController();
               'setupComplete': false,
             };
             if (profilePicUrl != null) userData['profilePicUrl'] = profilePicUrl;
-            if (policeCertUrl != null) userData['policeCertUrl'] = policeCertUrl;
 
             await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
             
@@ -2114,64 +2084,6 @@ final _phone = TextEditingController();
                 ),
               ),
             const SizedBox(height: 20),
-            // Police Certificate (Optional)
-            const Divider(),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Icon(Icons.policy_outlined, size: 18, color: Color(0xFF0D9488)),
-                const SizedBox(width: 8),
-                const Text('Police Character Certificate', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('Required', style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text('Upload image of your police certificate (max 100KB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            const SizedBox(height: 10),
-            InkWell(
-              onTap: _pickPoliceCert,
-              child: Container(
-                width: double.infinity,
-                height: 80,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: _policeCertFile != null ? const Color(0xFFF0FDFA) : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: _policeCertError != null ? Colors.red : (_policeCertFile != null ? const Color(0xFF0D9488) : Colors.grey.shade300),
-                    width: _policeCertFile != null ? 1.5 : 1,
-                  ),
-                ),
-                child: _policeCertFile != null
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.check_circle, color: Color(0xFF0D9488), size: 22),
-                          const SizedBox(width: 10),
-                          Text('Certificate uploaded', style: TextStyle(color: const Color(0xFF0D9488), fontWeight: FontWeight.w600, fontSize: 13)),
-                        ],
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.upload_file_outlined, color: Colors.grey, size: 26),
-                          const SizedBox(width: 10),
-                          Text('Tap to upload certificate', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-                        ],
-                      ),
-              ),
-            ),
-            if (_policeCertError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(_policeCertError!, style: const TextStyle(color: Colors.red, fontSize: 11)),
-              ),
-            const SizedBox(height: 24),
           ],
           SizedBox(
             width: double.infinity,

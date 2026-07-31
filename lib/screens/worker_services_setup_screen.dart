@@ -328,9 +328,6 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
         if (_signupData!.profilePicUrl != null) {
           userData['profilePicUrl'] = _signupData!.profilePicUrl;
         }
-        if (_signupData!.policeCertUrl != null) {
-          userData['policeCertUrl'] = _signupData!.policeCertUrl;
-        }
         if (_signupData!.certificationUrl != null) {
           userData['certificationUrl'] = _signupData!.certificationUrl;
         }

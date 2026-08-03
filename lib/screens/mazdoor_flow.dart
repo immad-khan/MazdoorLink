@@ -3776,8 +3776,12 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           _trackingState = 4;
         } else if (status == 'worker_completed') {
           _trackingState = 2;
+        } else if (status == 'payment_pending' || status == 'worker_payment_pending' || status == 'payment_disputed') {
+          _trackingState = 6;
         } else if (status == 'completed') {
           _trackingState = 5;
+        } else if (status == 'arrival_declined') {
+          _trackingState = 7;
         } else {
           _trackingState = 0;
         }
@@ -3830,6 +3834,10 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         return bilingual(context, 'Worker is working at your location', 'ورکر آپ کے مقام پر کام کر رہا ہے');
       case 5:
         return bilingual(context, 'Job completed', 'کام مکمل ہو گیا');
+      case 6:
+        return bilingual(context, 'Awaiting payment confirmation', 'ادائیگی کی تصدیق زیر التوا');
+      case 7:
+        return bilingual(context, 'Worker arrival was declined', 'ورکر کی آمد مسترد کر دی گئی');
       default:
         return bilingual(context, 'Tracking job', 'کام ٹریک ہو رہا ہے');
     }
@@ -3841,6 +3849,10 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         return bilingual(context, 'Please confirm the worker is at your location.', 'براہ کرم تصدیق کریں کہ ورکر آپ کے مقام پر موجود ہے۔');
       case 4:
         return bilingual(context, 'This job is now working at customer.', 'یہ کام اب کسٹمر کے مقام پر جاری ہے۔');
+      case 6:
+        return bilingual(context, 'Waiting for the worker to confirm receipt of payment.', 'ورکر ادائیگی موصول ہونے کی تصدیق کرے گا۔');
+      case 7:
+        return bilingual(context, 'This job has been closed because the arrival was declined.', 'آمد مسترد ہونے کی وجہ سے یہ کام بند ہو گیا۔');
       default:
         return null;
     }
@@ -4152,6 +4164,15 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         ),
                       ],
                     ),
+                  ] else if (_trackingState == 6 || _trackingState == 7) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(bilingual(context, 'Back', 'واپس جائیں')),
+                      ),
+                    )
                   ] else ...[
                     SizedBox(
                       width: double.infinity,
@@ -5938,6 +5959,12 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
         return bilingual(context, 'Working at customer', 'کسٹمر کے مقام پر کام جاری ہے');
       case 'worker_completed':
         return bilingual(context, 'Customer completion pending', 'کسٹمر کی تکمیل تصدیق باقی ہے');
+      case 'payment_pending':
+        return bilingual(context, 'Payment pending', 'ادائیگی زیر التوا');
+      case 'worker_payment_pending':
+        return bilingual(context, 'Awaiting payment confirmation', 'ادائیگی کی تصدیق زیر التوا');
+      case 'payment_disputed':
+        return bilingual(context, 'Payment disputed', 'ادائیگی کا تنازع');
       case 'completed':
         return bilingual(context, 'Completed', 'مکمل');
       case 'arrival_declined':
@@ -5949,6 +5976,23 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     }
   }
 
+  static const List<String> _activeStatuses = [
+    'pending',
+    'accepted',
+    'arrival_pending',
+    'working',
+    'worker_completed',
+    'payment_pending',
+    'worker_payment_pending',
+    'payment_disputed',
+  ];
+
+  static const List<String> _pastStatuses = [
+    'completed',
+    'rejected',
+    'arrival_declined',
+  ];
+
   Stream<QuerySnapshot> _buildStream() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const Stream.empty();
@@ -5957,7 +6001,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     return FirebaseFirestore.instance
         .collection('jobs')
         .where(uidField, isEqualTo: user.uid)
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
@@ -5984,16 +6027,31 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
             child: StreamBuilder<QuerySnapshot>(
               stream: _buildStream(),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        bilingual(context, 'Failed to load bookings. Please try again.', 'بکنگز لوڈ کرنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                    ),
+                  );
+                }
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final docs = snapshot.data!.docs;
                 final filtered = docs.where((doc) {
                   final status = (doc.data() as Map<String, dynamic>)['status']?.toString() ?? '';
-                  return activeTab
-                      ? (status == 'pending' || status == 'accepted' || status == 'arrival_pending' || status == 'working' || status == 'worker_completed')
-                      : (status == 'completed' || status == 'rejected' || status == 'arrival_declined');
-                }).toList();
+                  return activeTab ? _activeStatuses.contains(status) : _pastStatuses.contains(status);
+                }).toList()
+                  ..sort((a, b) {
+                    final aTime = ((a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+                    final bTime = ((b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+                    return bTime.compareTo(aTime);
+                  });
 
                 if (filtered.isEmpty) {
                   return Center(child: Text(bilingual(context, 'No bookings yet', 'ابھی کوئی بکنگ نہیں')));

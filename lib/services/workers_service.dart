@@ -229,6 +229,51 @@ Future<void> updateJobStatus(String jobId, String status) async {
   await FirebaseFirestore.instance.collection('jobs').doc(jobId).update(updates);
 }
 
+const List<String> kBusyJobStatuses = [
+  'accepted',
+  'arrival_pending',
+  'working',
+  'worker_completed',
+  'payment_pending',
+  'worker_payment_pending',
+  'payment_disputed',
+];
+
+Future<bool> workerHasActiveJob(String workerId) async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('jobs')
+      .where('workerId', isEqualTo: workerId)
+      .where('status', whereIn: kBusyJobStatuses)
+      .limit(1)
+      .get();
+  return snapshot.docs.isNotEmpty;
+}
+
+Future<void> scheduleAcceptedJob(String jobId, DateTime scheduledTime) async {
+  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+    'status': 'accepted',
+    'scheduledReminderAt': Timestamp.fromDate(scheduledTime),
+    'scheduleConfirmed': false,
+    'acceptedAt': FieldValue.serverTimestamp(),
+    'statusUpdatedAt': FieldValue.serverTimestamp(),
+  });
+}
+
+Future<void> confirmJobSchedule(String jobId) async {
+  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+    'scheduleConfirmed': true,
+    'scheduleConfirmedAt': FieldValue.serverTimestamp(),
+  });
+}
+
+Stream<QuerySnapshot> streamWorkerUpcomingJobs(String workerId) {
+  return FirebaseFirestore.instance
+      .collection('jobs')
+      .where('workerId', isEqualTo: workerId)
+      .where('status', isEqualTo: 'accepted')
+      .snapshots();
+}
+
 Stream<QuerySnapshot> streamWorkerJobs(String workerId) {
   return FirebaseFirestore.instance
       .collection('jobs')

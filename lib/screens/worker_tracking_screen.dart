@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../app_state.dart';
 import '../services/workers_service.dart';
 
@@ -26,6 +27,8 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   String _customerPhone = '';
   String _jobDesc = '';
   String _paymentMethod = 'Cash';
+  DateTime? _scheduledTime;
+  bool _scheduleConfirmed = false;
 
   @override
   void initState() {
@@ -77,6 +80,9 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
         _jobDesc = isUrdu
             ? (data['descriptionUr']?.toString() ?? '')
             : (data['descriptionEn']?.toString() ?? '');
+        final scheduledRaw = data['scheduledReminderAt'];
+        _scheduledTime = scheduledRaw is Timestamp ? scheduledRaw.toDate() : null;
+        _scheduleConfirmed = data['scheduleConfirmed'] as bool? ?? false;
         _updateMarkers();
       });
     });
@@ -568,6 +574,32 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    if (_scheduledTime != null && _scheduleConfirmed && _scheduledTime!.isAfter(DateTime.now())) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFF59E0B)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.alarm, color: Color(0xFFB45309), size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                isUrdu
+                                    ? 'آپ کا شیڈول وقت: ${DateFormat('hh:mm a').format(_scheduledTime!)} — وقت آنے پر کام شروع کریں'
+                                    : "Scheduled for ${DateFormat('hh:mm a').format(_scheduledTime!)} — start the job when it's time",
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF92400E)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     _buildCustomerInfoTile(isUrdu),
                     const SizedBox(height: 14),
                     SizedBox(

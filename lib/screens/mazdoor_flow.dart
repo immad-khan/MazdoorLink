@@ -3741,11 +3741,19 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   String _pin = '';
   Set<Marker> _markers = {};
   GoogleMapController? _mapController;
+  DateTime? _scheduledTime;
+  bool _scheduleConfirmed = false;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
     super.initState();
     _listenToJob();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && _scheduledTime != null && _scheduleConfirmed) {
+        setState(() {});
+      }
+    });
   }
 
   void _listenToJob() {
@@ -3758,7 +3766,10 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       if (data == null) return;
       final status = data['status']?.toString() ?? 'pending';
       if (status == 'rejected') {
-        showToast(bilingual(context, 'Worker declined your offer. Please find another worker.', 'ورکر نے آپ کی پیشکش مسترد کر دی۔ براہ کرم دوسرا ورکر تلاش کریں۔'));
+        final wasScheduled = data['scheduleDeclined'] as bool? ?? false;
+        showToast(wasScheduled
+            ? bilingual(context, 'You declined the worker\'s proposed schedule. This job is closed.', 'آپ نے ورکر کے تجویز کردہ شیڈول کو مسترد کر دیا۔ یہ کام بند ہو گیا۔')
+            : bilingual(context, 'Worker declined your offer. Please find another worker.', 'ورکر نے آپ کی پیشکش مسترد کر دی۔ براہ کرم دوسرا ورکر تلاش کریں۔'));
         Navigator.pop(context);
         return;
       }
@@ -3768,6 +3779,9 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         lng = (data['customerLongitude'] as num).toDouble();
       }
       setState(() {
+        final scheduledRaw = data['scheduledReminderAt'];
+        _scheduledTime = scheduledRaw is Timestamp ? scheduledRaw.toDate() : null;
+        _scheduleConfirmed = data['scheduleConfirmed'] as bool? ?? false;
         if (status == 'accepted') {
           _trackingState = 1;
         } else if (status == 'arrival_pending') {
@@ -3816,8 +3830,119 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   @override
   void dispose() {
     _jobSub?.cancel();
+    _countdownTimer?.cancel();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  Widget _buildSchedulePanel(BuildContext context, String? jobId) {
+    final scheduled = _scheduledTime;
+    if (scheduled == null) return const SizedBox.shrink();
+    final t = DateFormat('hh:mm a, d MMM').format(scheduled);
+    if (_scheduleConfirmed) {
+      final remaining = scheduled.difference(DateTime.now());
+      final String reminder;
+      if (remaining.isNegative) {
+        reminder = bilingual(context, 'Worker should be arriving now', 'ورکر کو اب پہنچنا چاہیے');
+      } else if (remaining.inHours > 0) {
+        final mins = remaining.inMinutes % 60;
+        reminder = bilingual(context, 'Worker arrives in ${remaining.inHours} h $mins min', 'ورکر ${remaining.inHours} گھنٹے $mins منٹ میں پہنچے گا');
+      } else {
+        reminder = bilingual(context, 'Worker arrives in ${remaining.inMinutes} min', 'ورکر ${remaining.inMinutes} منٹ میں پہنچے گا');
+      }
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFF59E0B)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.alarm, color: Color(0xFFB45309)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    bilingual(context, 'Reminder set for $t', 'یاد دہانی $t پر مقرر'),
+                    style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                  ),
+                  Text(reminder, style: const TextStyle(fontSize: 12, color: Color(0xFF92400E))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF59E0B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.schedule, color: Color(0xFFB45309)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  bilingual(context, 'Worker is busy with another job', 'ورکر دوسرے کام میں مصروف ہے'),
+                  style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            bilingual(context, 'They proposed to arrive at $t. Do you agree?', 'انہوں نے $t پر پہنچنے کی تجویز دی۔ کیا آپ متفق ہیں؟'),
+            style: const TextStyle(fontSize: 13, color: Color(0xFF92400E)),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    if (jobId != null) {
+                      await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+                        'status': 'rejected',
+                        'scheduleDeclined': true,
+                        'statusUpdatedAt': FieldValue.serverTimestamp(),
+                      });
+                    }
+                  },
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent),
+                  child: Text(bilingual(context, 'Decline', 'مسترد کریں')),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () async {
+                    if (jobId != null) {
+                      await confirmJobSchedule(jobId);
+                    }
+                  },
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                  child: Text(bilingual(context, 'Approve', 'منظور کریں')),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   String _trackingTitle(BuildContext context) {
@@ -3825,6 +3950,10 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       case 0:
         return bilingual(context, 'Waiting for worker to accept...', 'ورکر کے قبول کرنے کا انتظار ہے...');
       case 1:
+        if (_scheduledTime != null && _scheduleConfirmed) {
+          final t = DateFormat('hh:mm a, d MMM').format(_scheduledTime!);
+          return bilingual(context, 'Worker will arrive at $t', 'ورکر $t پر پہنچے گا');
+        }
         return bilingual(context, 'Worker is on the way', 'ورکر راستے میں ہے');
       case 2:
         return bilingual(context, 'Worker claims job is completed', 'ورکر کا دعویٰ ہے کہ کام مکمل ہو گیا');
@@ -4038,6 +4167,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     ],
                   ),
                   if (_trackingState == 1) Text(bilingual(context, 'Worker has accepted the job', 'ورکر نے کام قبول کر لیا ہے')),
+                  if (_trackingState == 1 && _scheduledTime != null) _buildSchedulePanel(context, jobId),
                   if (_trackingDetail(context) != null) Text(_trackingDetail(context)!),
                   if (_trackingState == 2) ...[
                     const SizedBox(height: 8),
@@ -5008,6 +5138,59 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen>
     }
   }
 
+  Future<DateTime?> _pickScheduleTime(BuildContext context) async {
+    final isUrdu = AppScope.of(context).isUrdu;
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(hours: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 7)),
+    );
+    if (date == null || !mounted) return null;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (time == null || !mounted) return null;
+    final scheduled = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    if (scheduled.isBefore(DateTime.now())) {
+      showToast(isUrdu
+          ? 'براہ کرم مستقبل کا وقت منتخب کریں'
+          : 'Please select a future time');
+      return null;
+    }
+    return scheduled;
+  }
+
+  Future<void> _handleAcceptJob(BuildContext context, String jobId, double price) async {
+    final isUrdu = AppScope.of(context).isUrdu;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final busy = await workerHasActiveJob(user.uid);
+    if (!mounted) return;
+
+    if (!busy) {
+      await updateJobStatus(jobId, 'accepted');
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => WorkerTrackingScreen(jobPrice: price, jobId: jobId),
+        ),
+      );
+      return;
+    }
+
+    final scheduled = await _pickScheduleTime(context);
+    if (scheduled == null || !mounted) return;
+    await scheduleAcceptedJob(jobId, scheduled);
+    if (!mounted) return;
+    showToast(isUrdu
+        ? 'آپ کی تجویز کردہ آمد کا وقت گاہک کی منظوری کے لیے بھیج دیا گیا'
+        : 'Your proposed arrival time was sent to the customer for approval');
+  }
+
   @override
   Widget build(BuildContext context) {
     final scope = AppScope.of(context);
@@ -5254,16 +5437,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen>
                                               TextButton(
                                                 onPressed: () {
                                                   Navigator.pop(context);
-                                                  updateJobStatus(jobId, 'accepted');
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) => WorkerTrackingScreen(
-                                                        jobPrice: price,
-                                                        jobId: jobId,
-                                                      ),
-                                                    ),
-                                                  );
+                                                  _handleAcceptJob(context, jobId, price);
                                                 },
                                                 child: Text(isUrdu ? 'جی ہاں' : 'Yes'),
                                               ),
@@ -5285,6 +5459,82 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen>
                       ),
                     );
                   }).toList(),
+                );
+              },
+            ),
+          if (online && user != null)
+            StreamBuilder<QuerySnapshot>(
+              stream: streamWorkerUpcomingJobs(user.uid),
+              builder: (context, snapshot) {
+                if (snapshot.hasError || !snapshot.hasData) {
+                  return const SizedBox.shrink();
+                }
+                final upcoming = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return data['scheduledReminderAt'] != null;
+                }).toList()
+                  ..sort((a, b) {
+                    final at = (a.data() as Map<String, dynamic>)['scheduledReminderAt'] as Timestamp?;
+                    final bt = (b.data() as Map<String, dynamic>)['scheduledReminderAt'] as Timestamp?;
+                    return ((at?.toDate()) ?? DateTime(9999)).compareTo((bt?.toDate()) ?? DateTime(9999));
+                  });
+                if (upcoming.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 14),
+                    Text(
+                      bilingual(context, 'Upcoming Scheduled', 'آئندہ شیڈول کام'),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    ...upcoming.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final scheduled = (data['scheduledReminderAt'] as Timestamp?)?.toDate();
+                      final confirmed = data['scheduleConfirmed'] as bool? ?? false;
+                      final descEn = data['descriptionEn']?.toString() ?? 'Service';
+                      final descUr = data['descriptionUr']?.toString() ?? 'سروس';
+                      final price = (data['price'] as num?)?.toDouble() ?? 0;
+                      final timeStr = scheduled != null ? DateFormat('hh:mm a, d MMM').format(scheduled) : '';
+                      final isPast = scheduled != null && scheduled.isBefore(DateTime.now());
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            color: confirmed ? const Color(0xFF0D9488) : Colors.amber.shade700,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          leading: Icon(
+                            isPast ? Icons.notifications_active : Icons.schedule,
+                            color: isPast ? const Color(0xFF0D9488) : Colors.amber.shade700,
+                          ),
+                          title: Text(isUrdu ? descUr : descEn),
+                          subtitle: Text(
+                            confirmed
+                                ? (isPast
+                                    ? bilingual(context, 'Scheduled time reached — start the job', 'شیڈول وقت ہو گیا — کام شروع کریں')
+                                    : '${bilingual(context, 'Confirmed for', 'تصدیق شدہ وقت')} $timeStr')
+                                : '${bilingual(context, 'Waiting for customer approval', 'گاہک کی منظوری کا انتظار')} • $timeStr',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          trailing: TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => WorkerTrackingScreen(jobPrice: price, jobId: doc.id),
+                                ),
+                              );
+                            },
+                            child: Text(bilingual(context, 'Track', 'ٹریک')),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
                 );
               },
             ),
@@ -6071,6 +6321,16 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                         ? DateFormat('d MMM yyyy').format(createdAt.toDate())
                         : '';
 
+                    String? reminderLine;
+                    final scheduledRaw = data['scheduledReminderAt'];
+                    if (scheduledRaw is Timestamp) {
+                      final t = DateFormat('hh:mm a').format(scheduledRaw.toDate());
+                      final confirmed = data['scheduleConfirmed'] as bool? ?? false;
+                      reminderLine = confirmed
+                          ? '${bilingual(context, 'Reminder: worker arrives at', 'یاد دہانی: ورکر آئے گا')} $t'
+                          : '${bilingual(context, 'Schedule approval pending', 'شیڈول کی منظوری زیر التوا')} • $t';
+                    }
+
                     return Card(
                       child: InkWell(
                         onTap: () async {
@@ -6117,7 +6377,17 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                           leading: Icon(status == 'completed' ? Icons.check_circle : Icons.schedule,
                               color: status == 'completed' ? Colors.green : Colors.amber.shade700),
                           title: Text(isUrdu ? descUr : descEn),
-                          subtitle: Text('$timeStr • ${_bookingStatusLabel(context, status)}'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('$timeStr • ${_bookingStatusLabel(context, status)}'),
+                              if (reminderLine != null)
+                                Text(
+                                  reminderLine,
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFFB45309), fontWeight: FontWeight.w600),
+                                ),
+                            ],
+                          ),
                           trailing: Text(priceStr, style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
                         ),
                       ),

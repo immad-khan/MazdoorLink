@@ -794,6 +794,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     final categoryNameUr = w['categoryNameUr'];
     final skills = w['skills'] as List<dynamic>?;
     final setupComplete = w['setupComplete'] as bool? ?? false;
+    final profilePicUrl = w['profilePicUrl'] ?? w['profileImage'];
 
     showModalBottomSheet(
       context: context,
@@ -824,10 +825,15 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 36,
                       backgroundColor: const Color(0xFF006B5E).withOpacity(0.12),
-                      child: Text(
-                        name.toString().isNotEmpty ? name.toString()[0].toUpperCase() : '?',
-                        style: const TextStyle(color: Color(0xFF006B5E), fontWeight: FontWeight.bold, fontSize: 28),
-                      ),
+                      backgroundImage: profilePicUrl != null && profilePicUrl.toString().isNotEmpty
+                          ? NetworkImage(profilePicUrl.toString())
+                          : null,
+                      child: profilePicUrl == null || profilePicUrl.toString().isEmpty
+                          ? Text(
+                              name.toString().isNotEmpty ? name.toString()[0].toUpperCase() : '?',
+                              style: const TextStyle(color: Color(0xFF006B5E), fontWeight: FontWeight.bold, fontSize: 28),
+                            )
+                          : null,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1093,6 +1099,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
               final status = w['status'] ?? 'pending';
               final idFrontUrl = w['idFrontUrl'];
               final idBackUrl = w['idBackUrl'];
+              final profilePicUrl = w['profilePicUrl'] ?? w['profileImage'];
 
               Color statusColor = status == 'approved'
                   ? const Color(0xFF10B981)
@@ -1128,13 +1135,18 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                           CircleAvatar(
                             radius: 22,
                             backgroundColor: const Color(0xFF006B5E).withOpacity(0.12),
-                            child: Text(
-                              name.toString().isNotEmpty ? name.toString()[0].toUpperCase() : '?',
-                              style: const TextStyle(
-                                  color: Color(0xFF006B5E),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18),
-                            ),
+                            backgroundImage: profilePicUrl != null && profilePicUrl.toString().isNotEmpty
+                                ? NetworkImage(profilePicUrl.toString())
+                                : null,
+                            child: profilePicUrl == null || profilePicUrl.toString().isEmpty
+                                ? Text(
+                                    name.toString().isNotEmpty ? name.toString()[0].toUpperCase() : '?',
+                                    style: const TextStyle(
+                                        color: Color(0xFF006B5E),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18),
+                                  )
+                                : null,
                           ),
                           const SizedBox(width: 12),
                           Expanded(

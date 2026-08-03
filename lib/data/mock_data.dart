@@ -65,7 +65,7 @@ class WorkerModel {
       reviews: (data['reviews'] ?? 0) as int,
       distanceKm: (data['distanceKm'] ?? 2.0).toDouble(),
       price: lowestPrice > 0 ? 'Rs. ${lowestPrice.toStringAsFixed(0)}' : '',
-      image: data['profileImage']?.toString() ?? '',
+      image: data['profileImage']?.toString() ?? data['profilePicUrl']?.toString() ?? '',
       skillsEn: skillsEn,
       skillsUr: skillsUr,
       phone: data['phone']?.toString() ?? '',

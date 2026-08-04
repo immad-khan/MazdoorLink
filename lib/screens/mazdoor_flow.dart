@@ -92,8 +92,9 @@ class LocationPickArguments {
 class ConversationArguments {
   final String conversationId;
   final String otherName;
+  final String? otherImage;
 
-  ConversationArguments({required this.conversationId, required this.otherName});
+  ConversationArguments({required this.conversationId, required this.otherName, this.otherImage});
 }
 
 class AppRoutes {
@@ -184,7 +185,14 @@ Route<dynamic> buildRoute(RouteSettings settings) {
     case AppRoutes.sharedConversation:
       final args = settings.arguments;
       if (args is ConversationArguments) {
-        return _page(ConversationScreen(conversationId: args.conversationId, otherName: args.otherName), settings);
+        return _page(
+          ConversationScreen(
+            conversationId: args.conversationId,
+            otherName: args.otherName,
+            otherImage: args.otherImage,
+          ),
+          settings,
+        );
       }
       return _page(const ChatHistoryScreen(), settings);
     case AppRoutes.sharedHistory:
@@ -227,6 +235,7 @@ class MzScaffold extends StatelessWidget {
     super.key,
     required this.child,
     this.title,
+    this.titleWidget,
     this.showBack = false,
     this.showBottomNav = true,
     this.background,
@@ -234,6 +243,7 @@ class MzScaffold extends StatelessWidget {
 
   final Widget child;
   final String? title;
+  final Widget? titleWidget;
   final bool showBack;
   final bool showBottomNav;
   final Color? background;
@@ -245,10 +255,10 @@ class MzScaffold extends StatelessWidget {
       textDirection: controller.isUrdu ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: background ?? const Color(0xFFF9FAFB),
-        appBar: title == null
+        appBar: (title == null && titleWidget == null)
             ? null
             : AppBar(
-                title: Text(title!),
+                title: titleWidget ?? Text(title!),
                 centerTitle: true,
                 leading: showBack
                     ? IconButton(
@@ -3528,12 +3538,29 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                     if (wid == null) return;
                     final existingId = await findExistingConversation(wid);
                     if (!context.mounted) return;
+                    final args = ConversationArguments(
+                      conversationId: existingId ?? '',
+                      otherName: worker.name,
+                      otherImage: worker.image,
+                    );
                     if (existingId != null) {
-                      Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: existingId, otherName: worker.name));
+                      Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: args);
                     } else {
-                      final newId = await createConversation(otherUserId: wid, otherUserName: worker.name);
+                      final newId = await createConversation(
+                        otherUserId: wid,
+                        otherUserName: worker.name,
+                        otherUserImage: worker.image,
+                      );
                       if (context.mounted) {
-                        Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: newId, otherName: worker.name));
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.sharedConversation,
+                          arguments: ConversationArguments(
+                            conversationId: newId,
+                            otherName: worker.name,
+                            otherImage: worker.image,
+                          ),
+                        );
                       }
                     }
                   },
@@ -3744,15 +3771,24 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   DateTime? _scheduledTime;
   bool _scheduleConfirmed = false;
   Timer? _countdownTimer;
+  bool _reminderEmailSent = false;
+  String _jobDescEmail = '';
 
   @override
   void initState() {
     super.initState();
     _listenToJob();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && _scheduledTime != null && _scheduleConfirmed) {
-        setState(() {});
+      if (!mounted) return;
+      final scheduled = _scheduledTime;
+      if (scheduled == null || !_scheduleConfirmed) return;
+      if (!scheduled.isAfter(DateTime.now()) &&
+          !_reminderEmailSent &&
+          _trackingState == 1) {
+        _reminderEmailSent = true;
+        _sendArrivalReminderEmail();
       }
+      setState(() {});
     });
   }
 
@@ -3782,6 +3818,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         final scheduledRaw = data['scheduledReminderAt'];
         _scheduledTime = scheduledRaw is Timestamp ? scheduledRaw.toDate() : null;
         _scheduleConfirmed = data['scheduleConfirmed'] as bool? ?? false;
+        _jobDescEmail = data['descriptionEn']?.toString() ?? '';
         if (status == 'accepted') {
           _trackingState = 1;
         } else if (status == 'arrival_pending') {
@@ -3920,6 +3957,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         'scheduleDeclined': true,
                         'statusUpdatedAt': FieldValue.serverTimestamp(),
                       });
+                      _notifyScheduleDeclined(jobId);
                     }
                   },
                   style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent),
@@ -3932,6 +3970,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                   onPressed: () async {
                     if (jobId != null) {
                       await confirmJobSchedule(jobId);
+                      _notifyScheduleApproval(jobId);
                     }
                   },
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
@@ -3943,6 +3982,53 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _notifyScheduleApproval(String jobId) async {
+    try {
+      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+      final data = jobDoc.data();
+      if (data == null) return;
+      final workerId = data['workerId']?.toString();
+      final workerEmail = workerId != null ? await getUserEmail(workerId) : null;
+      if (workerEmail == null) return;
+      final scheduledRaw = data['scheduledReminderAt'];
+      final scheduled = scheduledRaw is Timestamp ? scheduledRaw.toDate() : null;
+      if (scheduled == null) return;
+      await SmtpService.sendScheduleConfirmedEmail(
+        email: workerEmail,
+        workerName: data['workerName']?.toString() ?? 'Worker',
+        jobDesc: data['descriptionEn']?.toString() ?? 'Service',
+        scheduledTime: scheduled,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _notifyScheduleDeclined(String jobId) async {
+    try {
+      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+      final data = jobDoc.data();
+      if (data == null) return;
+      final workerId = data['workerId']?.toString();
+      final workerEmail = workerId != null ? await getUserEmail(workerId) : null;
+      if (workerEmail == null) return;
+      await SmtpService.sendScheduleDeclinedEmail(
+        email: workerEmail,
+        workerName: data['workerName']?.toString() ?? 'Worker',
+        jobDesc: data['descriptionEn']?.toString() ?? 'Service',
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _sendArrivalReminderEmail() async {
+    final email = FirebaseAuth.instance.currentUser?.email;
+    if (email == null || email.isEmpty) return;
+    try {
+      await SmtpService.sendArrivalReminderEmail(
+        email: email,
+        jobDesc: _jobDescEmail.isEmpty ? 'Service' : _jobDescEmail,
+      );
+    } catch (_) {}
   }
 
   String _trackingTitle(BuildContext context) {
@@ -4203,11 +4289,11 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                             final existingId = await findExistingConversation(wid);
                             if (!context.mounted) return;
                             if (existingId != null) {
-                              Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: existingId, otherName: worker.name));
+                              Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: existingId, otherName: worker.name, otherImage: worker.image));
                             } else {
-                              final newId = await createConversation(otherUserId: wid, otherUserName: worker.name);
+                              final newId = await createConversation(otherUserId: wid, otherUserName: worker.name, otherUserImage: worker.image);
                               if (context.mounted) {
-                                Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: newId, otherName: worker.name));
+                                Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: newId, otherName: worker.name, otherImage: worker.image));
                               }
                             }
                           },
@@ -5186,9 +5272,27 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen>
     if (scheduled == null || !mounted) return;
     await scheduleAcceptedJob(jobId, scheduled);
     if (!mounted) return;
+    _notifyScheduleProposal(jobId, scheduled);
     showToast(isUrdu
         ? 'آپ کی تجویز کردہ آمد کا وقت گاہک کی منظوری کے لیے بھیج دیا گیا'
         : 'Your proposed arrival time was sent to the customer for approval');
+  }
+
+  Future<void> _notifyScheduleProposal(String jobId, DateTime scheduled) async {
+    try {
+      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+      final data = jobDoc.data();
+      if (data == null) return;
+      final customerId = data['customerId']?.toString();
+      final customerEmail = customerId != null ? await getUserEmail(customerId) : null;
+      if (customerEmail == null) return;
+      await SmtpService.sendScheduleProposalEmail(
+        email: customerEmail,
+        workerName: data['workerName']?.toString() ?? 'Worker',
+        jobDesc: data['descriptionEn']?.toString() ?? 'Service',
+        scheduledTime: scheduled,
+      );
+    } catch (_) {}
   }
 
   @override
@@ -5810,212 +5914,6 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
   }
 }
 
-class SmartChatScreen extends StatefulWidget {
-  const SmartChatScreen({super.key});
-  @override
-  State<SmartChatScreen> createState() => _SmartChatScreenState();
-}
-class _SmartChatScreenState extends State<SmartChatScreen> {
-  final input = TextEditingController();
-  late final VoidCallback _inputListener;
-  bool showUrdu = false;
-
-  final List<_Message> messages = [
-    _Message('Hi, available?', 'سلام، دستیاب؟', false),
-    _Message('Yes, 15 minutes', 'جی، 15 منٹ', true),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _inputListener = () {
-      if (mounted) setState(() {});
-    };
-    input.addListener(_inputListener);
-  }
-
-  @override
-  void dispose() {
-    input.removeListener(_inputListener);
-    input.dispose();
-    super.dispose();
-  }
-
-  bool _isUrduText(String text) {
-    return RegExp(r'[\u0600-\u06FF]').hasMatch(text);
-  }
-
-  String _translateToUrdu(String english) {
-    final map = {
-      'hello': 'سلام / ہیلو',
-      'hi': 'سلام',
-      'how are you': 'آپ کیسے ہیں؟',
-      'where are you': 'آپ کہاں ہیں؟',
-      'i am coming': 'میں آ رہا ہوں',
-      'ok': 'ٹھیک ہے',
-      'yes': 'جی ہاں',
-      'no': 'جی نہیں',
-      'thanks': 'شکریہ',
-      'thank you': 'شکریہ',
-      'price': 'قیمت',
-    };
-    final lower = english.toLowerCase().trim();
-    return map[lower] ?? 'ترجمہ: $english';
-  }
-
-  String _translateToEnglish(String urdu) {
-    final map = {
-      'سلام': 'hi',
-      'جی، 15 منٹ': 'Yes, 15 minutes',
-      'آپ کیسے ہیں؟': 'how are you?',
-      'شکریہ': 'thanks',
-      'ٹھیک ہے': 'ok',
-    };
-    final trimmed = urdu.trim();
-    return map[trimmed] ?? 'Translation: $urdu';
-  }
-
-  void _sendMessage() {
-    final text = input.text.trim();
-    if (text.isEmpty) return;
-    final urText = _isUrduText(text);
-    setState(() {
-      messages.add(_Message(
-        urText ? _translateToEnglish(text) : text,
-        urText ? text : _translateToUrdu(text),
-        true,
-      ));
-      input.clear();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scope = AppScope.of(context);
-    final isUrdu = scope.isUrdu;
-    return MzScaffold(
-      showBottomNav: true,
-      showBack: true,
-      title: bilingual(context, 'Smart Chat', 'سمارٹ چیٹ'),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            color: const Color(0xFFEFF6FF),
-            child: Row(
-              children: [
-                const Icon(Icons.language, color: Color(0xFF1D4ED8), size: 18),
-                const SizedBox(width: 8),
-                Expanded(child: Text(bilingual(context, 'Messages auto-translated', 'پیغامات خودکار ترجمہ ہوتے ہیں'))),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: messages.length,
-              padding: const EdgeInsets.all(12),
-              itemBuilder: (_, i) {
-                final m = messages[i];
-                final own = m.own;
-                return Align(
-                  alignment: own ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    constraints: const BoxConstraints(maxWidth: 300),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: own ? const Color(0xFF0D9488) : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          (showUrdu) ? m.ur : m.en, 
-                          style: TextStyle(color: own ? Colors.white : Colors.black87, fontSize: 15),
-                        ),
-                        const SizedBox(height: 5),
-                        Align(
-                          alignment: Alignment.bottomRight,
-                          child: Text(
-                            DateFormat('hh:mm a').format(DateTime.now()), 
-                            style: TextStyle(color: own ? Colors.white60 : Colors.black45, fontSize: 10),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      showUrdu = !(showUrdu);
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    margin: const EdgeInsets.only(right: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFBFDBFE)),
-                    ),
-                    child: Text(
-                      (showUrdu) ? 'UR ➔ EN' : 'EN ➔ UR',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1D4ED8),
-                      ),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Voice input activated')),
-                    );
-                  }, 
-                  icon: const Icon(Icons.mic_none)
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: input,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
-                    decoration: InputDecoration(hintText: bilingual(context, 'Type a message...', 'پیغام لکھیں...')),
-                  ),
-                ),
-                Transform.rotate(
-                  angle: isUrdu ? math.pi : 0,
-                  child: IconButton(
-                    onPressed: input.text.trim().isEmpty ? null : _sendMessage,
-                    icon: const Icon(Icons.send),
-                  ),
-                )
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-  }
-}
-
 class ChatHistoryScreen extends StatefulWidget {
   const ChatHistoryScreen({super.key});
   @override
@@ -6177,14 +6075,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
       ),
     );
   }
-}
-
-class _Message {
-  _Message(this.en, this.ur, this.own);
-
-  final String en;
-  final String ur;
-  final bool own;
 }
 
 class BookingHistoryScreen extends StatefulWidget {

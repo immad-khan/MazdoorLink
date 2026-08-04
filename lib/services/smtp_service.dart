@@ -66,6 +66,75 @@ class SmtpService {
     return _sendMessage(message);
   }
 
+  static Future<bool> sendScheduleProposalEmail({
+    required String email,
+    required String workerName,
+    required String jobDesc,
+    required DateTime scheduledTime,
+  }) async {
+    final message = Message()
+      ..from = Address(_emailHostUser, _emailFromName)
+      ..recipients.add(email)
+      ..subject = 'Worker proposed a schedule for your MazdoorLink job'
+      ..text =
+          'Hello,\n\n$workerName is busy with another job and has proposed to arrive at ${_formatTime(scheduledTime)} for your request: "$jobDesc".\n\nPlease open the MazdoorLink app to Approve or Decline this schedule.\n\nThank you,\nMazdoorLink';
+
+    return _sendMessage(message);
+  }
+
+  static Future<bool> sendScheduleConfirmedEmail({
+    required String email,
+    required String workerName,
+    required String jobDesc,
+    required DateTime scheduledTime,
+  }) async {
+    final message = Message()
+      ..from = Address(_emailHostUser, _emailFromName)
+      ..recipients.add(email)
+      ..subject = 'Customer confirmed your proposed schedule'
+      ..text =
+          'Hello $workerName,\n\nYour customer approved your proposed arrival time of ${_formatTime(scheduledTime)} for the job: "$jobDesc".\n\nOpen the MazdoorLink app at that time to start the job.\n\nThank you,\nMazdoorLink';
+
+    return _sendMessage(message);
+  }
+
+  static Future<bool> sendScheduleDeclinedEmail({
+    required String email,
+    required String workerName,
+    required String jobDesc,
+  }) async {
+    final message = Message()
+      ..from = Address(_emailHostUser, _emailFromName)
+      ..recipients.add(email)
+      ..subject = 'Customer declined your proposed schedule'
+      ..text =
+          'Hello $workerName,\n\nYour customer declined the proposed schedule for the job: "$jobDesc".\n\nThe job has been closed.\n\nThank you,\nMazdoorLink';
+
+    return _sendMessage(message);
+  }
+
+  static Future<bool> sendArrivalReminderEmail({
+    required String email,
+    required String jobDesc,
+  }) async {
+    final message = Message()
+      ..from = Address(_emailHostUser, _emailFromName)
+      ..recipients.add(email)
+      ..subject = 'Reminder: your scheduled MazdoorLink job time has arrived'
+      ..text =
+          'Hello,\n\nThe scheduled time for your MazdoorLink job "$jobDesc" has arrived. The worker should be arriving now.\n\nThank you,\nMazdoorLink';
+
+    return _sendMessage(message);
+  }
+
+  static String _formatTime(DateTime time) {
+    final local = time.toLocal();
+    final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final amPm = local.hour >= 12 ? 'PM' : 'AM';
+    final day = '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
+    return '$day at $hour:${local.minute.toString().padLeft(2, '0')} $amPm';
+  }
+
   static Future<bool> _sendMessage(Message message) async {
     try {
       await send(message, _smtpServer);

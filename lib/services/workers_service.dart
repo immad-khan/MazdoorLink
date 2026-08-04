@@ -121,6 +121,12 @@ Future<String?> getUserPhone(String userId) async {
   return doc.data()?['phone']?.toString();
 }
 
+Future<String?> getUserEmail(String userId) async {
+  final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+  final email = doc.data()?['email']?.toString() ?? '';
+  return email.isEmpty ? null : email;
+}
+
 Future<void> updateProfileImage(String imageUrl) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;
@@ -426,13 +432,14 @@ Future<String> createConversation({
       user.uid: user.displayName ?? 'User',
       otherUserId: otherUserName,
     },
-    if (otherUserImage != null)
-      'participantImages': {
-        user.uid: '',
-        otherUserId: otherUserImage,
-      },
+    'participantImages': {
+      user.uid: user.photoURL ?? '',
+      otherUserId: otherUserImage ?? '',
+    },
     'lastMessage': '',
     'lastTimestamp': FieldValue.serverTimestamp(),
+    'unreadCounts': {user.uid: 0, otherUserId: 0},
+    'typing': {},
     'createdAt': FieldValue.serverTimestamp(),
   });
   return docRef.id;
@@ -451,19 +458,89 @@ Stream<QuerySnapshot> streamConversations() {
 Future<void> sendMessage(String conversationId, String text) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;
-  await FirebaseFirestore.instance
-      .collection('conversations')
-      .doc(conversationId)
-      .collection('messages')
-      .add({
-    'senderId': user.uid,
-    'text': text,
-    'timestamp': FieldValue.serverTimestamp(),
+  final convRef = FirebaseFirestore.instance.collection('conversations').doc(conversationId);
+  await FirebaseFirestore.instance.runTransaction((tx) async {
+    final snap = await tx.get(convRef);
+    if (!snap.exists) return;
+    final data = snap.data() ?? {};
+    final participants = List<String>.from(data['participants'] ?? []);
+    final otherId = participants.where((p) => p != user.uid).firstOrNull ?? '';
+    tx.set(convRef.collection('messages').doc(), {
+      'senderId': user.uid,
+      'text': text,
+      'timestamp': FieldValue.serverTimestamp(),
+      'readBy': [user.uid],
+    });
+    final unread = Map<String, dynamic>.from(data['unreadCounts'] as Map? ?? {});
+    if (otherId.isNotEmpty) {
+      unread[otherId] = ((unread[otherId] as num?)?.toInt() ?? 0) + 1;
+    }
+    tx.update(convRef, {
+      'lastMessage': text,
+      'lastTimestamp': FieldValue.serverTimestamp(),
+      'unreadCounts': unread,
+    });
   });
-  await FirebaseFirestore.instance.collection('conversations').doc(conversationId).update({
-    'lastMessage': text,
-    'lastTimestamp': FieldValue.serverTimestamp(),
+}
+
+/// Marks the current user's incoming messages in [conversationId] as read and
+/// resets their unread counter on the conversation doc.
+Future<void> markConversationRead(String conversationId) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+  final convRef = FirebaseFirestore.instance.collection('conversations').doc(conversationId);
+  try {
+    await FirebaseFirestore.instance.runTransaction((tx) async {
+      final snap = await tx.get(convRef);
+      if (!snap.exists) return;
+      final unread = Map<String, dynamic>.from(snap.data()?['unreadCounts'] as Map? ?? {});
+      unread[user.uid] = 0;
+      tx.update(convRef, {'unreadCounts': unread});
+    });
+  } catch (_) {
+    // Conversation may have been deleted or field already matches.
+  }
+  final snap = await convRef.collection('messages')
+      .where('senderId', isNotEqualTo: user.uid)
+      .get();
+  final batch = FirebaseFirestore.instance.batch();
+  var changed = false;
+  for (final doc in snap.docs) {
+    final readBy = List<String>.from(doc['readBy'] as List? ?? []);
+    if (!readBy.contains(user.uid)) {
+      batch.update(doc.reference, {'readBy': FieldValue.arrayUnion([user.uid])});
+      changed = true;
+    }
+  }
+  if (changed) await batch.commit();
+}
+
+/// Publishes a typing heartbeat for the current user on [conversationId].
+/// Pass `false` to clear the indicator.
+Future<void> setTyping(String conversationId, bool typing) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+  final convRef = FirebaseFirestore.instance.collection('conversations').doc(conversationId);
+  if (typing) {
+    await convRef.update({'typing.${user.uid}': FieldValue.serverTimestamp()});
+  } else {
+    await convRef.update({'typing.${user.uid}': FieldValue.delete()});
+  }
+}
+
+/// Publishes online/offline presence for the current user in `presence/{uid}`.
+Future<void> setPresence({required bool online}) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+  final ref = FirebaseFirestore.instance.collection('presence').doc(user.uid);
+  await ref.set({
+    'online': online,
+    'lastSeen': FieldValue.serverTimestamp(),
   });
+}
+
+Stream<DocumentSnapshot> streamPresence(String uid) {
+  return FirebaseFirestore.instance.collection('presence').doc(uid).snapshots();
 }
 
 Stream<QuerySnapshot> streamMessages(String conversationId) {

@@ -5961,6 +5961,22 @@ class ChatHistoryScreen extends StatefulWidget {
 }
 
 class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
+  String _conversationPreview(
+    BuildContext context,
+    Map<String, dynamic> data,
+    String lastMsg,
+  ) {
+    if (lastMsg.isEmpty) {
+      return bilingual(context, 'Say hello to start', 'سلام کہہ کر شروع کریں');
+    }
+    final lastEn = data['lastMessageEn'] as String? ?? '';
+    final lastUr = data['lastMessageUr'] as String? ?? '';
+    if (AppScope.of(context).isUrdu) {
+      return lastUr.isNotEmpty ? lastUr : lastMsg;
+    }
+    return lastEn.isNotEmpty ? lastEn : lastMsg;
+  }
+
   @override
   Widget build(BuildContext context) {
     return MzScaffold(
@@ -6015,7 +6031,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                 ),
                 title: Text(otherName, style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text(
-                  lastMsg.isEmpty ? bilingual(context, 'Say hello to start', 'سلام کہہ کر شروع کریں') : lastMsg,
+                  _conversationPreview(context, data, lastMsg),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -6074,6 +6090,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _otherOnline = false;
   bool _otherTyping = false;
   bool _isTyping = false;
+  bool _sending = false;
+  late bool _showUrdu;
   int _lastMsgCount = 0;
 
   StreamSubscription<DocumentSnapshot>? _convSub;
@@ -6086,6 +6104,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   void initState() {
     super.initState();
+    _showUrdu = AppScope.of(context).isUrdu;
     setPresence(online: true);
     _presenceHeartbeat = Timer.periodic(
       const Duration(seconds: 30),
@@ -6191,10 +6210,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  void _send() {
+  Future<void> _send() async {
     final text = _msgCtrl.text.trim();
-    if (text.isEmpty) return;
-    sendMessage(widget.conversationId, text);
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    await sendMessage(widget.conversationId, text);
+    if (!mounted) return;
+    setState(() => _sending = false);
     _msgCtrl.clear();
     _stopTyping();
   }
@@ -6327,7 +6349,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildBubble(BuildContext context, Map<String, dynamic> data) {
     final me = FirebaseAuth.instance.currentUser?.uid ?? '';
     final senderId = data['senderId'] as String? ?? '';
-    final text = data['text'] as String? ?? '';
+    final raw = data['text'] as String? ?? '';
+    final textUr = data['textUr'] as String? ?? '';
+    final textEn = data['textEn'] as String? ?? '';
+    final text = _showUrdu
+        ? (textUr.isNotEmpty ? textUr : raw)
+        : (textEn.isNotEmpty ? textEn : raw);
     final isMe = senderId == me;
     final ts = data['timestamp'] as Timestamp?;
     final readBy = List<String>.from(data['readBy'] as List? ?? []);
@@ -6400,6 +6427,26 @@ class _ConversationScreenState extends State<ConversationScreen> {
       padding: const EdgeInsets.all(10),
       child: Row(
         children: [
+          GestureDetector(
+            onTap: () => setState(() => _showUrdu = !_showUrdu),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Text(
+                _showUrdu ? 'UR' : 'EN',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1D4ED8),
+                ),
+              ),
+            ),
+          ),
           Expanded(
             child: TextField(
               controller: _msgCtrl,
@@ -6413,10 +6460,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.send, color: Color(0xFF0D9488)),
-            onPressed: _send,
-          ),
+          _sending
+              ? const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF0D9488)),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.send, color: Color(0xFF0D9488)),
+                  onPressed: _send,
+                ),
         ],
       ),
     );

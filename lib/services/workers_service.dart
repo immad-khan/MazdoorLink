@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../data/mock_data.dart';
+import 'translation_service.dart';
 
 Future<List<WorkerModel>> getAllApprovedWorkers() async {
   final snapshot = await FirebaseFirestore.instance
@@ -437,6 +438,8 @@ Future<String> createConversation({
       otherUserId: otherUserImage ?? '',
     },
     'lastMessage': '',
+    'lastMessageEn': '',
+    'lastMessageUr': '',
     'lastTimestamp': FieldValue.serverTimestamp(),
     'unreadCounts': {user.uid: 0, otherUserId: 0},
     'typing': {},
@@ -458,6 +461,15 @@ Stream<QuerySnapshot> streamConversations() {
 Future<void> sendMessage(String conversationId, String text) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;
+  final sourceLang = detectLanguage(text);
+  final otherLang = sourceLang == 'en' ? 'ur' : 'en';
+  final translated = await TranslationService().translate(
+    text: text,
+    sourceLang: sourceLang,
+    targetLang: otherLang,
+  );
+  final textEn = sourceLang == 'en' ? text : translated;
+  final textUr = sourceLang == 'ur' ? text : translated;
   final convRef = FirebaseFirestore.instance.collection('conversations').doc(conversationId);
   await FirebaseFirestore.instance.runTransaction((tx) async {
     final snap = await tx.get(convRef);
@@ -468,6 +480,8 @@ Future<void> sendMessage(String conversationId, String text) async {
     tx.set(convRef.collection('messages').doc(), {
       'senderId': user.uid,
       'text': text,
+      'textEn': textEn,
+      'textUr': textUr,
       'timestamp': FieldValue.serverTimestamp(),
       'readBy': [user.uid],
     });
@@ -477,6 +491,8 @@ Future<void> sendMessage(String conversationId, String text) async {
     }
     tx.update(convRef, {
       'lastMessage': text,
+      'lastMessageEn': textEn,
+      'lastMessageUr': textUr,
       'lastTimestamp': FieldValue.serverTimestamp(),
       'unreadCounts': unread,
     });

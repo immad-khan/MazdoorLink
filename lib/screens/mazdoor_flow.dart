@@ -26,7 +26,6 @@ import 'profile_management_screen.dart';
 import 'privacy_settings_screen.dart';
 import 'voice_navigation_screen.dart';
 import 'issue_selection_screen.dart';
-import 'signup_data.dart';
 import 'worker_services_setup_screen.dart';
 import '../services/cloudinary_service.dart';
 import '../services/workers_service.dart';
@@ -6117,7 +6116,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         .snapshots()
         .listen((doc) {
       if (!mounted) return;
-      final data = doc.data() as Map<String, dynamic>? ?? const {};
+      final data = doc.data() ?? const {};
       final me = FirebaseAuth.instance.currentUser?.uid ?? '';
       final otherId = List<String>.from(data['participants'] ?? [])
           .where((p) => p != me)
@@ -6166,29 +6165,30 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   void _onTypingChanged() {
     if (_msgCtrl.text.trim().isEmpty) {
-      if (_isTyping) {
-        _isTyping = false;
-        _typingTimer?.cancel();
-        _typingHeartbeat?.cancel();
-        setTyping(widget.conversationId, false);
-      }
+      _stopTyping();
       return;
     }
     if (!_isTyping) {
       _isTyping = true;
       setTyping(widget.conversationId, true);
     }
-    _typingTimer?.cancel();
-    _typingTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted && _isTyping) {
-        _isTyping = false;
-        setTyping(widget.conversationId, false);
-      }
-    });
     _typingHeartbeat?.cancel();
     _typingHeartbeat = Timer.periodic(const Duration(seconds: 3), (_) {
-      setTyping(widget.conversationId, true);
+      if (_isTyping && _msgCtrl.text.trim().isNotEmpty) {
+        setTyping(widget.conversationId, true);
+      }
     });
+    _typingTimer?.cancel();
+    _typingTimer = Timer(const Duration(seconds: 5), _stopTyping);
+  }
+
+  void _stopTyping() {
+    _typingTimer?.cancel();
+    _typingHeartbeat?.cancel();
+    if (_isTyping) {
+      _isTyping = false;
+      setTyping(widget.conversationId, false);
+    }
   }
 
   void _send() {
@@ -6196,12 +6196,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (text.isEmpty) return;
     sendMessage(widget.conversationId, text);
     _msgCtrl.clear();
-    if (_isTyping) {
-      _isTyping = false;
-      _typingTimer?.cancel();
-      _typingHeartbeat?.cancel();
-      setTyping(widget.conversationId, false);
-    }
+    _stopTyping();
   }
 
   void _onMessagesChanged(int count) {

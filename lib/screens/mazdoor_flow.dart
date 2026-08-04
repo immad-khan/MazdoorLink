@@ -316,6 +316,8 @@ class RoleBottomNav extends StatelessWidget {
     Widget buildItem(int index, _NavItem item) {
       final isSelected = index == selected;
       final color = isSelected ? const Color(0xFF0D9488) : Colors.grey.shade500;
+      final isChat = item.route == '/shared/chat';
+      final controller = AppScope.of(context);
       return Expanded(
         child: Material(
           color: Colors.transparent,
@@ -330,11 +332,50 @@ class RoleBottomNav extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  isSelected ? item.filled : item.outline,
-                  color: color,
-                  size: 24,
-                ),
+                isChat
+                    ? ListenableBuilder(
+                        listenable: controller.chatUnread,
+                        builder: (context, _) {
+                          final unread = controller.chatUnread.total;
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Icon(
+                                isSelected ? item.filled : item.outline,
+                                color: color,
+                                size: 24,
+                              ),
+                              if (unread > 0)
+                                Positioned(
+                                  right: -10,
+                                  top: -6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                    constraints: const BoxConstraints(minWidth: 16),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      unread > 99 ? '99+' : '$unread',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      )
+                    : Icon(
+                        isSelected ? item.filled : item.outline,
+                        color: color,
+                        size: 24,
+                      ),
                 const SizedBox(height: 4),
                 Text(
                   isUrdu ? item.ur : item.en,
@@ -5953,26 +5994,54 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
               final data = doc.data() as Map<String, dynamic>;
               final participants = List<String>.from(data['participants'] ?? []);
               final participantNames = data['participantNames'] as Map<String, dynamic>?;
+              final participantImages = data['participantImages'] as Map<String, dynamic>?;
               final lastMsg = data['lastMessage'] as String? ?? '';
               final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
               final otherId = participants.where((p) => p != currentUid).firstOrNull ?? '';
               final otherName = participantNames?[otherId] as String? ?? '';
+              final otherImage = participantImages?[otherId] as String? ?? '';
+              final unreadCounts = data['unreadCounts'] as Map<String, dynamic>?;
+              final unread = (unreadCounts?[currentUid] as num?)?.toInt() ?? 0;
+              final hasImage = otherImage.isNotEmpty;
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: const Color(0xFF0D9488).withOpacity(0.15),
-                  child: Text(
-                    otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-                  ),
+                  backgroundImage: hasImage ? NetworkImage(otherImage) : null,
+                  child: hasImage
+                      ? null
+                      : Text(
+                          otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                        ),
                 ),
                 title: Text(otherName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(lastMsg, maxLines: 1, overflow: TextOverflow.ellipsis),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                subtitle: Text(
+                  lastMsg.isEmpty ? bilingual(context, 'Say hello to start', 'سلام کہہ کر شروع کریں') : lastMsg,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: unread > 0
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0D9488),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          unread > 99 ? '99+' : '$unread',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      )
+                    : const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
                 onTap: () {
                   Navigator.pushNamed(
                     context,
                     AppRoutes.sharedConversation,
-                    arguments: ConversationArguments(conversationId: doc.id, otherName: otherName),
+                    arguments: ConversationArguments(
+                      conversationId: doc.id,
+                      otherName: otherName,
+                      otherImage: otherImage,
+                    ),
                   );
                 },
               );
@@ -5987,18 +6056,139 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
 class ConversationScreen extends StatefulWidget {
   final String conversationId;
   final String otherName;
-  const ConversationScreen({super.key, required this.conversationId, required this.otherName});
+  final String? otherImage;
+  const ConversationScreen({
+    super.key,
+    required this.conversationId,
+    required this.otherName,
+    this.otherImage,
+  });
   @override
   State<ConversationScreen> createState() => _ConversationScreenState();
 }
 
 class _ConversationScreenState extends State<ConversationScreen> {
   final TextEditingController _msgCtrl = TextEditingController();
+  final ScrollController _scrollCtrl = ScrollController();
+
+  String _otherId = '';
+  bool _otherOnline = false;
+  bool _otherTyping = false;
+  bool _isTyping = false;
+  int _lastMsgCount = 0;
+
+  StreamSubscription<DocumentSnapshot>? _convSub;
+  StreamSubscription<DocumentSnapshot>? _presenceSub;
+  Timer? _typingTimer;
+  Timer? _typingHeartbeat;
+  Timer? _presenceHeartbeat;
+  Timer? _markReadDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    setPresence(online: true);
+    _presenceHeartbeat = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => setPresence(online: true),
+    );
+    _listenConversation();
+  }
 
   @override
   void dispose() {
+    _typingTimer?.cancel();
+    _typingHeartbeat?.cancel();
+    _presenceHeartbeat?.cancel();
+    _markReadDebounce?.cancel();
+    _convSub?.cancel();
+    _presenceSub?.cancel();
+    setPresence(online: false);
+    if (_isTyping) setTyping(widget.conversationId, false);
     _msgCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _listenConversation() {
+    _convSub = FirebaseFirestore.instance
+        .collection('conversations')
+        .doc(widget.conversationId)
+        .snapshots()
+        .listen((doc) {
+      if (!mounted) return;
+      final data = doc.data() as Map<String, dynamic>? ?? const {};
+      final me = FirebaseAuth.instance.currentUser?.uid ?? '';
+      final otherId = List<String>.from(data['participants'] ?? [])
+          .where((p) => p != me)
+          .firstOrNull ?? '';
+      setState(() {
+        if (otherId.isNotEmpty && otherId != _otherId) {
+          _otherId = otherId;
+          _presenceSub?.cancel();
+          _presenceSub = streamPresence(otherId).listen((p) {
+            if (!mounted) return;
+            setState(() => _otherOnline = _isOnline(p.data() as Map<String, dynamic>?));
+          });
+        }
+        final typingMap = Map<String, dynamic>.from(data['typing'] as Map? ?? {});
+        _otherTyping = _isTypingFresh(typingMap[otherId]);
+      });
+      final unread = Map<String, dynamic>.from(data['unreadCounts'] as Map? ?? {});
+      if (((unread[me] as num?)?.toInt() ?? 0) > 0) {
+        _scheduleMarkRead();
+      }
+    });
+  }
+
+  bool _isOnline(Map<String, dynamic>? data) {
+    if (data == null || data['online'] != true) return false;
+    final last = data['lastSeen'];
+    if (last is Timestamp) {
+      return DateTime.now().difference(last.toDate()).inMinutes < 2;
+    }
+    return false;
+  }
+
+  bool _isTypingFresh(Object? t) {
+    if (t is Timestamp) {
+      return DateTime.now().difference(t.toDate()).inSeconds < 10;
+    }
+    return false;
+  }
+
+  void _scheduleMarkRead() {
+    _markReadDebounce?.cancel();
+    _markReadDebounce = Timer(const Duration(milliseconds: 600), () {
+      markConversationRead(widget.conversationId);
+    });
+  }
+
+  void _onTypingChanged() {
+    if (_msgCtrl.text.trim().isEmpty) {
+      if (_isTyping) {
+        _isTyping = false;
+        _typingTimer?.cancel();
+        _typingHeartbeat?.cancel();
+        setTyping(widget.conversationId, false);
+      }
+      return;
+    }
+    if (!_isTyping) {
+      _isTyping = true;
+      setTyping(widget.conversationId, true);
+    }
+    _typingTimer?.cancel();
+    _typingTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && _isTyping) {
+        _isTyping = false;
+        setTyping(widget.conversationId, false);
+      }
+    });
+    _typingHeartbeat?.cancel();
+    _typingHeartbeat = Timer.periodic(const Duration(seconds: 3), (_) {
+      setTyping(widget.conversationId, true);
+    });
   }
 
   void _send() {
@@ -6006,6 +6196,30 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (text.isEmpty) return;
     sendMessage(widget.conversationId, text);
     _msgCtrl.clear();
+    if (_isTyping) {
+      _isTyping = false;
+      _typingTimer?.cancel();
+      _typingHeartbeat?.cancel();
+      setTyping(widget.conversationId, false);
+    }
+  }
+
+  void _onMessagesChanged(int count) {
+    if (count > _lastMsgCount && count > 0) {
+      _lastMsgCount = count;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollCtrl.hasClients) {
+          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+        }
+      });
+    } else {
+      _lastMsgCount = count;
+    }
+  }
+
+  String _formatTime(Timestamp? ts) {
+    if (ts == null) return '';
+    return DateFormat('hh:mm a').format(ts.toDate().toLocal());
   }
 
   @override
@@ -6013,63 +6227,200 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return MzScaffold(
       showBack: true,
       showBottomNav: false,
-      title: widget.otherName,
+      titleWidget: _buildHeader(context),
       child: Column(
         children: [
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: streamMessages(widget.conversationId),
-              builder: (context, snapshot) {
-                final msgs = snapshot.data?.docs ?? [];
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: msgs.length,
-                  itemBuilder: (_, i) {
-                    final data = msgs[i].data() as Map<String, dynamic>;
-                    final senderId = data['senderId'] as String? ?? '';
-                    final text = data['text'] as String? ?? '';
-                    final isMe = senderId == FirebaseAuth.instance.currentUser?.uid;
-                    return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        constraints: const BoxConstraints(maxWidth: 300),
-                        decoration: BoxDecoration(
-                          color: isMe ? const Color(0xFF0D9488) : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2))],
-                        ),
-                        child: Text(text, style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15)),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _msgCtrl,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _send(),
-                    decoration: InputDecoration(
-                      hintText: bilingual(context, 'Type a message...', 'پیغام لکھیں...'),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          Expanded(child: _buildMessages(context)),
+          if (_otherTyping) _buildTypingBanner(context),
+          _buildInput(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final hasImage = (widget.otherImage ?? '').isNotEmpty;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: const Color(0xFF0D9488).withOpacity(0.15),
+              backgroundImage: hasImage ? NetworkImage(widget.otherImage!) : null,
+              child: hasImage
+                  ? null
+                  : Text(
+                      widget.otherName.isNotEmpty ? widget.otherName[0].toUpperCase() : '?',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
                     ),
+            ),
+            if (_otherId.isNotEmpty)
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _otherOnline ? const Color(0xFF22C55E) : Colors.grey.shade400,
+                    border: Border.all(color: Colors.white, width: 2),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Color(0xFF0D9488)),
-                  onPressed: _send,
+              ),
+          ],
+        ),
+        const SizedBox(width: 10),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.otherName,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              _otherId.isEmpty
+                  ? ''
+                  : (_otherOnline
+                      ? bilingual(context, 'Online', 'آن لائن')
+                      : bilingual(context, 'Offline', 'آف لائن')),
+              style: TextStyle(
+                fontSize: 12,
+                color: _otherOnline ? const Color(0xFF22C55E) : Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMessages(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: streamMessages(widget.conversationId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final docs = snapshot.data?.docs ?? [];
+        _onMessagesChanged(docs.length);
+        if (docs.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(
+                bilingual(context, 'Say hello to start the conversation', 'گفتگو شروع کرنے کے لیے سلام کہیں'),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+        return ListView.builder(
+          controller: _scrollCtrl,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          itemCount: docs.length,
+          itemBuilder: (_, i) => _buildBubble(context, docs[i].data() as Map<String, dynamic>),
+        );
+      },
+    );
+  }
+
+  Widget _buildBubble(BuildContext context, Map<String, dynamic> data) {
+    final me = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final senderId = data['senderId'] as String? ?? '';
+    final text = data['text'] as String? ?? '';
+    final isMe = senderId == me;
+    final ts = data['timestamp'] as Timestamp?;
+    final readBy = List<String>.from(data['readBy'] as List? ?? []);
+    final isRead = isMe && _otherId.isNotEmpty && readBy.contains(_otherId);
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        constraints: const BoxConstraints(maxWidth: 300),
+        decoration: BoxDecoration(
+          color: isMe ? const Color(0xFF0D9488) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(text, style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15)),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _formatTime(ts),
+                  style: TextStyle(color: isMe ? Colors.white70 : Colors.black45, fontSize: 10),
                 ),
+                if (isMe) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    isRead ? Icons.done_all : Icons.done,
+                    size: 14,
+                    color: isRead ? const Color(0xFFA7F3D0) : Colors.white70,
+                  ),
+                ],
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypingBanner(BuildContext context) {
+    return Container(
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D9488)),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${widget.otherName} ${bilingual(context, 'is typing...', 'ٹائپ کر رہے ہیں...')}',
+            style: const TextStyle(color: Colors.black54, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInput(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _msgCtrl,
+              textInputAction: TextInputAction.send,
+              onChanged: (_) => _onTypingChanged(),
+              onSubmitted: (_) => _send(),
+              decoration: InputDecoration(
+                hintText: bilingual(context, 'Type a message...', 'پیغام لکھیں...'),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.send, color: Color(0xFF0D9488)),
+            onPressed: _send,
           ),
         ],
       ),

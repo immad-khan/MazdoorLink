@@ -4,15 +4,57 @@ import 'app_state.dart';
 import 'l10n/app_localizations.dart';
 import 'app_theme.dart';
 import 'screens/mazdoor_flow.dart';
+import 'services/notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   print('App starting...');
+  NotificationService.onOpen = _openConversationFromNotification;
+  NotificationService.onForeground = _showForegroundNotification;
+  await NotificationService.initialize();
   runApp(ServiceApp());
+}
+
+void _openConversationFromNotification(Map<String, String> data) {
+  final conversationId = data['conversationId'] ?? '';
+  if (conversationId.isEmpty) return;
+  final navigator = rootNavigatorKey.currentState;
+  if (navigator == null) return;
+  navigator.pushNamed(
+    AppRoutes.sharedConversation,
+    arguments: ConversationArguments(
+      conversationId: conversationId,
+      otherName: data['otherName'] ?? 'Worker',
+      otherImage: data['otherImage'],
+    ),
+  );
+}
+
+void _showForegroundNotification(Map<String, String> data) {
+  final messenger = rootScaffoldMessengerKey.currentState;
+  if (messenger == null) return;
+  final otherName = data['otherName'] ?? 'New message';
+  final body = data['body'] ?? '';
+  messenger.showSnackBar(
+    SnackBar(
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 6),
+      content: Text(
+        body.isEmpty ? otherName : '$otherName: $body',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      action: SnackBarAction(
+        label: 'Open',
+        onPressed: () => _openConversationFromNotification(data),
+      ),
+    ),
+  );
 }
 
 class ServiceApp extends StatefulWidget {
@@ -38,6 +80,7 @@ class _ServiceAppState extends State<ServiceApp> {
         animation: _controller,
         builder: (context, _) => MaterialApp(
           scaffoldMessengerKey: rootScaffoldMessengerKey,
+          navigatorKey: rootNavigatorKey,
           title: 'MazdoorLink',
           locale: _controller.locale,
           debugShowCheckedModeBanner: false,

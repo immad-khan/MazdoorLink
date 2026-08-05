@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'admin_jobs_screen.dart';
 import '../services/smtp_service.dart';
 import '../services/workers_service.dart';
@@ -251,8 +252,11 @@ class _HomeTab extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.logout, color: Colors.white),
-                onPressed: () {
-                  Navigator.pushReplacementNamed(context, '/');
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                  if (context.mounted) {
+                    Navigator.pushReplacementNamed(context, '/');
+                  }
                 },
               ),
             ],

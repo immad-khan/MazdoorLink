@@ -420,6 +420,9 @@ Stream<List<String>> streamFavouriteWorkerIds() {
 
 // ── Conversations & Chat ────────────────────
 
+/// Creates a conversation with [otherUserId]. Uses a deterministic document id
+/// (`conv_<uidA>_<uidB>`, uids sorted) so two users starting a chat
+/// simultaneously can never create duplicate conversations.
 Future<String> createConversation({
   required String otherUserId,
   required String otherUserName,
@@ -427,25 +430,36 @@ Future<String> createConversation({
 }) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) throw Exception('Not logged in');
-  final docRef = await FirebaseFirestore.instance.collection('conversations').add({
-    'participants': [user.uid, otherUserId],
-    'participantNames': {
-      user.uid: user.displayName ?? 'User',
-      otherUserId: otherUserName,
-    },
-    'participantImages': {
-      user.uid: user.photoURL ?? '',
-      otherUserId: otherUserImage ?? '',
-    },
-    'lastMessage': '',
-    'lastMessageEn': '',
-    'lastMessageUr': '',
-    'lastTimestamp': FieldValue.serverTimestamp(),
-    'unreadCounts': {user.uid: 0, otherUserId: 0},
-    'typing': {},
-    'createdAt': FieldValue.serverTimestamp(),
-  });
-  return docRef.id;
+  final ids = [user.uid, otherUserId]..sort();
+  final convId = 'conv_${ids[0]}_${ids[1]}';
+  final ref = FirebaseFirestore.instance.collection('conversations').doc(convId);
+  try {
+    await FirebaseFirestore.instance.runTransaction((txn) async {
+      final snap = await txn.get(ref);
+      if (snap.exists) return;
+      txn.set(ref, {
+        'participants': [user.uid, otherUserId],
+        'participantNames': {
+          user.uid: user.displayName ?? 'User',
+          otherUserId: otherUserName,
+        },
+        'participantImages': {
+          user.uid: user.photoURL ?? '',
+          otherUserId: otherUserImage ?? '',
+        },
+        'lastMessage': '',
+        'lastMessageEn': '',
+        'lastMessageUr': '',
+        'lastTimestamp': FieldValue.serverTimestamp(),
+        'unreadCounts': {user.uid: 0, otherUserId: 0},
+        'typing': {},
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    });
+  } catch (_) {
+    // Already exists (created concurrently) — reuse it.
+  }
+  return convId;
 }
 
 Stream<QuerySnapshot> streamConversations() {

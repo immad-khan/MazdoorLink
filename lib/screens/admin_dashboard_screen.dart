@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'admin_jobs_screen.dart';
 import '../services/smtp_service.dart';
 import '../services/workers_service.dart';
+import '../services/voice_assistant_service.dart';
+import '../app_state.dart';
 
 // ─────────────────────────────────────────────
 // Entry point routed from /admin/dashboard
@@ -2523,13 +2525,18 @@ class _AdminVoiceSheet extends StatefulWidget {
 class _AdminVoiceSheetState extends State<_AdminVoiceSheet>
     with SingleTickerProviderStateMixin {
   late AnimationController _ring;
-  bool _listening = false;
+  String _phase = 'idle'; // idle, listening, processing, responded, error
+  String _recognizedText = '';
+  String _responseText = '';
+  String _errorText = '';
+
+  final _voiceService = VoiceAssistantService();
+
   final List<String> _suggestions = [
     'Show pending worker registrations',
     'How many complaints today?',
     'Show platform revenue',
-    'List suspended users',
-    'Approve all pending deposits',
+    'Show jobs',
   ];
 
   @override
@@ -2539,16 +2546,86 @@ class _AdminVoiceSheetState extends State<_AdminVoiceSheet>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     )..repeat(reverse: true);
+    _startListening();
   }
 
   @override
   void dispose() {
     _ring.dispose();
+    _voiceService.stopListening();
     super.dispose();
+  }
+
+  Future<void> _startListening() async {
+    setState(() {
+      _phase = 'listening';
+      _recognizedText = '';
+      _responseText = '';
+      _errorText = '';
+    });
+
+    try {
+      await _voiceService.startListening(
+        onResult: (text) {
+          if (!mounted) return;
+          setState(() => _recognizedText = text);
+        },
+        onDone: () {
+          if (!mounted) return;
+          if (_recognizedText.trim().isNotEmpty) {
+            _processCommand(_recognizedText.trim());
+          } else {
+            setState(() {
+              _phase = 'error';
+              _errorText = 'No speech detected.';
+            });
+          }
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _phase = 'error';
+        _errorText = 'Microphone error.';
+      });
+    }
+  }
+
+  Future<void> _processCommand(String text) async {
+    setState(() => _phase = 'processing');
+
+    final intent = await _voiceService.parseIntent(text, role: UserRole.admin);
+
+    if (!mounted) return;
+
+    final result = _voiceService.executeIntent(
+      context: context,
+      intent: intent,
+      role: UserRole.admin,
+    );
+
+    final response = result['response'] as String? ?? 'Done.';
+
+    setState(() {
+      _phase = 'responded';
+      _responseText = response;
+    });
+
+    await _voiceService.speak(response);
+
+    await Future.delayed(const Duration(milliseconds: 1000));
+    if (!mounted) return;
+    Navigator.pop(context);
+    _snack(context, response);
   }
 
   @override
   Widget build(BuildContext context) {
+    final isListening = _phase == 'listening';
+    final isProcessing = _phase == 'processing';
+    final isResponded = _phase == 'responded';
+    final isError = _phase == 'error';
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -2567,30 +2644,50 @@ class _AdminVoiceSheetState extends State<_AdminVoiceSheet>
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Text('Admin Voice Command',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Color(0xFF1E293B))),
+          const Text(
+            'Admin Voice Assistant',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Color(0xFF1E293B),
+            ),
+          ),
           const SizedBox(height: 6),
-          Text('Tap mic and speak a command',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+          Text(
+            isListening
+                ? 'Listening...'
+                : isProcessing
+                    ? 'Understanding...'
+                    : isResponded
+                        ? _responseText
+                        : isError
+                            ? _errorText
+                            : 'Tap mic to speak',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 28),
           GestureDetector(
-            onTapDown: (_) => setState(() => _listening = true),
-            onTapUp: (_) {
-              setState(() => _listening = false);
-              _snack(context, 'Voice command received!');
-              Navigator.pop(context);
+            onTap: () {
+              if (isListening) {
+                _voiceService.stopListening();
+                if (_recognizedText.trim().isNotEmpty) {
+                  _processCommand(_recognizedText.trim());
+                } else {
+                  setState(() => _phase = 'idle');
+                }
+              } else if (!isProcessing) {
+                _startListening();
+              }
             },
             child: AnimatedBuilder(
               animation: _ring,
               builder: (_, child) => Container(
-                padding: EdgeInsets.all(_listening ? 14 + 4 * _ring.value : 14),
+                padding: EdgeInsets.all(isListening ? 14 + 4 * _ring.value : 14),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFF006B5E)
-                      .withOpacity(_listening ? 0.15 + 0.1 * _ring.value : 0.1),
+                      .withOpacity(isListening ? 0.15 + 0.1 * _ring.value : 0.1),
                 ),
                 child: child,
               ),
@@ -2600,7 +2697,7 @@ class _AdminVoiceSheetState extends State<_AdminVoiceSheet>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: _listening
+                    colors: isListening
                         ? [const Color(0xFF004D45), const Color(0xFF0D9488)]
                         : [const Color(0xFF006B5E), const Color(0xFF0D9488)],
                     begin: Alignment.topLeft,
@@ -2614,25 +2711,55 @@ class _AdminVoiceSheetState extends State<_AdminVoiceSheet>
                     ),
                   ],
                 ),
-                child: const Icon(Icons.mic, color: Colors.white, size: 34),
+                child: isProcessing
+                    ? const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
+                      )
+                    : Icon(
+                        isListening
+                            ? Icons.mic
+                            : isResponded
+                                ? Icons.check
+                                : Icons.mic_none,
+                        color: Colors.white,
+                        size: 34,
+                      ),
               ),
             ),
           ),
+          if (_recognizedText.isNotEmpty && (isListening || isProcessing)) ...[
+            const SizedBox(height: 16),
+            Text(
+              '"$_recognizedText"',
+              style: const TextStyle(
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                color: Color(0xFF006B5E),
+              ),
+            ),
+          ],
           const SizedBox(height: 28),
           const Align(
             alignment: Alignment.centerLeft,
-            child: Text('Try saying...',
-                style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: Color(0xFF64748B))),
+            child: Text(
+              'Try saying...',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Color(0xFF64748B),
+              ),
+            ),
           ),
           const SizedBox(height: 10),
           ..._suggestions.map(
             (s) => GestureDetector(
               onTap: () {
-                _snack(context, 'Command: "$s"');
-                Navigator.pop(context);
+                setState(() => _recognizedText = s);
+                _processCommand(s);
               },
               child: Container(
                 margin: const EdgeInsets.only(bottom: 8),
@@ -2643,12 +2770,19 @@ class _AdminVoiceSheetState extends State<_AdminVoiceSheet>
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.mic_none_outlined,
-                        size: 16, color: Color(0xFF006B5E)),
+                    const Icon(
+                      Icons.mic_none_outlined,
+                      size: 16,
+                      color: Color(0xFF006B5E),
+                    ),
                     const SizedBox(width: 10),
-                    Text(s,
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF1E293B))),
+                    Text(
+                      s,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
                   ],
                 ),
               ),

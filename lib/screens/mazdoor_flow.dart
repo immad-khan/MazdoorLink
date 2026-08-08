@@ -468,72 +468,168 @@ class VoiceOverlaySheet extends StatefulWidget {
 }
 
 class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProviderStateMixin {
-  bool _listening = true;
-  String _recognizedCommand = '';
-  late List<AnimationController> _controllers;
+  // idle -> listening -> processing -> responded -> (navigating or idle)
+  String _phase = 'idle';
+  String _recognizedText = '';
+  String _responseText = '';
+  String _errorText = '';
+
+  late List<AnimationController> _waveControllers;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnim;
+
+  final _voiceService = VoiceAssistantService();
 
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(
-      4,
+    _waveControllers = List.generate(
+      5,
       (index) => AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 1000),
-      )..repeat(reverse: true),
+        duration: Duration(milliseconds: 800 + index * 150),
+      ),
     );
-
-    // Simulate listening and recognizing a command after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return;
-      setState(() {
-        _listening = false;
-        _recognizedCommand = 'Show my bookings';
-      });
-
-      // After recognition, trigger the corresponding navigation
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (!mounted) return;
-        Navigator.pop(context); // Close bottom sheet
-        
-        Navigator.pushReplacementNamed(context, '/shared/history');
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.mic, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Navigated to Bookings via Voice Command!'),
-              ],
-            ),
-            backgroundColor: Color(0xFF0D9488),
-          ),
-        );
-      });
-    });
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    // Auto-start listening when sheet opens
+    _startListening();
   }
 
   @override
   void dispose() {
-    for (final c in _controllers) {
+    for (final c in _waveControllers) {
       c.dispose();
     }
+    _pulseController.dispose();
+    _voiceService.stopListening();
     super.dispose();
+  }
+
+  Future<void> _startListening() async {
+    setState(() {
+      _phase = 'listening';
+      _recognizedText = '';
+      _responseText = '';
+      _errorText = '';
+    });
+    for (final c in _waveControllers) {
+      c.repeat(reverse: true);
+    }
+
+    try {
+      await _voiceService.startListening(
+        onResult: (text) {
+          if (!mounted) return;
+          setState(() => _recognizedText = text);
+        },
+        onDone: () {
+          if (!mounted) return;
+          if (_recognizedText.trim().isNotEmpty) {
+            _processCommand(_recognizedText.trim());
+          } else {
+            setState(() {
+              _phase = 'error';
+              _errorText = 'No speech detected. Tap mic to try again.';
+            });
+            _stopWaves();
+          }
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _phase = 'error';
+        _errorText = 'Microphone not available. Check permissions.';
+      });
+      _stopWaves();
+    }
+  }
+
+  void _stopWaves() {
+    for (final c in _waveControllers) {
+      c.stop();
+      c.value = 0.0;
+    }
+  }
+
+  Future<void> _processCommand(String text) async {
+    setState(() => _phase = 'processing');
+    _stopWaves();
+
+    final role = AppScope.of(context).role;
+    final intent = await _voiceService.parseIntent(text, role: role);
+
+    if (!mounted) return;
+
+    final result = _voiceService.executeIntent(
+      context: context,
+      intent: intent,
+      role: role,
+    );
+
+    final response = result['response'] as String? ?? 'Done.';
+    final navigated = result['navigated'] as bool? ?? false;
+
+    setState(() {
+      _phase = 'responded';
+      _responseText = response;
+    });
+
+    await _voiceService.speak(response);
+
+    if (navigated) {
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.mic, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text(response)),
+            ],
+          ),
+          backgroundColor: const Color(0xFF0D9488),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isListening = _phase == 'listening';
+    final isProcessing = _phase == 'processing';
+    final isResponded = _phase == 'responded';
+    final isError = _phase == 'error';
+
+    String statusText;
+    if (isListening) {
+      statusText = 'Listening for your command...';
+    } else if (isProcessing) {
+      statusText = 'Processing your command...';
+    } else if (isResponded) {
+      statusText = 'Command Recognized!';
+    } else if (isError) {
+      statusText = _errorText;
+    } else {
+      statusText = 'Tap the mic to speak';
+    }
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 20,
-            spreadRadius: 5,
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 20, spreadRadius: 5),
         ],
       ),
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
@@ -550,46 +646,46 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Voice Control Active',
+          Text(
+            isError ? 'Voice Error' : 'Voice Assistant',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF0D9488),
+              color: isError ? const Color(0xFFEF4444) : const Color(0xFF0D9488),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            _listening ? 'Listening for your command...' : 'Command Recognized!',
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.grey.shade600,
-            ),
+            statusText,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
-          // Glowing Visualizer Waves
+          // Wave Visualizer
           SizedBox(
             height: 60,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
-              children: List.generate(4, (index) {
-                final animation = Tween<double>(begin: 15, end: 55).animate(
+              children: List.generate(5, (index) {
+                final anim = Tween<double>(begin: 12, end: 52).animate(
                   CurvedAnimation(
-                    parent: _controllers[index],
-                    curve: Interval(0.1 * index, 1.0, curve: Curves.easeInOut),
+                    parent: _waveControllers[index],
+                    curve: Interval(0.08 * index, 1.0, curve: Curves.easeInOut),
                   ),
                 );
                 return AnimatedBuilder(
-                  animation: animation,
+                  animation: anim,
                   builder: (context, child) {
                     return Container(
-                      width: 8,
-                      height: _listening ? animation.value : 10.0,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: 7,
+                      height: isListening ? anim.value : 8.0,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0D9488).withOpacity(_listening ? (0.4 + 0.15 * index) : 0.2),
+                        color: const Color(0xFF0D9488).withOpacity(
+                          isListening ? (0.4 + 0.12 * index) : 0.15,
+                        ),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     );
@@ -598,83 +694,197 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
               }),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Central Microphone Action Circle
-          Container(
-            width: 84,
-            height: 84,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _listening ? const Color(0xFF0D9488) : Colors.grey.shade300,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0D9488).withOpacity(0.3),
-                  blurRadius: 15,
-                  spreadRadius: 2,
+          // Mic Button
+          GestureDetector(
+            onTap: () {
+              if (isListening) {
+                _voiceService.stopListening();
+                _stopWaves();
+                if (_recognizedText.trim().isNotEmpty) {
+                  _processCommand(_recognizedText.trim());
+                } else {
+                  setState(() => _phase = 'idle');
+                }
+              } else if (!isProcessing) {
+                _startListening();
+              }
+            },
+            child: ScaleTransition(
+              scale: isListening ? _pulseAnim : const AlwaysStoppedAnimation(1.0),
+              child: Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isListening
+                      ? const Color(0xFF0D9488)
+                      : isProcessing
+                          ? const Color(0xFFF59E0B)
+                          : isResponded
+                              ? const Color(0xFF10B981)
+                              : isError
+                                  ? const Color(0xFFEF4444)
+                                  : Colors.grey.shade300,
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isListening
+                              ? const Color(0xFF0D9488)
+                              : isProcessing
+                                  ? const Color(0xFFF59E0B)
+                                  : const Color(0xFF10B981))
+                          .withOpacity(0.35),
+                      blurRadius: 18,
+                      spreadRadius: 2,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Icon(
-              _listening ? Icons.mic : Icons.check,
-              color: Colors.white,
-              size: 36,
+                child: isProcessing
+                    ? const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
+                      )
+                    : Icon(
+                        isListening
+                            ? Icons.mic
+                            : isResponded
+                                ? Icons.check
+                                : isError
+                                    ? Icons.mic_off
+                                    : Icons.mic_none,
+                        color: Colors.white,
+                        size: 36,
+                      ),
+              ),
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
-          // Recognized Command text
-          if (_recognizedCommand.isNotEmpty) ...[
+          // Live Transcription
+          if (_recognizedText.isNotEmpty && (isListening || isProcessing))
             Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.format_quote, color: Color(0xFF94A3B8), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _recognizedText,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF334155),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Response
+          if (isResponded && _responseText.isNotEmpty)
+            Container(
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: const Color(0xFFF0FDFA),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFCCFBF1)),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.check_circle, color: Color(0xFF0D9488), size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    '“$_recognizedCommand”',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF0D9488),
+                  if (_recognizedText.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.record_voice_over, color: Color(0xFF0D9488), size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '"$_recognizedText"',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF64748B),
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                    const Divider(height: 16, color: Color(0xFFCCFBF1)),
+                  ],
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.smart_toy, color: Color(0xFF0D9488), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _responseText,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0D9488),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-          ] else ...[
-            // Example Voice Prompts
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+
+          // Suggestion chips (only when idle or error)
+          if (_phase == 'idle' || isError) ...[
+            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Try saying:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade400,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [
-                Text(
-                  'Try saying:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade400,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _buildPromptChip('“Show bookings”'),
-                    _buildPromptChip('“Open settings”'),
-                    _buildPromptChip('“Go home”'),
-                  ],
-                ),
+                _buildPromptChip('"Hire a plumber"'),
+                _buildPromptChip('"Show bookings"'),
+                _buildPromptChip('"Open settings"'),
+                _buildPromptChip('"Post a job"'),
               ],
+            ),
+          ],
+
+          // Retry button after response
+          if (isResponded) ...[
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: _startListening,
+              icon: const Icon(Icons.replay, size: 18),
+              label: const Text('Ask again'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0D9488),
+              ),
             ),
           ],
         ],
@@ -683,23 +893,43 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
   }
 
   Widget _buildPromptChip(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.grey.shade600,
+    return GestureDetector(
+      onTap: () {
+        final cleaned = text.replaceAll('"', '').replaceAll('"', '');
+        setState(() {
+          _recognizedText = cleaned;
+          _phase = 'processing';
+        });
+        _processCommand(cleaned);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDFA),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFCCFBF1)),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF0D9488),
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );
   }
 }
+
+
+
+
+
+
+
+
+
 
 class _NavItem {
   const _NavItem(this.route, this.outline, this.filled, this.en, this.ur);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'app_state.dart';
 import 'l10n/app_localizations.dart';
 import 'app_theme.dart';
@@ -12,6 +13,11 @@ final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    print('Failed to load .env file: $e');
+  }
   await Firebase.initializeApp();
   print('App starting...');
   NotificationService.onOpen = _openConversationFromNotification;

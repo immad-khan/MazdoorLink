@@ -341,7 +341,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                 CircleAvatar(
                   radius: 34,
                   backgroundImage: avatarImage,
-                  child: selected == null && _profilePicUrl.isEmpty
+                  child: selectedBytes == null && _profilePicUrl.isEmpty
                       ? const Icon(Icons.person, color: Colors.white, size: 34)
                       : null,
                 ),

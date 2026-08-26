@@ -2262,7 +2262,7 @@ final _phone = TextEditingController();
                 child: _profilePicFile != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                        child: Image.file(_profilePicFile!, fit: BoxFit.cover),
+                        child: Image.network(_profilePicFile!.path, fit: BoxFit.cover),
                       )
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -2310,7 +2310,7 @@ final _phone = TextEditingController();
                             border: Border.all(color: _idFrontError != null ? Colors.red : Colors.grey.shade300)
                           ),
                           child: _idFrontImage != null 
-                              ? Image.file(_idFrontImage!, fit: BoxFit.cover)
+                              ? Image.network(_idFrontImage!.path, fit: BoxFit.cover)
                               : const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
                         ),
                       ),
@@ -2337,7 +2337,7 @@ final _phone = TextEditingController();
                             border: Border.all(color: _idBackError != null ? Colors.red : Colors.grey.shade300)
                           ),
                           child: _idBackImage != null
-                              ? Image.file(_idBackImage!, fit: BoxFit.cover)
+                              ? Image.network(_idBackImage!.path, fit: BoxFit.cover)
                               : const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
                         ),
                       ),

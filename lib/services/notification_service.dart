@@ -2,13 +2,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import '../firebase_options.dart';
 
 /// Top-level handler for notifications received while the app is terminated
 /// or in the background. Runs in its own isolate, so Firebase is re-initialized.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (Firebase.apps.isEmpty) {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   }
 }
 
@@ -30,28 +34,34 @@ class NotificationService {
     if (_initialized) return;
     _initialized = true;
 
-    final messaging = FirebaseMessaging.instance;
+    try {
+      final messaging = FirebaseMessaging.instance;
 
-    await messaging.requestPermission(alert: true, badge: true, sound: true);
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
 
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      if (!kIsWeb) {
+        FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      }
 
-    FirebaseMessaging.onMessage.listen((message) {
-      onForeground?.call(Map<String, String>.from(message.data));
-    });
+      FirebaseMessaging.onMessage.listen((message) {
+        onForeground?.call(Map<String, String>.from(message.data));
+      });
 
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      onOpen?.call(Map<String, String>.from(message.data));
-    });
+      FirebaseMessaging.onMessageOpenedApp.listen((message) {
+        onOpen?.call(Map<String, String>.from(message.data));
+      });
 
-    final initial = await messaging.getInitialMessage();
-    if (initial != null) {
-      Future(() => onOpen?.call(Map<String, String>.from(initial.data)));
+      final initial = await messaging.getInitialMessage();
+      if (initial != null) {
+        Future(() => onOpen?.call(Map<String, String>.from(initial.data)));
+      }
+
+      await saveCurrentToken();
+
+      messaging.onTokenRefresh.listen((_) => saveCurrentToken());
+    } catch (e) {
+      debugPrint('NotificationService initialize error: $e');
     }
-
-    await saveCurrentToken();
-
-    messaging.onTokenRefresh.listen((_) => saveCurrentToken());
   }
 
   /// Fetches the FCM token and stores it on the current user's doc.

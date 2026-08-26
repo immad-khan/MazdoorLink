@@ -292,14 +292,49 @@ class _HomeTab extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // Stats Row
+                        // Stats Row (live from Firestore)
                         Row(
-                          children: const [
-                            _StatPill(label: 'Workers', value: '124'),
-                            SizedBox(width: 12),
-                            _StatPill(label: 'Complaints', value: '18'),
-                            SizedBox(width: 12),
-                            _StatPill(label: 'Refunds', value: 'Rs 45k'),
+                          children: [
+                            StreamBuilder<QuerySnapshot>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('users')
+                                  .where('role', isEqualTo: 'worker')
+                                  .snapshots(),
+                              builder: (_, snap) {
+                                final count = snap.data?.docs.length ?? 0;
+                                return _StatPill(label: 'Workers', value: '$count');
+                              },
+                            ),
+                            const SizedBox(width: 12),
+                            StreamBuilder<QuerySnapshot>(
+                              stream: streamComplaints(),
+                              builder: (_, snap) {
+                                final openCount = snap.data?.docs
+                                        .where((d) => !((d.data() as Map)['resolved'] == true))
+                                        .length ??
+                                    0;
+                                return _StatPill(label: 'Complaints', value: '$openCount');
+                              },
+                            ),
+                            const SizedBox(width: 12),
+                            StreamBuilder<QuerySnapshot>(
+                              stream: streamSecurityDeposits(),
+                              builder: (_, snap) {
+                                double totalRefunds = 0;
+                                if (snap.hasData) {
+                                  for (final doc in snap.data!.docs) {
+                                    final data = doc.data() as Map<String, dynamic>;
+                                    final deposited = (data['totalDeposited'] as num?)?.toDouble() ?? 0;
+                                    final balance = (data['currentBalance'] as num?)?.toDouble() ?? 0;
+                                    totalRefunds += deposited - balance;
+                                  }
+                                }
+                                final label = totalRefunds >= 1000
+                                    ? 'Rs ${(totalRefunds / 1000).toStringAsFixed(totalRefunds >= 10000 ? 0 : 1)}k'
+                                    : 'Rs ${totalRefunds.toStringAsFixed(0)}';
+                                return _StatPill(label: 'Refunds', value: label);
+                              },
+                            ),
                           ],
                         ),
                       ],
@@ -1426,7 +1461,7 @@ class _ComplaintCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// TAB 3 – User Management
+// TAB 3 – User Management (Firestore-backed)
 // ─────────────────────────────────────────────
 class _UserManagementTab extends StatefulWidget {
   const _UserManagementTab();
@@ -1436,22 +1471,60 @@ class _UserManagementTab extends StatefulWidget {
 }
 
 class _UserManagementTabState extends State<_UserManagementTab> {
-  final List<Map<String, dynamic>> _users = [
-    {'name': 'Sara Malik', 'type': 'Customer', 'joined': 'Jan 2025', 'jobs': 12, 'status': 'Active', 'flag': false},
-    {'name': 'Ali Raza', 'type': 'Worker', 'joined': 'Feb 2025', 'jobs': 34, 'status': 'Active', 'flag': false},
-    {'name': 'Ahmed Khan', 'type': 'Customer', 'joined': 'Mar 2025', 'jobs': 5, 'status': 'Active', 'flag': true},
-    {'name': 'Bilal Ahmed', 'type': 'Worker', 'joined': 'Mar 2025', 'jobs': 21, 'status': 'Suspended', 'flag': false},
-    {'name': 'Nida Hussain', 'type': 'Customer', 'joined': 'Apr 2025', 'jobs': 8, 'status': 'Active', 'flag': false},
-    {'name': 'Tariq Mehmood', 'type': 'Worker', 'joined': 'Apr 2025', 'jobs': 17, 'status': 'Active', 'flag': false},
-    {'name': 'Kamran Shah', 'type': 'Worker', 'joined': 'May 2025', 'jobs': 3, 'status': 'Banned', 'flag': true},
-  ];
-
   String _searchQuery = '';
 
-  void _showDeductDepositDialog(BuildContext context, String workerName) {
+  String _formatJoinDate(dynamic createdAt) {
+    if (createdAt == null) return '';
+    DateTime date;
+    if (createdAt is Timestamp) {
+      date = createdAt.toDate();
+    } else if (createdAt is String) {
+      date = DateTime.tryParse(createdAt) ?? DateTime.now();
+    } else {
+      return '';
+    }
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
+  String _displayStatus(String? status) {
+    switch (status) {
+      case 'approved':
+      case 'active':
+        return 'Active';
+      case 'suspended':
+        return 'Suspended';
+      case 'banned':
+        return 'Banned';
+      case 'rejected':
+        return 'Rejected';
+      case 'pending':
+        return 'Pending';
+      default:
+        return 'Active';
+    }
+  }
+
+  Future<void> _updateUserStatus(String docId, String newStatus) async {
+    await FirebaseFirestore.instance.collection('users').doc(docId).update({
+      'status': newStatus,
+    });
+  }
+
+  void _showDeductDepositDialog(BuildContext context, String workerId, String workerName) async {
+    final depositSnap = await FirebaseFirestore.instance
+        .collection('security_deposits')
+        .where('workerId', isEqualTo: workerId)
+        .limit(1)
+        .get();
+    final currentBalance = depositSnap.docs.isNotEmpty
+        ? ((depositSnap.docs.first.data()['currentBalance'] as num?)?.toDouble() ?? 0)
+        : 0.0;
+
     final amountController = TextEditingController();
     final reasonController = TextEditingController();
 
+    if (!context.mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1459,7 +1532,8 @@ class _UserManagementTabState extends State<_UserManagementTab> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Current Top-up Balance: Rs. 500', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Current Top-up Balance: Rs. ${currentBalance.toStringAsFixed(0)}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             TextField(
               controller: amountController,
@@ -1485,8 +1559,21 @@ class _UserManagementTabState extends State<_UserManagementTab> {
             child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
+              final amount = double.tryParse(amountController.text) ?? 0;
+              if (amount <= 0) return;
+              final reason = reasonController.text.trim();
+              if (reason.isEmpty) return;
               Navigator.pop(ctx);
+
+              if (depositSnap.docs.isNotEmpty) {
+                final docId = depositSnap.docs.first.id;
+                final newBalance = currentBalance - amount;
+                await FirebaseFirestore.instance.collection('security_deposits').doc(docId).update({
+                  'currentBalance': newBalance,
+                  'lastDeductionAt': FieldValue.serverTimestamp(),
+                });
+              }
               _snack(context, 'Deducted Rs. ${amountController.text} from $workerName');
             },
             child: const Text('Deduct'),
@@ -1498,13 +1585,6 @@ class _UserManagementTabState extends State<_UserManagementTab> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _users
-        .where((u) =>
-            (u['name'] as String)
-                .toLowerCase()
-                .contains(_searchQuery.toLowerCase()))
-        .toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5FA),
       appBar: AppBar(
@@ -1516,7 +1596,6 @@ class _UserManagementTabState extends State<_UserManagementTab> {
       ),
       body: Column(
         children: [
-          // Search Bar
           Container(
             color: const Color(0xFF006B5E),
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
@@ -1538,131 +1617,158 @@ class _UserManagementTabState extends State<_UserManagementTab> {
               ),
             ),
           ),
-
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: filtered.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, i) {
-                final u = filtered[i];
-                final status = u['status'] as String;
-                final statusColor = status == 'Active'
-                    ? const Color(0xFF10B981)
-                    : status == 'Suspended'
-                        ? const Color(0xFFF59E0B)
-                        : const Color(0xFFEF4444);
-                final isWorker = u['type'] == 'Worker';
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('users').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final docs = snapshot.data!.docs;
+                if (docs.isEmpty) {
+                  return const Center(child: Text('No users found.'));
+                }
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2)),
-                    ],
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 6),
-                    leading: Stack(
-                      children: [
-                        CircleAvatar(
+                final query = _searchQuery.toLowerCase();
+                final filtered = docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final name = (data['name']?.toString() ?? '').toLowerCase();
+                  return name.contains(query);
+                }).toList();
+
+                if (filtered.isEmpty) {
+                  return const Center(child: Text('No matching users.'));
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, i) {
+                    final data = filtered[i].data() as Map<String, dynamic>;
+                    final docId = filtered[i].id;
+                    final name = data['name']?.toString() ?? 'Unknown';
+                    final role = data['role']?.toString() ?? 'customer';
+                    final isWorker = role == 'worker';
+                    final displayStatus = _displayStatus(data['status']?.toString());
+                    final joined = _formatJoinDate(data['createdAt']);
+                    final profilePicUrl = data['profilePicUrl'] ?? data['profileImage'];
+
+                    Color statusColor;
+                    switch (displayStatus) {
+                      case 'Active':
+                        statusColor = const Color(0xFF10B981);
+                        break;
+                      case 'Suspended':
+                        statusColor = const Color(0xFFF59E0B);
+                        break;
+                      case 'Banned':
+                      case 'Rejected':
+                        statusColor = const Color(0xFFEF4444);
+                        break;
+                      default:
+                        statusColor = const Color(0xFFF59E0B);
+                    }
+
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
+                        leading: CircleAvatar(
                           radius: 22,
                           backgroundColor: (isWorker
                                   ? const Color(0xFF6366F1)
                                   : const Color(0xFF0D9488))
                               .withOpacity(0.12),
-                          child: Text(
-                            (u['name'] as String)[0],
-                            style: TextStyle(
+                          backgroundImage: profilePicUrl != null &&
+                                  profilePicUrl.toString().isNotEmpty
+                              ? NetworkImage(profilePicUrl.toString())
+                              : null,
+                          child: profilePicUrl == null ||
+                                  profilePicUrl.toString().isEmpty
+                              ? Text(
+                                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 17,
+                                      color: isWorker
+                                          ? const Color(0xFF6366F1)
+                                          : const Color(0xFF0D9488)),
+                                )
+                              : null,
+                        ),
+                        title: Text(name,
+                            style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 17,
-                                color: isWorker
-                                    ? const Color(0xFF6366F1)
-                                    : const Color(0xFF0D9488)),
-                          ),
-                        ),
-                        if (u['flag'] as bool)
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 12,
-                              height: 12,
+                                fontSize: 14,
+                                color: Color(0xFF1E293B))),
+                        subtitle: Text(
+                            '${isWorker ? 'Worker' : 'Customer'}${joined.isNotEmpty ? ' · Since $joined' : ''}',
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade500)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEF4444),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: Colors.white, width: 1.5),
+                                color: statusColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(8),
                               ),
+                              child: Text(displayStatus,
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: statusColor)),
                             ),
-                          ),
-                      ],
-                    ),
-                    title: Text(u['name'] as String,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: Color(0xFF1E293B))),
-                    subtitle: Text(
-                        '${u['type']} · ${u['jobs']} jobs · Since ${u['joined']}',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade500)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(status,
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: statusColor)),
-                        ),
-                        const SizedBox(width: 6),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert,
-                              size: 18, color: Color(0xFF64748B)),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          onSelected: (value) {
-                            if (value == 'DeductDeposit') {
-                              _showDeductDepositDialog(context, u['name'] as String);
-                              return;
-                            }
-                            setState(() => filtered[i]['status'] = value);
-                            _snack(context,
-                                '${u['name']} has been $value');
-                          },
-                          itemBuilder: (_) => [
-                            if (isWorker)
-                              const PopupMenuItem(
-                                value: 'DeductDeposit',
-                                child: Text('Deduct Security Deposit'),
-                              ),
-                            const PopupMenuItem(
-                                value: 'Active',
-                                child: Text('Restore / Activate')),
-                            const PopupMenuItem(
-                                value: 'Suspended',
-                                child: Text('Suspend User')),
-                            const PopupMenuItem(
-                                value: 'Banned',
-                                child: Text('Ban User')),
+                            const SizedBox(width: 6),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert,
+                                  size: 18, color: Color(0xFF64748B)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              onSelected: (value) {
+                                if (value == 'DeductDeposit') {
+                                  _showDeductDepositDialog(
+                                      context, docId, name);
+                                  return;
+                                }
+                                _updateUserStatus(docId, value);
+                                _snack(context, '$name has been ${value.toLowerCase()}');
+                              },
+                              itemBuilder: (_) => [
+                                if (isWorker)
+                                  const PopupMenuItem(
+                                    value: 'DeductDeposit',
+                                    child: Text('Deduct Security Deposit'),
+                                  ),
+                                const PopupMenuItem(
+                                    value: 'approved',
+                                    child: Text('Restore / Activate')),
+                                const PopupMenuItem(
+                                    value: 'suspended',
+                                    child: Text('Suspend User')),
+                                const PopupMenuItem(
+                                    value: 'banned',
+                                    child: Text('Ban User')),
+                              ],
+                            ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -2235,8 +2341,15 @@ class _DepositsSheet extends StatelessWidget {
   }
 }
 
-class _StatsSheet extends StatelessWidget {
+class _StatsSheet extends StatefulWidget {
   const _StatsSheet();
+
+  @override
+  State<_StatsSheet> createState() => _StatsSheetState();
+}
+
+class _StatsSheetState extends State<_StatsSheet> {
+  String _selectedPeriod = 'All Time';
 
   @override
   Widget build(BuildContext context) {
@@ -2273,36 +2386,16 @@ class _StatsSheet extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _FilterChip(label: 'Today', isSelected: true),
-                  _FilterChip(label: 'Weekly', isSelected: false),
-                  _FilterChip(label: 'Monthly', isSelected: false),
-                  _FilterChip(label: 'Yearly: 2025', isSelected: false),
-                  _FilterChip(label: 'Yearly: 2026', isSelected: false),
+                  _FilterChip(label: 'All Time', isSelected: _selectedPeriod == 'All Time', onTap: () => setState(() => _selectedPeriod = 'All Time')),
+                  _FilterChip(label: 'Today', isSelected: _selectedPeriod == 'Today', onTap: () => setState(() => _selectedPeriod = 'Today')),
+                  _FilterChip(label: 'This Week', isSelected: _selectedPeriod == 'This Week', onTap: () => setState(() => _selectedPeriod = 'This Week')),
+                  _FilterChip(label: 'This Month', isSelected: _selectedPeriod == 'This Month', onTap: () => setState(() => _selectedPeriod = 'This Month')),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                _StatsCard(
-                    label: 'Total Revenue', value: 'Rs 1.2M', icon: Icons.paid_outlined,
-                    color: const Color(0xFF10B981)),
-                const SizedBox(width: 12),
-                _StatsCard(
-                    label: 'Active Jobs', value: '234', icon: Icons.work_outline,
-                    color: const Color(0xFF6366F1)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _StatsCard(
-                    label: 'Total Users', value: '1,842', icon: Icons.people_outline,
-                    color: const Color(0xFF0D9488)),
-                const SizedBox(width: 12),
-                const Expanded(child: SizedBox()),
-              ],
-            ),
+            // Stats Cards (live)
+            _LiveStatsCards(period: _selectedPeriod),
             const SizedBox(height: 24),
             const Text('Bookings Trend',
                 style: TextStyle(
@@ -2310,12 +2403,7 @@ class _StatsSheet extends StatelessWidget {
                     fontSize: 16,
                     color: Color(0xFF1E293B))),
             const SizedBox(height: 12),
-            _BarChartWidget(
-              bars: const [
-                ('Jan', 0.4), ('Feb', 0.55), ('Mar', 0.6), ('Apr', 0.75),
-                ('May', 0.9), ('Jun', 0.7), ('Jul', 0.8),
-              ],
-            ),
+            _LiveBarChart(period: _selectedPeriod),
             const SizedBox(height: 24),
             const Text('Top Service Categories',
                 style: TextStyle(
@@ -2323,13 +2411,208 @@ class _StatsSheet extends StatelessWidget {
                     fontSize: 16,
                     color: Color(0xFF1E293B))),
             const SizedBox(height: 12),
-            ...[
-              ('Plumber', 0.82, const Color(0xFF0D9488)),
-              ('Electrician', 0.70, const Color(0xFF6366F1)),
-            ].map((e) => _CategoryBar(label: e.$1, fraction: e.$2, color: e.$3)),
+            _LiveCategoryBars(period: _selectedPeriod),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _LiveStatsCards extends StatelessWidget {
+  const _LiveStatsCards({required this.period});
+  final String period;
+
+  DateTime? _periodStart() {
+    final now = DateTime.now();
+    switch (period) {
+      case 'Today':
+        return DateTime(now.year, now.month, now.day);
+      case 'This Week':
+        return now.subtract(Duration(days: now.weekday - 1));
+      case 'This Month':
+        return DateTime(now.year, now.month, 1);
+      default:
+        return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final start = _periodStart();
+
+    Query completedQuery = FirebaseFirestore.instance
+        .collection('jobs')
+        .where('status', isEqualTo: 'completed');
+    if (start != null) {
+      completedQuery = completedQuery.where('createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(start));
+    }
+
+    Query activeQuery = FirebaseFirestore.instance
+        .collection('jobs')
+        .where('status', whereIn: [
+      'pending', 'accepted', 'arrival_pending', 'working',
+      'worker_completed', 'payment_pending', 'worker_payment_pending',
+      'payment_disputed',
+    ]);
+    if (start != null) {
+      activeQuery = activeQuery.where('createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(start));
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: completedQuery.snapshots(),
+      builder: (_, completedSnap) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: activeQuery.snapshots(),
+          builder: (_, activeSnap) {
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('users').snapshots(),
+              builder: (_, usersSnap) {
+                double totalRevenue = 0;
+                if (completedSnap.hasData) {
+                  for (final doc in completedSnap.data!.docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    totalRevenue += (data['price'] as num?)?.toDouble() ?? 0;
+                  }
+                }
+                final activeJobs = activeSnap.data?.docs.length ?? 0;
+                final totalUsers = usersSnap.data?.docs.length ?? 0;
+
+                String revenueStr;
+                if (totalRevenue >= 1000000) {
+                  revenueStr = 'Rs ${(totalRevenue / 1000000).toStringAsFixed(1)}M';
+                } else if (totalRevenue >= 1000) {
+                  revenueStr = 'Rs ${(totalRevenue / 1000).toStringAsFixed(1)}k';
+                } else {
+                  revenueStr = 'Rs ${totalRevenue.toStringAsFixed(0)}';
+                }
+
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        _StatsCard(
+                            label: 'Total Revenue', value: revenueStr,
+                            icon: Icons.paid_outlined, color: const Color(0xFF10B981)),
+                        const SizedBox(width: 12),
+                        _StatsCard(
+                            label: 'Active Jobs', value: '$activeJobs',
+                            icon: Icons.work_outline, color: const Color(0xFF6366F1)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _StatsCard(
+                            label: 'Total Users', value: '$totalUsers',
+                            icon: Icons.people_outline, color: const Color(0xFF0D9488)),
+                        const SizedBox(width: 12),
+                        const Expanded(child: SizedBox()),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _LiveBarChart extends StatelessWidget {
+  const _LiveBarChart({required this.period});
+  final String period;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: streamAllJobs(),
+      builder: (_, snap) {
+        if (!snap.hasData) {
+          return const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()));
+        }
+
+        final now = DateTime.now();
+        final months = <String, int>{};
+        const monthLabels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+        for (int i = 6; i >= 0; i--) {
+          final m = DateTime(now.year, now.month - i, 1);
+          months['${monthLabels[m.month - 1]}'] = 0;
+        }
+
+        for (final doc in snap.data!.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final createdAt = data['createdAt'];
+          if (createdAt is! Timestamp) continue;
+          final date = createdAt.toDate();
+          final label = monthLabels[date.month - 1];
+          if (months.containsKey(label)) {
+            months[label] = months[label]! + 1;
+          }
+        }
+
+        final maxVal = months.values.fold<int>(1, (a, b) => a > b ? a : b);
+        final bars = months.entries
+            .map((e) => (e.key, e.value / maxVal))
+            .toList();
+
+        return _BarChartWidget(bars: bars);
+      },
+    );
+  }
+}
+
+class _LiveCategoryBars extends StatelessWidget {
+  const _LiveCategoryBars({required this.period});
+  final String period;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: streamAllJobs(),
+      builder: (_, snap) {
+        if (!snap.hasData || snap.data!.docs.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text('No jobs yet'),
+          );
+        }
+
+        final categoryCount = <String, int>{};
+        for (final doc in snap.data!.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final cat = data['categoryKey']?.toString() ?? 'Other';
+          categoryCount[cat] = (categoryCount[cat] ?? 0) + 1;
+        }
+
+        final sorted = categoryCount.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+        final top = sorted.take(5).toList();
+        final total = top.fold<int>(0, (sum, e) => sum + e.value);
+
+        const colors = [
+          Color(0xFF0D9488),
+          Color(0xFF6366F1),
+          Color(0xFFF59E0B),
+          Color(0xFFEF4444),
+          Color(0xFF3B82F6),
+        ];
+
+        return Column(
+          children: List.generate(top.length, (i) {
+            final entry = top[i];
+            final fraction = total > 0 ? entry.value / total : 0.0;
+            final label = entry.key[0].toUpperCase() + entry.key.substring(1);
+            return _CategoryBar(
+                label: label, fraction: fraction, color: colors[i % colors.length]);
+          }),
+        );
+      },
     );
   }
 }
@@ -2413,26 +2696,30 @@ class _BarChartWidget extends StatelessWidget {
 }
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.isSelected});
+  const _FilterChip({required this.label, required this.isSelected, this.onTap});
   final String label;
   final bool isSelected;
+  final VoidCallback? onTap;
   
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF0D9488) : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isSelected ? const Color(0xFF0D9488) : Colors.grey.shade300),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : Colors.grey.shade700,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          fontSize: 13,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0D9488) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? const Color(0xFF0D9488) : Colors.grey.shade300),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey.shade700,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 13,
+          ),
         ),
       ),
     );

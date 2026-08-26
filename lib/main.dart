@@ -18,11 +18,19 @@ void main() async {
   } catch (e) {
     print('Failed to load .env file: $e');
   }
-  await Firebase.initializeApp();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    print('Failed to initialize Firebase: $e');
+  }
   print('App starting...');
-  NotificationService.onOpen = _openConversationFromNotification;
-  NotificationService.onForeground = _showForegroundNotification;
-  await NotificationService.initialize();
+  try {
+    NotificationService.onOpen = _openConversationFromNotification;
+    NotificationService.onForeground = _showForegroundNotification;
+    await NotificationService.initialize();
+  } catch (e) {
+    print('Failed to initialize Notifications: $e');
+  }
   runApp(ServiceApp());
 }
 

@@ -30,6 +30,7 @@ import 'worker_services_setup_screen.dart';
 import '../services/cloudinary_service.dart';
 import '../services/workers_service.dart';
 import '../services/smtp_service.dart';
+import '../services/voice_assistant_service.dart';
 import 'recommendation_arguments.dart';
 import 'cancel_job_screen.dart';
 import 'customer_support_screen.dart';

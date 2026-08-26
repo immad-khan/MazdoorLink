@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'app_state.dart';
 import 'l10n/app_localizations.dart';
 import 'app_theme.dart';
@@ -11,6 +13,54 @@ import 'firebase_options.dart';
 
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+class _AuthResult {
+  final String route;
+  final UserRole? role;
+  const _AuthResult(this.route, this.role);
+}
+
+Future<_AuthResult> _resolveAuth() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return _AuthResult(AppRoutes.welcome, null);
+
+  try {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    if (!doc.exists) return _AuthResult(AppRoutes.welcome, null);
+    final data = doc.data();
+    if (data == null) return _AuthResult(AppRoutes.welcome, null);
+
+    final role = data['role']?.toString();
+    final status = data['status']?.toString();
+
+    UserRole? userRole;
+    String route;
+
+    if (role == 'admin') {
+      userRole = UserRole.admin;
+      route = AppRoutes.adminDashboard;
+    } else if (role == 'worker') {
+      userRole = UserRole.worker;
+      if (status == 'pending') {
+        route = AppRoutes.workerOnboarding;
+      } else {
+        final setupComplete = data['setupComplete'] as bool? ?? false;
+        if (status == 'approved' && !setupComplete) {
+          route = AppRoutes.workerServicesSetup;
+        } else {
+          route = AppRoutes.workerDashboard;
+        }
+      }
+    } else {
+      userRole = UserRole.customer;
+      route = AppRoutes.customerHome;
+    }
+
+    return _AuthResult(route, userRole);
+  } catch (e) {
+    return _AuthResult(AppRoutes.welcome, null);
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +84,10 @@ void main() async {
   } catch (e) {
     print('Failed to initialize Notifications: $e');
   }
-  runApp(ServiceApp());
+
+  final authResult = await _resolveAuth();
+
+  runApp(ServiceApp(initialRoute: authResult.route, initialUserRole: authResult.role));
 }
 
 void _openConversationFromNotification(Map<String, String> data) {
@@ -75,12 +128,26 @@ void _showForegroundNotification(Map<String, String> data) {
 }
 
 class ServiceApp extends StatefulWidget {
+  final String initialRoute;
+  final UserRole? initialUserRole;
+
+  const ServiceApp({super.key, required this.initialRoute, this.initialUserRole});
+
   @override
   _ServiceAppState createState() => _ServiceAppState();
 }
 
 class _ServiceAppState extends State<ServiceApp> {
-  final AppController _controller = AppController();
+  late final AppController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AppController();
+    if (widget.initialUserRole != null) {
+      _controller.selectRole(widget.initialUserRole!);
+    }
+  }
 
   @override
   void dispose() {
@@ -172,7 +239,7 @@ class _ServiceAppState extends State<ServiceApp> {
             ),
           ),
           onGenerateRoute: buildRoute,
-          initialRoute: AppRoutes.welcome,
+          initialRoute: widget.initialRoute,
         ),
       ),
     );

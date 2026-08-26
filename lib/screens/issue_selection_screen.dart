@@ -53,6 +53,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
   bool _initialized = false;
   List<IssueItem> _customSkills = [];
   bool _loadingCustomSkills = true;
+
   final List<IssueItem> _electricalIssues = const [
     IssueItem(titleEn: 'Broken Switch', titleUr: 'خراب سوئچ', price: 300, icon: Icons.toggle_off),
     IssueItem(titleEn: 'Short Circuit', titleUr: 'شارٹ سرکٹ', price: 400, icon: Icons.flash_on),
@@ -113,8 +114,8 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
           .where('categoryNameEn', isEqualTo: _categoryKeyToName(_categoryKey))
           .get();
       final predefinedTitles = _categoryKey == 'electrician'
-          ? _electricalIssues.map((e) => e.titleEn).toSet()
-          : _PlumberIssues.map((e) => e.titleEn).toSet();
+          ? _electricalIssues.map((e) => e.titleEn.toLowerCase()).toSet()
+          : _PlumberIssues.map((e) => e.titleEn.toLowerCase()).toSet();
       final seen = <String>{};
       final skills = <IssueItem>[];
       for (final doc in snapshot.docs) {
@@ -123,7 +124,9 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
         for (final s in skillsData) {
           final map = s as Map<String, dynamic>;
           final title = map['titleEn']?.toString() ?? '';
-          if (title.isNotEmpty && !predefinedTitles.contains(title) && seen.add(title)) {
+          final titleLower = title.toLowerCase();
+          // Skip if it matches a predefined issue (case-insensitive)
+          if (title.isNotEmpty && !predefinedTitles.contains(titleLower) && seen.add(titleLower)) {
             skills.add(IssueItem(
               titleEn: title,
               titleUr: map['titleUr']?.toString() ?? title,
@@ -208,15 +211,109 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
     );
   }
 
+  Widget _buildIssueCard({
+    required int index,
+    required String titleEn,
+    required String titleUr,
+    required IconData icon,
+    required bool isUrdu,
+    required int totalIndex,
+    bool isCustom = false,
+  }) {
+    final isSelected = _selectedIndices.contains(totalIndex);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 200 + index * 50),
+      builder: (context, value, child) => Transform.scale(
+        scale: 0.95 + value * 0.05,
+        child: Opacity(opacity: value, child: child),
+      ),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isSelected ? const Color(0xFF0D9488) : const Color(0xFFE5E7EB),
+            width: isSelected ? 1.8 : 1,
+          ),
+        ),
+        elevation: isSelected ? 2 : 1,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            setState(() {
+              if (_selectedIndices.contains(totalIndex)) {
+                _selectedIndices.remove(totalIndex);
+              } else {
+                _selectedIndices.add(totalIndex);
+              }
+            });
+          },
+          child: Row(
+            children: [
+              Checkbox(
+                value: isSelected,
+                activeColor: const Color(0xFF0D9488),
+                onChanged: (bool? value) {
+                  setState(() {
+                    if (value == true) {
+                      _selectedIndices.add(totalIndex);
+                    } else {
+                      _selectedIndices.remove(totalIndex);
+                    }
+                  });
+                },
+              ),
+              CircleAvatar(
+                backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.08),
+                child: Icon(icon, color: const Color(0xFF0D9488)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  isUrdu ? titleUr : titleEn,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? AppTheme.darkerText : Colors.black54,
+                    fontFamily: AppTheme.fontName,
+                  ),
+                ),
+              ),
+              if (isCustom)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDFA),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF99F6E4)),
+                    ),
+                    child: Text(
+                      isUrdu ? 'کسٹم' : 'Custom',
+                      style: const TextStyle(fontSize: 10, color: Color(0xFF0D9488), fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final isUrdu = controller.isUrdu;
 
     final issuesList = _categoryKey == 'electrician' ? _electricalIssues : _PlumberIssues;
-    
+
     final titleEn = _categoryKey == 'electrician' ? 'Select Electrician Issue' : 'Select Plumber Issue';
     final titleUr = _categoryKey == 'electrician' ? 'الیکٹریکل مسئلہ منتخب کریں' : 'پلمبنگ مسئلہ منتخب کریں';
+
+    final hasSelection = _selectedIndices.isNotEmpty;
 
     return Directionality(
       textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
@@ -233,174 +330,167 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
         body: Center(
           child: Container(
             constraints: const BoxConstraints(maxWidth: 430),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                Text(
-                  isUrdu 
-                      ? 'ملازمت پوسٹ کرنے کے لیے ایک عام مسئلہ منتخب کریں۔' 
-                      : 'Choose a common issue to post your job.',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                    fontFamily: AppTheme.fontName,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                
-                // Issues Grid/List
-                for (int index = 0; index < issuesList.length; index++) ...[
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: Duration(milliseconds: 200 + index * 50),
-                    builder: (context, value, child) => Transform.scale(
-                      scale: 0.95 + value * 0.05,
-                      child: Opacity(
-                        opacity: value,
-                        child: child,
+                // ── Scrollable issue list ──────────────────────────────
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    children: [
+                      Text(
+                        isUrdu
+                            ? 'ملازمت پوسٹ کرنے کے لیے ایک عام مسئلہ منتخب کریں۔'
+                            : 'Choose a common issue to post your job.',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                          fontFamily: AppTheme.fontName,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    child: Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: const Color(0xFFE5E7EB), width: 1),
-                      ),
-                      elevation: 1,
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: _selectedIndices.contains(index),
-                            onChanged: (bool? value) {
-                              setState(() {
-                                if (value == true) {
-                                  _selectedIndices.add(index);
-                                } else {
-                                  _selectedIndices.remove(index);
-                                }
-                              });
-                            },
-                          ),
-                          CircleAvatar(
-                            backgroundColor: const Color(0xFF0D9488).withValues(alpha:0.08),
-                            child: Icon(issuesList[index].icon, color: const Color(0xFF0D9488)),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  isUrdu ? issuesList[index].titleUr : issuesList[index].titleEn,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.darkerText,
+                      const SizedBox(height: 16),
+
+                      // Predefined issues
+                      for (int i = 0; i < issuesList.length; i++)
+                        _buildIssueCard(
+                          index: i,
+                          titleEn: issuesList[i].titleEn,
+                          titleUr: issuesList[i].titleUr,
+                          icon: issuesList[i].icon,
+                          isUrdu: isUrdu,
+                          totalIndex: i,
+                        ),
+
+                      // Custom worker-added skills
+                      if (_loadingCustomSkills)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_customSkills.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+                          child: Row(
+                            children: [
+                              const Expanded(child: Divider()),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  isUrdu ? 'ورکرز کی اضافی خدمات' : 'Additional Worker Services',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade500,
                                     fontFamily: AppTheme.fontName,
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const Expanded(child: Divider()),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                        ),
+                        for (int i = 0; i < _customSkills.length; i++)
+                          _buildIssueCard(
+                            index: issuesList.length + i,
+                            titleEn: _customSkills[i].titleEn,
+                            titleUr: _customSkills[i].titleUr,
+                            icon: Icons.handyman,
+                            isUrdu: isUrdu,
+                            totalIndex: issuesList.length + i,
+                            isCustom: true,
+                          ),
+                      ],
 
-                // Continue Button for Multiple Selection
-                if (_selectedIndices.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+
+                // ── Fixed bottom: Payment + Find Workers ──────────────
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    top: false,
                     child: Row(
                       children: [
                         _buildPaymentSelectorButton(isUrdu),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              final allIssues = [...issuesList, ..._customSkills];
-                              final selectedIssues = _selectedIndices.map((i) => allIssues[i]).toList();
-                              Navigator.pushNamed(
-                                context,
-                                AppRoutes.confirmLocation,
-                                arguments: RecommendationArguments(selectedIssues: selectedIssues, categoryKey: _categoryKey, paymentMethod: _paymentMethod),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFC0D72F),
-                              foregroundColor: Colors.black87,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: Text(
-                              isUrdu ? 'منتخب کریں اور ورکر تلاش کریں' : 'Find Workers', 
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: AppTheme.fontName)
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            child: ElevatedButton(
+                              onPressed: hasSelection
+                                  ? () {
+                                      final allIssues = [...issuesList, ..._customSkills];
+                                      final selectedIssues = _selectedIndices.map((i) => allIssues[i]).toList();
+                                      Navigator.pushNamed(
+                                        context,
+                                        AppRoutes.confirmLocation,
+                                        arguments: RecommendationArguments(
+                                          selectedIssues: selectedIssues,
+                                          categoryKey: _categoryKey,
+                                          paymentMethod: _paymentMethod,
+                                        ),
+                                      );
+                                    }
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: hasSelection ? const Color(0xFFC0D72F) : Colors.grey.shade200,
+                                foregroundColor: hasSelection ? Colors.black87 : Colors.grey.shade400,
+                                disabledBackgroundColor: Colors.grey.shade200,
+                                disabledForegroundColor: Colors.grey.shade400,
+                                elevation: hasSelection ? 2 : 0,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (hasSelection) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        '${_selectedIndices.length}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Text(
+                                    isUrdu ? 'ورکر تلاش کریں' : 'Find Workers',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      fontFamily: AppTheme.fontName,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-
-                // Custom Skills from Workers (blended in)
-                if (!_loadingCustomSkills)
-                  for (int index = 0; index < _customSkills.length; index++)
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: Duration(milliseconds: 200 + (issuesList.length + index) * 50),
-                      builder: (context, value, child) => Transform.scale(
-                        scale: 0.95 + value * 0.05,
-                        child: Opacity(opacity: value, child: child),
-                      ),
-                      child: Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1),
-                        ),
-                        elevation: 1,
-                        child: Row(
-                          children: [
-                            Checkbox(
-                              value: _selectedIndices.contains(issuesList.length + index),
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  if (value == true) {
-                                    _selectedIndices.add(issuesList.length + index);
-                                  } else {
-                                    _selectedIndices.remove(issuesList.length + index);
-                                  }
-                                });
-                              },
-                            ),
-                            CircleAvatar(
-                              backgroundColor: const Color(0xFF0D9488).withValues(alpha:0.08),
-                              child: const Icon(Icons.handyman, color: Color(0xFF0D9488)),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                isUrdu ? _customSkills[index].titleUr : _customSkills[index].titleEn,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.darkerText,
-                                  fontFamily: AppTheme.fontName,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                if (_loadingCustomSkills)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                ),
               ],
             ),
           ),

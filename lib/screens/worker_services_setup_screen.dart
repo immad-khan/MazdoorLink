@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../app_state.dart';
+import '../services/skill_deduplicator.dart';
 import 'signup_data.dart';
 
 class ServiceItem {
@@ -206,7 +207,9 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
     super.dispose();
   }
 
-  void _addCustomService(bool isUrdu) {
+  bool _checkingDuplicate = false;
+
+  Future<void> _addCustomService(bool isUrdu) async {
     final title = _customTitleController.text.trim();
     final priceText = _customPriceController.text.trim();
 
@@ -230,6 +233,52 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
       );
       return;
     }
+
+    // ── Semantic deduplication via Groq ───────────────────────────────────
+    setState(() => _checkingDuplicate = true);
+    final allTitles = _currentServices.map((s) => s.titleEn).toList();
+    final duplicate = await SkillDeduplicator.findDuplicate(
+      newTitle: title,
+      existingTitles: allTitles,
+    );
+    if (!mounted) return;
+    setState(() => _checkingDuplicate = false);
+
+    if (duplicate != null) {
+      // Show a friendly dialog telling the worker which existing item matches
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.merge_type, color: Color(0xFF0D9488)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  isUrdu ? 'ملتی جلتی خدمت موجود ہے' : 'Similar Service Exists',
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            isUrdu
+                ? '"$title" پہلے سے موجود خدمت "$duplicate" کے مترادف ہے۔\nبراہ کرم اسے فہرست سے منتخب کریں۔'
+                : '"$title" is equivalent to the existing service:\n\n"$duplicate"\n\nPlease select it from the list instead.',
+            style: const TextStyle(fontSize: 14, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(isUrdu ? 'ٹھیک ہے' : 'Got it'),
+            ),
+          ],
+        ),
+      );
+      return; // Do NOT add the duplicate
+    }
+    // ─────────────────────────────────────────────────────────────────────
 
     setState(() {
       final newItem = ServiceItem(
@@ -817,16 +866,36 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                                     SizedBox(
                                       width: double.infinity,
                                       child: ElevatedButton(
-                                        onPressed: () => _addCustomService(isUrdu),
+                                        onPressed: _checkingDuplicate ? null : () => _addCustomService(isUrdu),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: const Color(0xFF0D9488),
                                           foregroundColor: Colors.white,
+                                          disabledBackgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.6),
                                           padding: const EdgeInsets.symmetric(vertical: 12),
                                         ),
-                                        child: Text(
-                                          isUrdu ? 'سروس شامل کریں' : 'Add Service',
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
+                                        child: _checkingDuplicate
+                                            ? Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const SizedBox(
+                                                    height: 18,
+                                                    width: 18,
+                                                    child: CircularProgressIndicator(
+                                                      color: Colors.white,
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Text(
+                                                    isUrdu ? 'جانچ کی جا رہی ہے...' : 'Checking...',
+                                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                                  ),
+                                                ],
+                                              )
+                                            : Text(
+                                                isUrdu ? 'سروس شامل کریں' : 'Add Service',
+                                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                              ),
                                       ),
                                     ),
                                   ],

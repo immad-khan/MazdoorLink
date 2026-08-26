@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:math' as math;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
@@ -1214,9 +1214,9 @@ final _phone = TextEditingController();
   String _selectedCategory = 'Select a category';
   String? _generatedOtp;
   
-  File? _idFrontImage;
-  File? _idBackImage;
-  File? _profilePicFile;      // Optional for worker
+  XFile? _idFrontImage;
+  XFile? _idBackImage;
+  XFile? _profilePicFile;      // Optional for worker
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
   bool _rememberMe = false;
@@ -1245,8 +1245,8 @@ final _phone = TextEditingController();
   Future<void> _pickImage(bool isFront) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      final file = File(image.path);
-      final sizeInKb = file.lengthSync() / 1024;
+      final bytes = await image.readAsBytes();
+      final sizeInKb = bytes.length / 1024;
       if (sizeInKb > 100) {
         setState(() {
           _imageSizeError = 'Image size must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)';
@@ -1256,10 +1256,10 @@ final _phone = TextEditingController();
       setState(() {
         _imageSizeError = null;
         if (isFront) {
-          _idFrontImage = file;
+          _idFrontImage = image;
           _idFrontError = null;
         } else {
-          _idBackImage = file;
+          _idBackImage = image;
           _idBackError = null;
         }
       });
@@ -1269,14 +1269,14 @@ final _phone = TextEditingController();
   Future<void> _pickProfilePic() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      final file = File(image.path);
-      final sizeInKb = file.lengthSync() / 1024;
+      final bytes = await image.readAsBytes();
+      final sizeInKb = bytes.length / 1024;
       if (sizeInKb > 100) {
         setState(() => _imageSizeError = 'Profile picture must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)');
         return;
       }
       setState(() {
-        _profilePicFile = file;
+        _profilePicFile = image;
         _profilePicError = null;
         _imageSizeError = null;
       });
@@ -1293,7 +1293,7 @@ final _phone = TextEditingController();
     return buf.toString();
   }
 
-  Future<String?> _uploadToCloudinary(File imageFile) async {
+  Future<String?> _uploadToCloudinary(XFile imageFile) async {
     return CloudinaryService.uploadImage(imageFile);
   }
 

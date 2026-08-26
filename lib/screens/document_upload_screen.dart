@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:service_frontend/app_theme.dart';
@@ -40,8 +39,8 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen>
   Future<void> _pickAndUpload(bool isFront) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
-    final file = File(image.path);
-    final sizeInKb = file.lengthSync() / 1024;
+    final bytes = await image.readAsBytes();
+    final sizeInKb = bytes.length / 1024;
     if (sizeInKb > 100) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

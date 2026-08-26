@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:typed_data';
+import 'package:cross_file/cross_file.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,7 +28,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
   late AnimationController _fadeController;
 
   final ImagePicker _picker = ImagePicker();
-  final Map<String, File> _selectedFiles = {};
+  final Map<String, XFile> _selectedFiles = {};
+  final Map<String, Uint8List> _selectedFileBytes = {};
 
   String _profilePicUrl = '';
   String _idFrontUrl = '';
@@ -138,8 +140,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
 
-    final file = File(image.path);
-    final sizeInMb = file.lengthSync() / (1024 * 1024);
+    final fileBytes = await image.readAsBytes();
+    final sizeInMb = fileBytes.length / (1024 * 1024);
     if (sizeInMb > 5) {
       _showSnack(
         'Image size must be less than 5MB (current: ${sizeInMb.toStringAsFixed(1)}MB)',
@@ -148,7 +150,10 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
       return;
     }
 
-    setState(() => _selectedFiles[key] = file);
+    setState(() {
+      _selectedFiles[key] = image;
+      _selectedFileBytes[key] = fileBytes;
+    });
   }
 
   Future<String?> _uploadSelected(String key, String existingUrl) async {
@@ -315,10 +320,10 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
   }
 
   Widget _imageHeader() {
-    final selected = _selectedFiles['profilePicUrl'];
-    final ImageProvider? avatarImage = selected != null
-        ? FileImage(selected)
-        : (_profilePicUrl.isNotEmpty ? NetworkImage(_profilePicUrl) : null);
+    final selectedBytes = _selectedFileBytes['profilePicUrl'];
+    final ImageProvider? avatarImage = selectedBytes != null
+        ? MemoryImage(selectedBytes)
+        : (_profilePicUrl.isNotEmpty ? NetworkImage(_profilePicUrl) as ImageProvider : null);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -416,7 +421,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: hasFile
-                    ? Image.file(selected!, fit: BoxFit.cover)
+                    ? Image.memory(_selectedFileBytes[keyName]!, fit: BoxFit.cover)
                     : hasExisting
                         ? Image.network(currentUrl, fit: BoxFit.cover)
                         : const Icon(Icons.add_a_photo_outlined, color: Colors.grey),

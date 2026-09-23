@@ -1471,6 +1471,8 @@ final _phone = TextEditingController();
               'phone': _phone.text.trim(),
               'cnicNumber': _cnicController.text.trim(),
               'role': 'worker',
+              'roles': ['worker'],
+              'workerStatus': 'pending',
               'status': 'pending',
               'createdAt': FieldValue.serverTimestamp(),
               'idFrontUrl': frontUrl!,
@@ -1550,6 +1552,7 @@ final _phone = TextEditingController();
             'phone': _phone.text.trim(),
             'cnic': _cnicController.text.trim(),
             'role': 'customer',
+            'roles': ['customer'],
             'createdAt': FieldValue.serverTimestamp(),
           };
 
@@ -1644,7 +1647,9 @@ final _phone = TextEditingController();
             await prefs.setString('remembered_password', _password.text);
           }
           final data = doc.data()!;
-          if (data['role'] == 'worker') {
+          final firestoreRole = data['role']?.toString() ?? 'customer';
+
+          if (firestoreRole == 'worker') {
             final status = data['status'] ?? 'pending';
             if (status == 'pending') {
               await FirebaseAuth.instance.signOut();
@@ -1657,12 +1662,27 @@ final _phone = TextEditingController();
               return;
             }
             AppScope.of(context).selectRole(UserRole.worker);
-            // Check if worker has selected a category yet
-            final category = data['category'];
             Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
           } else {
-            AppScope.of(context).selectRole(UserRole.customer);
-            Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+            // Customer account — check if they also have worker access
+            final roles = (data['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
+            final workerStatus = data['workerStatus']?.toString();
+            final hasWorkerAccess = roles.contains('worker') && workerStatus == 'approved';
+
+            // Check saved preference — if they last used worker mode, route there
+            String? savedRole;
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              savedRole = prefs.getString('active_role');
+            } catch (_) {}
+
+            if (hasWorkerAccess && savedRole == 'worker') {
+              AppScope.of(context).selectRole(UserRole.worker);
+              Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
+            } else {
+              AppScope.of(context).selectRole(UserRole.customer);
+              Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+            }
           }
         } else if (mounted) {
           // Default fallback
@@ -7238,6 +7258,99 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  /// Called when user in Customer mode taps "Switch to Worker Mode"
+  Future<void> _switchToWorkerMode(BuildContext context, Map<String, dynamic> userData) async {
+    final c = AppScope.of(context);
+    final roles = (userData['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final workerStatus = userData['workerStatus']?.toString();
+    final hasWorkerAccess = roles.contains('worker');
+
+    if (hasWorkerAccess && workerStatus == 'approved') {
+      // Worker mode is already set up and approved — switch directly
+      await WorkerPresenceService.instance.setOnline(false);
+      c.switchActiveRole(UserRole.worker);
+      if (context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.workerDashboard, (r) => false);
+      }
+    } else if (hasWorkerAccess && workerStatus == 'pending') {
+      // Applied but not yet approved
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(bilingual(context, 'Application Pending', 'درخواست زیر التواء')),
+            content: Text(bilingual(
+              context,
+              'Your worker application is under review. You will be notified once approved.',
+              'آپ کی ورکر درخواست جائزے میں ہے۔ منظوری پر آپ کو اطلاع ملے گی۔',
+            )),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(bilingual(context, 'OK', 'ٹھیک ہے')),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      // Not registered as worker yet — offer to set up worker profile
+      if (context.mounted) {
+        showModalBottomSheet(
+          context: context,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          builder: (ctx) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.handyman_rounded, size: 48, color: Color(0xFF0D9488)),
+                const SizedBox(height: 12),
+                Text(
+                  bilingual(context, 'Become a Worker', 'ورکر بنیں'),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  bilingual(
+                    context,
+                    'Register as a worker to offer your services on MazdoorLink.',
+                    'MazdoorLink پر اپنی خدمات پیش کرنے کے لیے ورکر کے طور پر رجسٹر کریں۔',
+                  ),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.arrow_forward),
+                    label: Text(bilingual(context, 'Set Up Worker Profile', 'ورکر پروفائل بنائیں')),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.pushNamed(context, AppRoutes.workerOnboarding);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Called when user in Worker mode taps "Switch to Customer Mode"
+  Future<void> _switchToCustomerMode(BuildContext context) async {
+    final c = AppScope.of(context);
+    // Go offline before switching so the worker is removed from listings
+    await WorkerPresenceService.instance.setOnline(false);
+    c.switchActiveRole(UserRole.customer);
+    if (context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.customerHome, (r) => false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppScope.of(context);
@@ -7257,17 +7370,96 @@ class SettingsScreen extends StatelessWidget {
               final phone = data?['phone']?.toString() ?? '+92 300 1234567';
               final profileImage = data?['profileImage']?.toString() ?? '';
 
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
-                  child: profileImage.isEmpty ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?') : null,
-                ),
-                title: Text(name),
-                subtitle: Text(phone),
+              // ── Role Switcher Card ──────────────────────────────────────────
+              Widget roleSwitcher = const SizedBox.shrink();
+              if (data != null) {
+                roleSwitcher = Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: const Color(0xFF0D9488).withOpacity(0.3)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: const Color(0xFF0D9488).withOpacity(0.12),
+                                child: Icon(
+                                  isWorker ? Icons.handyman_rounded : Icons.person_rounded,
+                                  color: const Color(0xFF0D9488),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    bilingual(context, 'Current Mode', 'موجودہ موڈ'),
+                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                  ),
+                                  Text(
+                                    isWorker
+                                        ? bilingual(context, 'Worker Mode', 'ورکر موڈ')
+                                        : bilingual(context, 'Customer Mode', 'کسٹمر موڈ'),
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF0D9488),
+                                side: const BorderSide(color: Color(0xFF0D9488)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: Icon(isWorker ? Icons.person_rounded : Icons.handyman_rounded),
+                              label: Text(
+                                isWorker
+                                    ? bilingual(context, 'Switch to Customer Mode', 'کسٹمر موڈ پر جائیں')
+                                    : bilingual(context, 'Switch to Worker Mode', 'ورکر موڈ پر جائیں'),
+                              ),
+                              onPressed: () {
+                                if (isWorker) {
+                                  _switchToCustomerMode(context);
+                                } else {
+                                  _switchToWorkerMode(context, data);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
+                      child: profileImage.isEmpty ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?') : null,
+                    ),
+                    title: Text(name),
+                    subtitle: Text(phone),
+                  ),
+                  const SizedBox(height: 8),
+                  roleSwitcher,
+                ],
               );
             },
           ),
-          const SizedBox(height: 8),
           GestureDetector(
             onTap: () => Navigator.pushNamed(context, AppRoutes.profileManagement),
             child: _SettingsItem(icon: Icons.person, color: Colors.blue, title: bilingual(context, 'Profile', 'پروفائل')),

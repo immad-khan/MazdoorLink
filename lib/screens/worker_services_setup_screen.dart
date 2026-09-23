@@ -361,6 +361,8 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
           'email': _signupData!.email,
           'phone': _signupData!.phone,
           'role': 'worker',
+          'roles': ['worker'],
+          'workerStatus': 'pending',
           'status': 'pending',
           'createdAt': FieldValue.serverTimestamp(),
           'idFrontUrl': _signupData!.idFrontUrl,

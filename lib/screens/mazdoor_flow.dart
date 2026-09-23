@@ -7512,9 +7512,11 @@ class SettingsScreen extends StatelessWidget {
             ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () {
-              c.logout();
-              Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (route) => false);
+            onPressed: () async {
+              await c.logout();
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (route) => false);
+              }
             },
             icon: const Icon(Icons.logout, color: Colors.red),
             label: Text(bilingual(context, 'Log Out', 'لاگ آؤٹ'), style: const TextStyle(color: Colors.red)),

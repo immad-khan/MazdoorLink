@@ -8,6 +8,7 @@ import 'l10n/app_localizations.dart';
 import 'app_theme.dart';
 import 'screens/mazdoor_flow.dart';
 import 'services/notification_service.dart';
+import 'services/workers_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -84,6 +85,8 @@ void main() async {
   } catch (e) {
     print('Failed to initialize Notifications: $e');
   }
+
+  WorkerPresenceService.instance.init();
 
   final authResult = await _resolveAuth();
 

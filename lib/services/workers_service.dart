@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:math';
+import 'package:flutter/widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../data/mock_data.dart';
@@ -594,4 +596,88 @@ Future<String?> findExistingConversation(String otherUserId) async {
     if (participants.contains(otherUserId)) return doc.id;
   }
   return null;
+}
+
+/// Global service managing worker online presence and app lifecycle.
+/// Keeps worker online while navigating within the app, and temporarily
+/// marks worker offline only when the worker actually leaves the app
+/// (paused/detached) or explicitly toggles off / logs out.
+class WorkerPresenceService with WidgetsBindingObserver {
+  static final WorkerPresenceService instance = WorkerPresenceService._();
+  WorkerPresenceService._();
+
+  bool _initialized = false;
+  bool isOnline = false;
+  Timer? _heartbeat;
+
+  void init() {
+    if (_initialized) return;
+    _initialized = true;
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  void startHeartbeat() {
+    _heartbeat?.cancel();
+    _heartbeat = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!isOnline) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'lastSeenAt': FieldValue.serverTimestamp(),
+        }).catchError((_) {});
+        setPresence(online: true).catchError((_) {});
+      }
+    });
+  }
+
+  void stopHeartbeat() {
+    _heartbeat?.cancel();
+    _heartbeat = null;
+  }
+
+  Future<void> setOnline(bool value) async {
+    isOnline = value;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'isOnline': value,
+        'lastSeenAt': FieldValue.serverTimestamp(),
+      });
+      await setPresence(online: value);
+    } catch (_) {}
+
+    if (value) {
+      startHeartbeat();
+    } else {
+      stopHeartbeat();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Only manage online status if worker had toggled online
+    if (!isOnline) return;
+
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      // Worker left the app: mark offline in Firestore
+      stopHeartbeat();
+      FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'isOnline': false,
+        'lastSeenAt': FieldValue.serverTimestamp(),
+      }).catchError((_) {});
+      setPresence(online: false).catchError((_) {});
+    } else if (state == AppLifecycleState.resumed) {
+      // Worker returned to the app: restore online status in Firestore
+      FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'isOnline': true,
+        'lastSeenAt': FieldValue.serverTimestamp(),
+      }).catchError((_) {});
+      setPresence(online: true).catchError((_) {});
+      startHeartbeat();
+    }
+  }
 }

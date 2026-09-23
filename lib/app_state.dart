@@ -91,14 +91,19 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void logout() {
-    WorkerPresenceService.instance.setOnline(false);
+  Future<void> logout() async {
+    try {
+      await WorkerPresenceService.instance.setOnline(false);
+    } catch (_) {}
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
     role = null;
     activeRole = 'customer';
     locale = const Locale('en');
     chatUnread.reset();
     notifyListeners();
-    _persistActiveRole('customer');
+    await _persistActiveRole('customer');
   }
 
   Future<void> _persistActiveRole(String roleName) async {

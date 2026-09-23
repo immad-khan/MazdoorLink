@@ -74,6 +74,7 @@ class AppController extends ChangeNotifier {
   }
 
   void logout() {
+    WorkerPresenceService.instance.setOnline(false);
     role = null;
     locale = const Locale('en');
     chatUnread.reset();

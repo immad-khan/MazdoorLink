@@ -70,8 +70,13 @@ Future<LatLng?> getCurrentLocation() async {
 class ProfileArguments {
   final WorkerModel worker;
   final JobPostingArguments job;
+  final List<IssueItem> selectedIssues;
 
-  ProfileArguments({required this.worker, required this.job});
+  ProfileArguments({
+    required this.worker,
+    required this.job,
+    this.selectedIssues = const [],
+  });
 }
 
 class TrackingArguments {
@@ -3539,15 +3544,22 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                             width: double.infinity,
                             child: FilledButton.icon(
                               onPressed: () {
+                                final combinedEn = selectedIssues.isNotEmpty
+                                    ? selectedIssues.map((e) => e.titleEn).join(', ')
+                                    : '';
+                                final combinedUr = selectedIssues.isNotEmpty
+                                    ? selectedIssues.map((e) => e.titleUr).join('، ')
+                                    : '';
                                 final issueIndex = i % (selectedIssues.isNotEmpty ? selectedIssues.length : 1);
                                 Navigator.pushNamed(
                                   context,
                                   AppRoutes.workerProfile,
                                   arguments: ProfileArguments(
                                     worker: matchedWorkers[i],
+                                    selectedIssues: selectedIssues,
                                     job: JobPostingArguments(
-                                      descriptionEn: selectedIssues.isNotEmpty ? selectedIssues[issueIndex].titleEn : '',
-                                      descriptionUr: selectedIssues.isNotEmpty ? selectedIssues[issueIndex].titleUr : '',
+                                      descriptionEn: combinedEn.isNotEmpty ? combinedEn : (selectedIssues.isNotEmpty ? selectedIssues[issueIndex].titleEn : ''),
+                                      descriptionUr: combinedUr.isNotEmpty ? combinedUr : (selectedIssues.isNotEmpty ? selectedIssues[issueIndex].titleUr : ''),
                                       price: 0,
                                       categoryKey: categoryKey,
                                       paymentMethod: paymentMethod,
@@ -3579,6 +3591,18 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
   }
 }
 
+class _FlowDisplayedSkill {
+  final String titleEn;
+  final String titleUr;
+  final double price;
+
+  const _FlowDisplayedSkill({
+    required this.titleEn,
+    required this.titleUr,
+    required this.price,
+  });
+}
+
 class FlowWorkerProfileScreen extends StatefulWidget {
   const FlowWorkerProfileScreen({super.key});
 
@@ -3591,6 +3615,7 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
   List<String> _favouriteIds = [];
   StreamSubscription? _favSub;
   int _visibilityMinutes = 10;
+  bool _initializedOffer = false;
 
   @override
   void initState() {
@@ -3611,6 +3636,7 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as ProfileArguments?;
     final worker = args?.worker;
+    final selectedIssues = args?.selectedIssues ?? const [];
     final scope = AppScope.of(context);
     final isUrdu = scope.isUrdu;
 
@@ -3618,6 +3644,56 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
       return Scaffold(
         appBar: AppBar(title: Text(bilingual(context, 'Worker not found', 'ورکر نہیں ملا'))),
       );
+    }
+
+    final List<_FlowDisplayedSkill> displayedSkills = [];
+
+    if (selectedIssues.isNotEmpty) {
+      for (final issue in selectedIssues) {
+        double price = issue.price;
+        final matchedWorkerSkill = worker.skills.where((ws) {
+          final wsTitle = ws.titleEn.toLowerCase().trim();
+          final issueTitle = issue.titleEn.toLowerCase().trim();
+          return wsTitle == issueTitle ||
+              wsTitle.contains(issueTitle) ||
+              issueTitle.contains(wsTitle);
+        }).firstOrNull;
+
+        if (matchedWorkerSkill != null && matchedWorkerSkill.price > 0) {
+          price = matchedWorkerSkill.price;
+        }
+
+        displayedSkills.add(_FlowDisplayedSkill(
+          titleEn: issue.titleEn,
+          titleUr: issue.titleUr,
+          price: price,
+        ));
+      }
+    } else if (worker.skills.isNotEmpty) {
+      for (final ws in worker.skills) {
+        displayedSkills.add(_FlowDisplayedSkill(
+          titleEn: ws.titleEn,
+          titleUr: ws.titleUr.isNotEmpty ? ws.titleUr : ws.titleEn,
+          price: ws.price,
+        ));
+      }
+    } else {
+      for (int i = 0; i < worker.skillsEn.length; i++) {
+        final en = worker.skillsEn[i];
+        final ur = i < worker.skillsUr.length ? worker.skillsUr[i] : en;
+        displayedSkills.add(_FlowDisplayedSkill(
+          titleEn: en,
+          titleUr: ur,
+          price: worker.priceValue > 0 ? worker.priceValue : 300,
+        ));
+      }
+    }
+
+    final double grandTotal = displayedSkills.fold<double>(0, (sum, item) => sum + item.price);
+
+    if (!_initializedOffer && grandTotal > 0) {
+      _offerController.text = grandTotal.toStringAsFixed(0);
+      _initializedOffer = true;
     }
 
     return MzScaffold(
@@ -3714,14 +3790,6 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(bilingual(context, 'Worker\'s Preset Price:', 'ورکر کی مقرر کردہ قیمت:'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text(worker.price, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
                     TextField(
                       controller: _offerController,
                       keyboardType: TextInputType.number,
@@ -3783,9 +3851,99 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    Text(bilingual(context, 'Skills', 'مہارتیں'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    ...((isUrdu ? worker.skillsUr : worker.skillsEn).map((e) => ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.check_circle, color: Colors.green), title: Text(e)))),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          bilingual(context, 'Skills', 'مہارتیں'),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => _showAllSkillsBottomSheet(context, worker, isUrdu, selectedIssues),
+                          icon: const Icon(Icons.format_list_bulleted, size: 16, color: Color(0xFF0D9488)),
+                          label: Text(
+                            bilingual(context, 'View All Skills', 'تمام مہارتیں دیکھیں'),
+                            style: const TextStyle(
+                              color: Color(0xFF0D9488),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    for (final skill in displayedSkills)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                isUrdu ? skill.titleUr : skill.titleEn,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF1F2937),
+                                ),
+                              ),
+                            ),
+                            Text(
+                              'Rs. ${skill.price.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0D9488),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (displayedSkills.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDFA),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF99F6E4)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.receipt_long, size: 20, color: Color(0xFF0D9488)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  bilingual(context, 'Total Bill / Grand Total:', 'کل بل / گرینڈ ٹوٹل:'),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F766E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              'Rs. ${grandTotal.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0D9488),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Text(bilingual(context, 'Recent Reviews', 'حالیہ جائزے'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
@@ -3984,6 +4142,201 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showAllSkillsBottomSheet(
+    BuildContext context,
+    WorkerModel worker,
+    bool isUrdu,
+    List<IssueItem> selectedIssues,
+  ) {
+    final allSkills = <_FlowDisplayedSkill>[];
+    final seenTitles = <String>{};
+
+    for (final ws in worker.skills) {
+      if (seenTitles.add(ws.titleEn.toLowerCase().trim())) {
+        allSkills.add(_FlowDisplayedSkill(
+          titleEn: ws.titleEn,
+          titleUr: ws.titleUr.isNotEmpty ? ws.titleUr : ws.titleEn,
+          price: ws.price,
+        ));
+      }
+    }
+
+    if (allSkills.isEmpty) {
+      for (int i = 0; i < worker.skillsEn.length; i++) {
+        final en = worker.skillsEn[i];
+        final ur = i < worker.skillsUr.length ? worker.skillsUr[i] : en;
+        if (seenTitles.add(en.toLowerCase().trim())) {
+          allSkills.add(_FlowDisplayedSkill(
+            titleEn: en,
+            titleUr: ur,
+            price: worker.priceValue > 0 ? worker.priceValue : 300,
+          ));
+        }
+      }
+    }
+
+    final categoryKey = worker.category.toLowerCase();
+    final List<_FlowDisplayedSkill> defaultCategorySkills = (categoryKey.contains('plumb'))
+        ? const [
+            _FlowDisplayedSkill(titleEn: 'Water Tap Leakage Fix', titleUr: 'نلکے سے پانی کا رساو ٹھیک کرنا', price: 300),
+            _FlowDisplayedSkill(titleEn: 'Flush Tank Repair', titleUr: 'فلش ٹینک کی مرمت', price: 600),
+            _FlowDisplayedSkill(titleEn: 'Sink / Wash Basin Installation', titleUr: 'واش بیسن لگانا', price: 1200),
+            _FlowDisplayedSkill(titleEn: 'Motor Pump Installation', titleUr: 'پانی کی موٹر لگانا', price: 2500),
+            _FlowDisplayedSkill(titleEn: 'Geyser Repair & Service', titleUr: 'گیزر کی سروس اور مرمت', price: 1800),
+            _FlowDisplayedSkill(titleEn: 'Pipeline Leakage Repair', titleUr: 'پائپ لائن لیکیج مرمت', price: 1000),
+            _FlowDisplayedSkill(titleEn: 'Shower Fitting Replacement', titleUr: 'شاور فٹنگ تبدیل کرنا', price: 700),
+            _FlowDisplayedSkill(titleEn: 'Drain Blockage Cleaning', titleUr: 'بند نالی کی صفائی', price: 800),
+            _FlowDisplayedSkill(titleEn: 'Full Washroom Setup', titleUr: 'واش روم کا مکمل سیٹ اپ', price: 12000),
+          ]
+        : (categoryKey.contains('elect'))
+            ? const [
+                _FlowDisplayedSkill(titleEn: 'Broken Switch Repair', titleUr: 'خراب سوئچ کی مرمت', price: 300),
+                _FlowDisplayedSkill(titleEn: 'Short Circuit Fix', titleUr: 'شارٹ سرکٹ ٹھیک کرنا', price: 400),
+                _FlowDisplayedSkill(titleEn: 'Ceiling Fan Installation', titleUr: 'سیلنگ فین انسٹالیشن', price: 500),
+                _FlowDisplayedSkill(titleEn: 'Full Home Wiring Repair', titleUr: 'مکمل گھر کی وائرنگ مرمت', price: 8000),
+                _FlowDisplayedSkill(titleEn: 'AC Switch Installation', titleUr: 'اے سی سوئچ لگانا', price: 450),
+                _FlowDisplayedSkill(titleEn: 'UPS Setup & Installation', titleUr: 'یو پی ایس سیٹ اپ', price: 1500),
+                _FlowDisplayedSkill(titleEn: 'Generator Repair', titleUr: 'جنریٹر کی مرمت', price: 2000),
+                _FlowDisplayedSkill(titleEn: 'Bulb or Holder Replacement', titleUr: 'بلب یا ہولڈر تبدیل کرنا', price: 150),
+              ]
+            : const [];
+
+    for (final def in defaultCategorySkills) {
+      if (seenTitles.add(def.titleEn.toLowerCase().trim())) {
+        allSkills.add(def);
+      }
+    }
+
+    final selectedTitles = selectedIssues.map((e) => e.titleEn.toLowerCase().trim()).toSet();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            bilingual(ctx, '${worker.name}\'s Skills', '${worker.name} کی مہارتیں'),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            bilingual(ctx, 'All available services & pricing', 'تمام دستیاب سروسز اور قیمتیں'),
+                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  itemCount: allSkills.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (ctx, i) {
+                    final s = allSkills[i];
+                    final sTitle = s.titleEn.toLowerCase().trim();
+                    final isRequested = selectedTitles.any((st) =>
+                        st == sTitle ||
+                        st.contains(sTitle) ||
+                        sTitle.contains(st));
+
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      leading: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: isRequested ? const Color(0xFF0D9488).withOpacity(0.12) : const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          isRequested ? Icons.check_circle : Icons.handyman_outlined,
+                          color: isRequested ? const Color(0xFF0D9488) : Colors.black54,
+                          size: 20,
+                        ),
+                      ),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              isUrdu ? s.titleUr : s.titleEn,
+                              style: TextStyle(
+                                fontWeight: isRequested ? FontWeight.bold : FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          if (isRequested) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                bilingual(ctx, 'Requested', 'مطلوبہ'),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      trailing: Text(
+                        'Rs. ${s.price.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFF0D9488),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

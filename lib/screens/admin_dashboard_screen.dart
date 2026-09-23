@@ -803,6 +803,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
   ) async {
     await FirebaseFirestore.instance.collection('users').doc(docId).update({
       'status': 'approved',
+      'workerStatus': 'approved',
     });
     final emailSent = await SmtpService.sendWorkerApprovalEmail(
       email: workerEmail,

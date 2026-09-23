@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'services/workers_service.dart';
 import 'services/notification_service.dart';
 
@@ -53,14 +54,31 @@ class AppController extends ChangeNotifier {
   Locale locale = const Locale('en');
   final ChatUnreadController chatUnread = ChatUnreadController();
 
+  /// The currently active role string ('customer' or 'worker'), persisted in
+  /// SharedPreferences so the app can restore it on next launch.
+  String activeRole = 'customer';
+
   bool get isUrdu => locale.languageCode == 'ur';
 
-  void selectRole(UserRole value) {
+  void selectRole(UserRole value, {bool updateLocale = true}) {
     role = value;
-    locale = value == UserRole.worker ? const Locale('ur') : const Locale('en');
+    if (updateLocale) {
+      locale = value == UserRole.worker ? const Locale('ur') : const Locale('en');
+    }
+    activeRole = value == UserRole.worker ? 'worker' : 'customer';
     chatUnread.start();
     NotificationService.saveCurrentToken();
     notifyListeners();
+    _persistActiveRole(activeRole);
+  }
+
+  /// Switch the active role in-app (from Settings). Preserves current locale.
+  void switchActiveRole(UserRole value) {
+    role = value;
+    activeRole = value == UserRole.worker ? 'worker' : 'customer';
+    chatUnread.start();
+    notifyListeners();
+    _persistActiveRole(activeRole);
   }
 
   void setLocale(Locale value) {
@@ -76,9 +94,18 @@ class AppController extends ChangeNotifier {
   void logout() {
     WorkerPresenceService.instance.setOnline(false);
     role = null;
+    activeRole = 'customer';
     locale = const Locale('en');
     chatUnread.reset();
     notifyListeners();
+    _persistActiveRole('customer');
+  }
+
+  Future<void> _persistActiveRole(String roleName) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('active_role', roleName);
+    } catch (_) {}
   }
 
   @override

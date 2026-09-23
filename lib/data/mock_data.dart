@@ -14,6 +14,28 @@ class ServiceCategory {
   final IconData icon;
 }
 
+class WorkerSkill {
+  final String titleEn;
+  final String titleUr;
+  final double price;
+
+  const WorkerSkill({
+    required this.titleEn,
+    required this.titleUr,
+    required this.price,
+  });
+
+  factory WorkerSkill.fromMap(Map<String, dynamic> map) {
+    return WorkerSkill(
+      titleEn: map['titleEn']?.toString() ?? '',
+      titleUr: map['titleUr']?.toString() ?? '',
+      price: (map['price'] is num)
+          ? (map['price'] as num).toDouble()
+          : (double.tryParse(map['price']?.toString() ?? '0') ?? 0.0),
+    );
+  }
+}
+
 class WorkerModel {
   WorkerModel({
     this.id,
@@ -24,6 +46,7 @@ class WorkerModel {
     this.distanceKm = 0,
     this.price = '',
     this.image = '',
+    this.skills = const [],
     this.skillsEn = const [],
     this.skillsUr = const [],
     this.phone = '',
@@ -39,6 +62,7 @@ class WorkerModel {
   final double distanceKm;
   final String price;
   final String image;
+  final List<WorkerSkill> skills;
   final List<String> skillsEn;
   final List<String> skillsUr;
   final String phone;
@@ -47,14 +71,29 @@ class WorkerModel {
 
   factory WorkerModel.fromFirestore(Map<String, dynamic> data, {String? docId}) {
     final List<dynamic> skillsData = data['skills'] as List<dynamic>? ?? [];
-    final List<String> skillsEn = skillsData.map((s) => (s as Map)['titleEn']?.toString() ?? '').toList();
-    final List<String> skillsUr = skillsData.map((s) => (s as Map)['titleUr']?.toString() ?? '').toList();
+    final List<WorkerSkill> skillsList = [];
+    final List<String> skillsEn = [];
+    final List<String> skillsUr = [];
+
+    for (final s in skillsData) {
+      if (s is Map) {
+        final map = Map<String, dynamic>.from(s);
+        final skill = WorkerSkill.fromMap(map);
+        skillsList.add(skill);
+        if (skill.titleEn.isNotEmpty) skillsEn.add(skill.titleEn);
+        if (skill.titleUr.isNotEmpty) skillsUr.add(skill.titleUr);
+      } else if (s is String && s.isNotEmpty) {
+        skillsList.add(WorkerSkill(titleEn: s, titleUr: s, price: 0.0));
+        skillsEn.add(s);
+        skillsUr.add(s);
+      }
+    }
 
     final categoryNameEn = data['categoryNameEn']?.toString() ?? '';
 
-    final double lowestPrice = skillsData.fold<double>(0, (prev, s) {
-      final p = ((s as Map)['price'] ?? 0).toDouble();
-      return prev == 0 ? p : (p < prev ? p : prev);
+    final double lowestPrice = skillsList.fold<double>(0, (prev, s) {
+      final p = s.price;
+      return prev == 0 ? p : (p < prev && p > 0 ? p : prev);
     });
 
     return WorkerModel(
@@ -66,6 +105,7 @@ class WorkerModel {
       distanceKm: (data['distanceKm'] ?? 2.0).toDouble(),
       price: lowestPrice > 0 ? 'Rs. ${lowestPrice.toStringAsFixed(0)}' : '',
       image: data['profileImage']?.toString() ?? data['profilePicUrl']?.toString() ?? '',
+      skills: skillsList,
       skillsEn: skillsEn,
       skillsUr: skillsUr,
       phone: data['phone']?.toString() ?? '',

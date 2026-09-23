@@ -7307,15 +7307,15 @@ class SettingsScreen extends StatelessWidget {
                 const Icon(Icons.handyman_rounded, size: 48, color: Color(0xFF0D9488)),
                 const SizedBox(height: 12),
                 Text(
-                  bilingual(context, 'Become a Worker', 'ورکر بنیں'),
+                   bilingual(context, 'Become a Worker', 'ورکر بنیں'),
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   bilingual(
                     context,
-                    'Register as a worker to offer your services on MazdoorLink.',
-                    'MazdoorLink پر اپنی خدمات پیش کرنے کے لیے ورکر کے طور پر رجسٹر کریں۔',
+                    'Submit a worker application. Our team will review and approve you to start earning.',
+                    'ورکر درخواست جمع کریں۔ ہماری ٹیم جائزہ لے کر آپ کو منظوری دے گی۔',
                   ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.grey),
@@ -7325,10 +7325,24 @@ class SettingsScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.arrow_forward),
-                    label: Text(bilingual(context, 'Set Up Worker Profile', 'ورکر پروفائل بنائیں')),
-                    onPressed: () {
+                    label: Text(bilingual(context, 'Apply as Worker', 'ورکر کے لیے درخواست دیں')),
+                    onPressed: () async {
                       Navigator.pop(ctx);
-                      Navigator.pushNamed(context, AppRoutes.workerOnboarding);
+                      // Update existing Firestore doc to request worker role
+                      final uid = FirebaseAuth.instance.currentUser?.uid;
+                      if (uid != null) {
+                        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+                          'roles': FieldValue.arrayUnion(['worker']),
+                          'workerStatus': 'pending',
+                        });
+                        if (context.mounted) {
+                          showToast(bilingual(
+                            context,
+                            'Worker application submitted! You will be notified once approved.',
+                            'درخواست جمع ہو گئی! منظوری پر آپ کو اطلاع ملے گی۔',
+                          ));
+                        }
+                      }
                     },
                   ),
                 ),

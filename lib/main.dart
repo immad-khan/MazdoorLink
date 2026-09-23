@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app_state.dart';
 import 'l10n/app_localizations.dart';
 import 'app_theme.dart';
@@ -31,16 +32,24 @@ Future<_AuthResult> _resolveAuth() async {
     final data = doc.data();
     if (data == null) return _AuthResult(AppRoutes.welcome, null);
 
-    final role = data['role']?.toString();
+    final firestoreRole = data['role']?.toString();
     final status = data['status']?.toString();
+
+    // Read the last active role the user chose (for dual-role support)
+    String? savedActiveRole;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      savedActiveRole = prefs.getString('active_role');
+    } catch (_) {}
 
     UserRole? userRole;
     String route;
 
-    if (role == 'admin') {
+    if (firestoreRole == 'admin') {
       userRole = UserRole.admin;
       route = AppRoutes.adminDashboard;
-    } else if (role == 'worker') {
+    } else if (firestoreRole == 'worker') {
+      // Pure worker account
       userRole = UserRole.worker;
       if (status == 'pending') {
         route = AppRoutes.workerOnboarding;
@@ -53,8 +62,19 @@ Future<_AuthResult> _resolveAuth() async {
         }
       }
     } else {
-      userRole = UserRole.customer;
-      route = AppRoutes.customerHome;
+      // Customer (may also have worker access via 'roles' array)
+      final roles = (data['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      final hasWorkerAccess = roles.contains('worker');
+      final workerStatus = data['workerStatus']?.toString();
+
+      if (hasWorkerAccess && savedActiveRole == 'worker' && workerStatus == 'approved') {
+        // Dual-role user last used worker mode
+        userRole = UserRole.worker;
+        route = AppRoutes.workerDashboard;
+      } else {
+        userRole = UserRole.customer;
+        route = AppRoutes.customerHome;
+      }
     }
 
     return _AuthResult(route, userRole);

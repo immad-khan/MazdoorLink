@@ -9,11 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:service_frontend/main.dart';
+import 'package:service_frontend/screens/mazdoor_flow.dart';
 
 void main() {
   testWidgets('App loads correctly', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(ServiceApp());
+    await tester.pumpWidget(const ServiceApp(initialRoute: AppRoutes.welcome));
 
     // Verify that the app loads without errors.
     expect(find.byType(MaterialApp), findsOneWidget);

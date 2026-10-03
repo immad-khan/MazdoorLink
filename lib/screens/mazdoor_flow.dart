@@ -2653,6 +2653,8 @@ final _phone = TextEditingController();
                   ],
                 ),
               ),
+            const SizedBox(height: 20),
+          ],
           const SizedBox(height: 12),
           // OTP Delivery Method Selection Card
           Container(

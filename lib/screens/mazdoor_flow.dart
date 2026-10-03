@@ -2883,7 +2883,7 @@ class CustomerHomeScreen extends StatelessWidget {
                   trailing: FilledButton(
                     onPressed: () {
                       scope.selectRole(UserRole.worker);
-                      Navigator.pushNamed(context, AppRoutes.workerOnboarding);
+                      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (route) => false);
                     },
                     child: Text(bilingual(context, 'Switch', 'تبدیل کریں')),
                   ),

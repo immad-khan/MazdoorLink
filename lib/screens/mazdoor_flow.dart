@@ -1960,21 +1960,34 @@ final _phone = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    return MzScaffold(
-      showBottomNav: false,
-      showBack: true,
-      title: (_isForgotPassword)
-          ? 'Reset Password'
-          : (widget.isSignup ? 'Sign up' : 'Login'),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: SingleChildScrollView(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 260),
-            transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-            child: (_isForgotPassword)
-                ? _forgotPasswordFlow()
-                : (widget.isSignup ? _signupFlow() : _loginScreen()),
+    return PopScope(
+      canPop: !(_isForgotPassword && step > 0) && !(widget.isSignup && step > 0),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_isForgotPassword && step > 0) {
+          setState(() => step--);
+        } else if (widget.isSignup && step > 0) {
+          setState(() => step = 0);
+        }
+      },
+      child: MzScaffold(
+        showBottomNav: false,
+        showBack: true,
+        title: (_isForgotPassword)
+            ? 'Reset Password'
+            : (widget.isSignup
+                ? (step == 0 ? 'Sign up' : 'Verification')
+                : 'Login'),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: SingleChildScrollView(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
+              child: (_isForgotPassword)
+                  ? _forgotPasswordFlow()
+                  : (widget.isSignup ? _signupFlow() : _loginScreen()),
+            ),
           ),
         ),
       ),
@@ -2640,8 +2653,114 @@ final _phone = TextEditingController();
                   ],
                 ),
               ),
-            const SizedBox(height: 20),
-          ],
+          const SizedBox(height: 12),
+          // OTP Delivery Method Selection Card
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.security, size: 16, color: Color(0xFF0D9488)),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppScope.of(context).isUrdu ? 'او ٹی پی تصدیق کا طریقہ' : 'Send verification OTP to:',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _selectedOtpMethod = 'email'),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: _selectedOtpMethod == 'email' ? const Color(0xFFF0FDFA) : Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _selectedOtpMethod == 'email' ? const Color(0xFF0D9488) : Colors.grey.shade300,
+                              width: _selectedOtpMethod == 'email' ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.email_outlined,
+                                size: 16,
+                                color: _selectedOtpMethod == 'email' ? const Color(0xFF0D9488) : Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                AppScope.of(context).isUrdu ? 'ای میل' : 'Email',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: _selectedOtpMethod == 'email' ? FontWeight.bold : FontWeight.normal,
+                                  color: _selectedOtpMethod == 'email' ? const Color(0xFF0D9488) : Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _selectedOtpMethod = 'phone'),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: _selectedOtpMethod == 'phone' ? const Color(0xFFF0FDFA) : Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _selectedOtpMethod == 'phone' ? const Color(0xFF0D9488) : Colors.grey.shade300,
+                              width: _selectedOtpMethod == 'phone' ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.sms_outlined,
+                                size: 16,
+                                color: _selectedOtpMethod == 'phone' ? const Color(0xFF0D9488) : Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                AppScope.of(context).isUrdu ? 'موبائل نمبر' : 'Mobile Number',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: _selectedOtpMethod == 'phone' ? FontWeight.bold : FontWeight.normal,
+                                  color: _selectedOtpMethod == 'phone' ? const Color(0xFF0D9488) : Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -2669,20 +2788,48 @@ final _phone = TextEditingController();
         ],
       );
     } else {
+      final isUrdu = AppScope.of(context).isUrdu;
+      final target = _selectedOtpMethod == 'email'
+          ? _emailController.text.trim()
+          : '+92 ${_phone.text.trim()}';
+
       return Column(
         key: const ValueKey('signupStep1'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Enter verification code',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+          Text(
+            isUrdu ? 'تصدیقی کوڈ درج کریں' : 'Enter verification code',
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
           ),
           const SizedBox(height: 8),
-          Text(
-            'We sent a 4-digit code to ${_emailController.text}',
-            style: const TextStyle(fontSize: 15, color: Colors.black54),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFCCFBF1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _selectedOtpMethod == 'email' ? Icons.email_outlined : Icons.sms_outlined,
+                  size: 14,
+                  color: const Color(0xFF0D9488),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _selectedOtpMethod == 'email'
+                      ? (isUrdu ? 'ہم نے $target پر 4 ہندسوں کا کوڈ بھیجا ہے' : 'We sent a 4-digit code to $target')
+                      : (isUrdu ? 'ہم نے $target پر 4 ہندسوں کا ایس ایم ایس بھیجا ہے' : 'We sent a 4-digit SMS code to $target'),
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
           Row(
             children: List.generate(4, (index) {
               return Expanded(
@@ -2706,23 +2853,89 @@ final _phone = TextEditingController();
               );
             }),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Align(
             alignment: Alignment.center,
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                TextButton.icon(
+                  icon: const Icon(Icons.refresh, size: 16, color: Color(0xFF0D9488)),
+                  label: Text(
+                    isUrdu ? 'دوبارہ کوڈ بھیجیں' : 'Resend code',
+                    style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () async {
+                    setState(() => _isUploading = true);
+                    final sent = await _dispatchOtp(_selectedOtpMethod);
+                    setState(() => _isUploading = false);
+                    if (sent) {
+                      for (final c in _otpControllers) {
+                        c.clear();
+                      }
+                      if (_selectedOtpMethod == 'email') {
+                        showToast('Verification code resent to ${_emailController.text.trim()}');
+                      } else {
+                        showToast('Verification code resent via SMS to +92 ${_phone.text.trim()}');
+                      }
+                    } else {
+                      showToast('Failed to resend verification code');
+                    }
+                  },
+                ),
+                const Text('|', style: TextStyle(color: Colors.grey)),
+                TextButton.icon(
+                  icon: Icon(
+                    _selectedOtpMethod == 'email' ? Icons.sms_outlined : Icons.email_outlined,
+                    size: 16,
+                    color: const Color(0xFF0D9488),
+                  ),
+                  label: Text(
+                    _selectedOtpMethod == 'email'
+                        ? (isUrdu ? 'نمبر پر ایس ایم ایس بھیجیں' : 'Send via SMS instead')
+                        : (isUrdu ? 'ای میل پر بھیجیں' : 'Send via Email instead'),
+                    style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () async {
+                    final newMethod = _selectedOtpMethod == 'email' ? 'phone' : 'email';
+                    setState(() {
+                      _isUploading = true;
+                      _selectedOtpMethod = newMethod;
+                    });
+                    final sent = await _dispatchOtp(newMethod);
+                    setState(() => _isUploading = false);
+                    if (sent) {
+                      for (final c in _otpControllers) {
+                        c.clear();
+                      }
+                      if (newMethod == 'email') {
+                        showToast('Verification code sent to ${_emailController.text.trim()}');
+                      } else {
+                        showToast('Verification code sent via SMS to +92 ${_phone.text.trim()}');
+                      }
+                    } else {
+                      showToast('Failed to send code via ${newMethod == 'email' ? 'Email' : 'SMS'}');
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
             child: TextButton(
-              onPressed: () async {
-                setState(() => _isUploading = true);
-                final random = math.Random();
-                _generatedOtp = (1000 + random.nextInt(9000)).toString();
-                final sent = await SmtpService.sendOTP(_emailController.text.trim(), _generatedOtp!);
-                setState(() => _isUploading = false);
-                if (sent) {
-                  showToast('Verification code resent successfully');
-                } else {
-                  showToast('Failed to resend code');
-                }
+              onPressed: () {
+                setState(() {
+                  step = 0;
+                });
               },
-              child: const Text('Resend code', style: TextStyle(color: Color(0xFF0D9488))),
+              child: Text(
+                isUrdu ? 'معلومات تبدیل کریں (واپس جائیں)' : 'Edit registration details (Go back)',
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -2730,9 +2943,14 @@ final _phone = TextEditingController();
             width: double.infinity,
             height: 48,
             child: FilledButton(
-              onPressed: _next,
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-              child: const Text('Complete Sign up'),
+              onPressed: _isUploading ? null : _next,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0D9488),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              ),
+              child: _isUploading
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(isUrdu ? 'سائن اپ مکمل کریں' : 'Complete Sign up'),
             ),
           ),
         ],

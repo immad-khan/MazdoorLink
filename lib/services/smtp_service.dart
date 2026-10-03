@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 
@@ -8,12 +10,8 @@ class SmtpService {
   static const String _emailHostPassword = 'ivcj icxn jpnl ekbo';
   static const String _emailFromName = 'Mazdoorlink';
 
-  static SmtpServer get _smtpServer => SmtpServer(
-        _emailHost,
-        port: _emailPort,
-        username: _emailHostUser,
-        password: _emailHostPassword,
-      );
+  // Uses the built-in gmail() helper — correctly sets STARTTLS on port 587.
+  static SmtpServer get _smtpServer => gmail(_emailHostUser, _emailHostPassword);
 
   static Future<bool> sendOTP(String email, String otp) async {
     final message = Message()
@@ -140,10 +138,19 @@ class SmtpService {
       await send(message, _smtpServer);
       return true;
     } on MailerException catch (e) {
-      print('Message not sent. \n${e.message}');
+      print('SMTP MailerException: ${e.message}');
+      for (final p in e.problems) {
+        print('  Problem: ${p.code} — ${p.msg}');
+      }
+      return false;
+    } on SocketException catch (e) {
+      print('SMTP SocketException (no network?): $e');
+      return false;
+    } on TimeoutException catch (e) {
+      print('SMTP TimeoutException: $e');
       return false;
     } catch (e) {
-      print('SMTP Error: $e');
+      print('SMTP unknown error: $e');
       return false;
     }
   }

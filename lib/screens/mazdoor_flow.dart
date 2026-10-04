@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:math' as math;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
@@ -1770,8 +1769,8 @@ final _phone = TextEditingController();
               'status': 'pending',
               'otpVerifiedVia': _selectedOtpMethod,
               'createdAt': FieldValue.serverTimestamp(),
-              'idFrontUrl': frontUrl!,
-              'idBackUrl': backUrl!,
+              'idFrontUrl': frontUrl,
+              'idBackUrl': backUrl,
               'category': categoryKey,
               'categoryNameEn': _selectedCategory,
               'categoryNameUr': categoryNameUr,

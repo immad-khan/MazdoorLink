@@ -4409,18 +4409,37 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                                 }
                                 if (!context.mounted) return;
                               }
-                              final jobId = await createJobOffer(
-                                workerId: worker.id,
-                                workerName: worker.name,
-                                descriptionEn: jobDesc.descriptionEn,
-                                descriptionUr: jobDesc.descriptionUr,
-                                price: offerPrice,
-                                categoryKey: jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey : worker.category.toLowerCase(),
-                                paymentMethod: jobDesc.paymentMethod,
-                                customerLatitude: latitude,
-                                customerLongitude: longitude,
-                                visibilityDurationMinutes: _visibilityMinutes,
-                              );
+                               final categoryKeyToUse = jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey.toLowerCase() : worker.category.toLowerCase();
+                               final customerId = FirebaseAuth.instance.currentUser?.uid;
+                               if (customerId != null && customerId.isNotEmpty) {
+                                 final hasActive = await customerHasActiveJobInCategory(customerId, categoryKeyToUse);
+                                 if (hasActive && mounted) {
+                                   ScaffoldMessenger.of(context).showSnackBar(
+                                     SnackBar(
+                                        content: Text(bilingual(
+                                          context,
+                                          'You can book only one ${worker.category} at a time. Please complete your previous ${worker.category} job first.',
+                                          'آپ صرف ایک ${worker.category} ایک وقت میں بک کر سکتے ہیں۔ براہ کرم اپنا پچھلا ${worker.category} کام مکمل کریں۔',
+                                        )),
+                                       backgroundColor: Colors.redAccent,
+                                       duration: const Duration(seconds: 5),
+                                     ),
+                                   );
+                                   return;
+                                 }
+                               }
+                               final jobId = await createJobOffer(
+                                 workerId: worker.id,
+                                 workerName: worker.name,
+                                 descriptionEn: jobDesc.descriptionEn,
+                                 descriptionUr: jobDesc.descriptionUr,
+                                 price: offerPrice,
+                                 categoryKey: categoryKeyToUse,
+                                 paymentMethod: jobDesc.paymentMethod,
+                                 customerLatitude: latitude,
+                                 customerLongitude: longitude,
+                                 visibilityDurationMinutes: _visibilityMinutes,
+                               );
                               if (context.mounted) {
                                 Navigator.pushReplacementNamed(
                                   context,
@@ -4474,18 +4493,37 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         }
                         if (!context.mounted) return;
                       }
-                      final jobId = await createJobOffer(
-                        workerId: worker.id,
-                        workerName: worker.name,
-                        descriptionEn: jobDesc.descriptionEn,
-                        descriptionUr: jobDesc.descriptionUr,
-                        price: offerPrice,
-                        categoryKey: jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey : worker.category.toLowerCase(),
-                        paymentMethod: jobDesc.paymentMethod,
-                        customerLatitude: latitude,
-                        customerLongitude: longitude,
-                        visibilityDurationMinutes: _visibilityMinutes,
-                      );
+                       final categoryKeyToUse = jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey.toLowerCase() : worker.category.toLowerCase();
+                       final customerId = FirebaseAuth.instance.currentUser?.uid;
+                       if (customerId != null && customerId.isNotEmpty) {
+                         final hasActive = await customerHasActiveJobInCategory(customerId, categoryKeyToUse);
+                         if (hasActive && mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(
+                                content: Text(bilingual(
+                                  context,
+                                  'You can book only one ${worker.category} at a time. Please complete your previous ${worker.category} job first.',
+                                  'آپ صرف ایک ${worker.category} ایک وقت میں بک کر سکتے ہیں۔ براہ کرم اپنا پچھلا ${worker.category} کام مکمل کریں۔',
+                                )),
+                               backgroundColor: Colors.redAccent,
+                               duration: const Duration(seconds: 5),
+                             ),
+                           );
+                           return;
+                         }
+                       }
+                       final jobId = await createJobOffer(
+                         workerId: worker.id,
+                         workerName: worker.name,
+                         descriptionEn: jobDesc.descriptionEn,
+                         descriptionUr: jobDesc.descriptionUr,
+                         price: offerPrice,
+                         categoryKey: categoryKeyToUse,
+                         paymentMethod: jobDesc.paymentMethod,
+                         customerLatitude: latitude,
+                         customerLongitude: longitude,
+                         visibilityDurationMinutes: _visibilityMinutes,
+                       );
                       if (context.mounted) {
                         Navigator.pushReplacementNamed(
                           context,

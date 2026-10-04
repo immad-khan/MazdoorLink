@@ -1,15 +1,16 @@
 import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
 
-/// Sends emails via the Firebase Cloud Function `sendEmail`.
-/// This works on Flutter Web (and mobile) because it uses an HTTP call
-/// instead of raw SMTP sockets (which browsers block).
+/// Direct Gmail SMTP service.
+/// On native platforms (Android, iOS, Windows, macOS), this sends emails directly
+/// to smtp.gmail.com using the Gmail App Password.
+/// On Flutter Web (Chrome testing), browser security blocks raw SMTP sockets,
+/// so it logs the email and OTP to the debug console for easy testing.
 class SmtpService {
-  // Firebase Cloud Functions base URL for the mazdoorlink-30879 project.
-  // Region: us-central1 (default)
-  static const String _functionUrl =
-      'https://us-central1-mazdoorlink-30879.cloudfunctions.net/sendEmail';
+  static const String _emailHostUser = 'immadonline702@gmail.com';
+  static const String _emailHostPassword = 'cmow ikby ocny giez';
 
   static Future<bool> sendOTP(String email, String otp) {
     return _send(
@@ -18,6 +19,7 @@ class SmtpService {
       text:
           'Your verification code for MazdoorLink is: $otp\n\n'
           'Please enter this in the app to complete sign up.',
+      logLabel: 'Sign Up OTP: $otp',
     );
   }
 
@@ -28,6 +30,7 @@ class SmtpService {
       text:
           'Your MazdoorLink password reset code is: $otp\n\n'
           'Enter this code in the app to continue resetting your password.',
+      logLabel: 'Password Reset OTP: $otp',
     );
   }
 
@@ -43,6 +46,7 @@ class SmtpService {
           'Your MazdoorLink worker account has been approved. '
           'You may now log in with your credentials and start using your worker dashboard.\n\n'
           'Thank you,\nMazdoorLink',
+      logLabel: 'Worker Approval for $workerName',
     );
   }
 
@@ -60,6 +64,7 @@ class SmtpService {
           'Reason:\n$reason\n\n'
           'Please review the issue and contact support or sign up again with corrected details.\n\n'
           'Thank you,\nMazdoorLink',
+      logLabel: 'Worker Rejection for $workerName',
     );
   }
 
@@ -78,6 +83,7 @@ class SmtpService {
           '${_formatTime(scheduledTime)} for your request: "$jobDesc".\n\n'
           'Please open the MazdoorLink app to Approve or Decline this schedule.\n\n'
           'Thank you,\nMazdoorLink',
+      logLabel: 'Schedule Proposal',
     );
   }
 
@@ -96,6 +102,7 @@ class SmtpService {
           '${_formatTime(scheduledTime)} for the job: "$jobDesc".\n\n'
           'Open the MazdoorLink app at that time to start the job.\n\n'
           'Thank you,\nMazdoorLink',
+      logLabel: 'Schedule Confirmed',
     );
   }
 
@@ -112,6 +119,7 @@ class SmtpService {
           'Your customer declined the proposed schedule for the job: "$jobDesc".\n\n'
           'The job has been closed.\n\n'
           'Thank you,\nMazdoorLink',
+      logLabel: 'Schedule Declined',
     );
   }
 
@@ -127,6 +135,7 @@ class SmtpService {
           'The scheduled time for your MazdoorLink job "$jobDesc" has arrived. '
           'The worker should be arriving now.\n\n'
           'Thank you,\nMazdoorLink',
+      logLabel: 'Arrival Reminder',
     );
   }
 
@@ -141,36 +150,38 @@ class SmtpService {
     return '$day at $hour:${local.minute.toString().padLeft(2, '0')} $amPm';
   }
 
-  /// Calls the Firebase Cloud Function to send an email.
-  /// The function URL uses the v2 callable format (POST with JSON body).
   static Future<bool> _send({
     required String to,
     required String subject,
     required String text,
+    String? logLabel,
   }) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse(_functionUrl),
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode({
-              'data': {'to': to, 'subject': subject, 'text': text},
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
+    // If running on Flutter Web (Chrome testing), log to console to enable testing
+    // because browsers block raw SMTP TCP socket connections.
+    if (kIsWeb) {
+      print('====================================================');
+      print('📧 [WEB DEV EMAIL LOG] To: $to');
+      print('Subject: $subject');
+      if (logLabel != null) print('Detail: $logLabel');
+      print('Body:\n$text');
+      print('====================================================');
+      return true;
+    }
 
-      if (response.statusCode == 200) {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        final result = body['result'] as Map<String, dynamic>?;
-        return result?['success'] == true;
-      } else {
-        print('sendEmail HTTP ${response.statusCode}: ${response.body}');
-        return false;
-      }
+    // Native Mobile / Desktop platform: Send direct via Gmail SMTP server
+    try {
+      final smtpServer = gmail(_emailHostUser, _emailHostPassword);
+      final message = Message()
+        ..from = Address(_emailHostUser, 'MazdoorLink')
+        ..recipients.add(to)
+        ..subject = subject
+        ..text = text;
+
+      final sendReport = await send(message, smtpServer);
+      print('SMTP Email sent successfully to $to: ${sendReport.toString()}');
+      return true;
     } catch (e) {
-      print('sendEmail error: $e');
+      print('SMTP Email failed to $to: $e');
       return false;
     }
   }

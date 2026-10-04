@@ -2537,7 +2537,7 @@ final _phone = TextEditingController();
                   child: Text('+92', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                 ),
                 prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                hintText: '3038064241',
+                hintText: '03000000000',
                 errorText: _phoneError,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 focusedBorder: OutlineInputBorder(

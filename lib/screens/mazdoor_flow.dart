@@ -36,6 +36,7 @@ import 'recommendation_arguments.dart';
 import 'cancel_job_screen.dart';
 import 'customer_support_screen.dart';
 import 'worker_support_screen.dart';
+import 'worker_verification_screen.dart';
 
 import 'worker_tracking_screen.dart';
 
@@ -118,6 +119,7 @@ class AppRoutes {
   static const tracking = '/customer/tracking';
   static const rating = '/customer/rating';
   static const workerOnboarding = '/worker/onboarding';
+  static const workerVerification = '/worker/verification';
     static const workerDashboard = '/worker/dashboard';
   static const workerServicesSetup = '/worker/services-setup';
   static const workerEarnings = '/worker/earnings';
@@ -166,6 +168,8 @@ Route<dynamic> buildRoute(RouteSettings settings) {
       return _page(const RatingReviewScreen(), settings);
     case AppRoutes.workerOnboarding:
       return _page(const WorkerOnboardingScreen(), settings);
+    case AppRoutes.workerVerification:
+      return _page(const WorkerVerificationScreen(), settings);
     case AppRoutes.workerDashboard:
       return _page(const WorkerDashboardScreen(), settings);
     case AppRoutes.workerServicesSetup:
@@ -6145,6 +6149,23 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final data = doc.data();
+
+      // Guard: worker must be approved by admin
+      final workerStatus = data?['workerStatus']?.toString() ?? data?['status']?.toString();
+      final roles = (data?['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      final hasWorkerRole = roles.contains('worker') || data?['role'] == 'worker';
+      if (!hasWorkerRole || workerStatus != 'approved') {
+        if (mounted) {
+          final isUrdu = AppScope.of(context).isUrdu;
+          AppScope.of(context).switchActiveRole(UserRole.customer);
+          Navigator.pushNamedAndRemoveUntil(context, AppRoutes.customerHome, (r) => false);
+          showToast(isUrdu
+              ? 'ورکر موڈ استعمال کرنے کے لیے ایڈمن کی منظوری درکار ہے'
+              : 'Admin approval is required to access Worker Mode');
+        }
+        return;
+      }
+
       final isOn = data?['isOnline'] as bool? ?? false;
       final effectiveOnline = WorkerPresenceService.instance.isOnline || isOn;
       WorkerPresenceService.instance.isOnline = effectiveOnline;
@@ -7605,8 +7626,8 @@ class SettingsScreen extends StatelessWidget {
   Future<void> _switchToWorkerMode(BuildContext context, Map<String, dynamic> userData) async {
     final c = AppScope.of(context);
     final roles = (userData['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
-    final workerStatus = userData['workerStatus']?.toString();
-    final hasWorkerAccess = roles.contains('worker');
+    final workerStatus = userData['workerStatus']?.toString() ?? userData['status']?.toString();
+    final hasWorkerAccess = roles.contains('worker') || userData['role'] == 'worker';
 
     if (hasWorkerAccess && workerStatus == 'approved') {
       // Worker mode is already set up and approved — switch directly
@@ -7615,17 +7636,24 @@ class SettingsScreen extends StatelessWidget {
       if (context.mounted) {
         Navigator.pushNamedAndRemoveUntil(context, AppRoutes.workerDashboard, (r) => false);
       }
-    } else if (hasWorkerAccess && workerStatus == 'pending') {
-      // Applied but not yet approved
+    } else if (workerStatus == 'pending') {
+      // Applied but not yet approved by admin
       if (context.mounted) {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text(bilingual(context, 'Application Pending', 'درخواست زیر التواء')),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.pending_actions, color: Color(0xFFF59E0B)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(bilingual(context, 'Application Pending', 'درخواست زیر التواء'))),
+              ],
+            ),
             content: Text(bilingual(
               context,
-              'Your worker application is under review. You will be notified once approved.',
-              'آپ کی ورکر درخواست جائزے میں ہے۔ منظوری پر آپ کو اطلاع ملے گی۔',
+              'Your worker verification request is under admin review. You will be able to access worker mode once approved.',
+              'آپ کی ورکر تصدیقی درخواست ایڈمن کے جائزے میں ہے۔ منظوری پر آپ کو مطلع کیا جائے گا اور آپ ورکر موڈ استعمال کر سکیں گے۔',
             )),
             actions: [
               TextButton(
@@ -7636,59 +7664,99 @@ class SettingsScreen extends StatelessWidget {
           ),
         );
       }
+    } else if (workerStatus == 'rejected') {
+      // Previously rejected by admin - allow re-applying with updated verification docs
+      final reason = userData['rejectReason']?.toString() ?? 'Documents not verified';
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Color(0xFFEF4444)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(bilingual(context, 'Application Rejected', 'درخواست مسترد'))),
+              ],
+            ),
+            content: Text(bilingual(
+              context,
+              'Your worker verification application was rejected by admin.\nReason: $reason\n\nPlease update your verification documents and re-apply.',
+              'ایڈمن کی جانب سے آپ کی ورکر تصدیق مسترد ہو گئی ہے۔\nوجہ: $reason\n\nبراہ کرم دستاویزات اپ ڈیٹ کر کے دوبارہ جمع کرائیں۔',
+            )),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(bilingual(context, 'Cancel', 'منسوخ')),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, AppRoutes.workerVerification);
+                },
+                child: Text(bilingual(context, 'Update & Re-apply', 'دوبارہ درخواست دیں')),
+              ),
+            ],
+          ),
+        );
+      }
     } else {
-      // Not registered as worker yet — offer to set up worker profile
+      // First time accessing worker mode — show modal to prompt for verification
       if (context.mounted) {
         showModalBottomSheet(
           context: context,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
           builder: (ctx) => Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.handyman_rounded, size: 48, color: Color(0xFF0D9488)),
-                const SizedBox(height: 12),
+                Container(
+                  width: 60, height: 60,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0D9488).withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.verified_user_rounded, size: 32, color: Color(0xFF0D9488)),
+                ),
+                const SizedBox(height: 16),
                 Text(
-                   bilingual(context, 'Become a Worker', 'ورکر بنیں'),
+                  bilingual(context, 'Worker Verification Required', 'ورکر تصدیق لازمی ہے'),
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   bilingual(
                     context,
-                    'Submit a worker application. Our team will review and approve you to start earning.',
-                    'ورکر درخواست جمع کریں۔ ہماری ٹیم جائزہ لے کر آپ کو منظوری دے گی۔',
+                    'To switch to worker mode and start receiving jobs, you must submit your CNIC, police clearance certificate, and skill details for admin approval.',
+                    'ورکر بننے اور کام وصول کرنے کے لیے اپنا شناختی کارڈ، پولیس سرٹیفکیٹ اور مہارت کی تفصیلات ایڈمن منظوری کے لیے جمع کروائیں۔',
                   ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: Colors.grey, height: 1.4),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.arrow_forward),
-                    label: Text(bilingual(context, 'Apply as Worker', 'ورکر کے لیے درخواست دیں')),
-                    onPressed: () async {
+                  height: 48,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF0D9488),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.badge_outlined),
+                    label: Text(
+                      bilingual(context, 'Complete Worker Verification', 'ورکر تصدیق مکمل کریں'),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () {
                       Navigator.pop(ctx);
-                      // Update existing Firestore doc to request worker role
-                      final uid = FirebaseAuth.instance.currentUser?.uid;
-                      if (uid != null) {
-                        await FirebaseFirestore.instance.collection('users').doc(uid).update({
-                          'roles': FieldValue.arrayUnion(['worker']),
-                          'workerStatus': 'pending',
-                        });
-                        if (context.mounted) {
-                          showToast(bilingual(
-                            context,
-                            'Worker application submitted! You will be notified once approved.',
-                            'درخواست جمع ہو گئی! منظوری پر آپ کو اطلاع ملے گی۔',
-                          ));
-                        }
-                      }
+                      Navigator.pushNamed(context, AppRoutes.workerVerification);
                     },
                   ),
                 ),
+                const SizedBox(height: 8),
               ],
             ),
           ),

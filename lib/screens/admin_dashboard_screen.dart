@@ -769,6 +769,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
               if (reason.isEmpty) return;
               await FirebaseFirestore.instance.collection('users').doc(docId).update({
                 'status': 'rejected',
+                'workerStatus': 'rejected',
                 'rejectReason': reason,
               });
               final emailSent = await SmtpService.sendWorkerRejectionEmail(
@@ -804,6 +805,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     await FirebaseFirestore.instance.collection('users').doc(docId).update({
       'status': 'approved',
       'workerStatus': 'approved',
+      'roles': FieldValue.arrayUnion(['worker']),
     });
     final emailSent = await SmtpService.sendWorkerApprovalEmail(
       email: workerEmail,
@@ -1116,14 +1118,21 @@ class _WorkerRegistrationsTab extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
-            .where('role', isEqualTo: 'worker')
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data!.docs;
+          final allDocs = snapshot.data!.docs;
+          final docs = allDocs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final role = data['role']?.toString();
+            final roles = (data['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
+            final workerStatus = data['workerStatus']?.toString();
+            return role == 'worker' || roles.contains('worker') || workerStatus != null;
+          }).toList();
+
           if (docs.isEmpty) {
             return const Center(child: Text('No worker registrations found.'));
           }

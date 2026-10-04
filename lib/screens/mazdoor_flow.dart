@@ -2868,28 +2868,6 @@ class CustomerHomeScreen extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          if (scope.role != UserRole.worker)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Card(
-                color: const Color(0xFFF0FDFA),
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFF0D9488),
-                    child: Icon(Icons.work_outline, color: Colors.white),
-                  ),
-                  title: Text(bilingual(context, 'Want to work instead?', 'کیا آپ کام کرنا چاہتے ہیں؟')),
-                  subtitle: Text(bilingual(context, 'Switch to worker mode to receive jobs', 'ورکر موڈ میں جائیں اور کام وصول کریں')),
-                  trailing: FilledButton(
-                    onPressed: () {
-                      scope.selectRole(UserRole.worker);
-                      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (route) => false);
-                    },
-                    child: Text(bilingual(context, 'Switch', 'تبدیل کریں')),
-                  ),
-                ),
-              ),
-            ),
           Container(
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 26),
             decoration: const BoxDecoration(

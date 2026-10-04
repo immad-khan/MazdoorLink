@@ -246,6 +246,7 @@ const List<String> kBusyJobStatuses = [
   'payment_pending',
   'worker_payment_pending',
   'payment_disputed',
+  'pending',
 ];
 
 Future<bool> workerHasActiveJob(String workerId) async {
@@ -253,6 +254,33 @@ Future<bool> workerHasActiveJob(String workerId) async {
       .collection('jobs')
       .where('workerId', isEqualTo: workerId)
       .where('status', whereIn: kBusyJobStatuses)
+      .limit(1)
+      .get();
+  return snapshot.docs.isNotEmpty;
+}
+
+/// Active job statuses for customers (not yet completed/completedly cancelled in effect - any non-completed)
+const List<String> kCustomerActiveJobStatuses = [
+  'pending',
+  'accepted',
+  'arrival_pending',
+  'working',
+  'worker_completed',
+  'payment_pending',
+  'worker_payment_pending',
+  'payment_disputed',
+];
+
+Future<bool> customerHasActiveJobInCategory(
+  String customerId,
+  String categoryKey,
+) async {
+  if (customerId.isEmpty) return false;
+  final snapshot = await FirebaseFirestore.instance
+      .collection('jobs')
+      .where('customerId', isEqualTo: customerId)
+      .where('categoryKey', isEqualTo: categoryKey.toLowerCase())
+      .where('status', whereIn: kCustomerActiveJobStatuses)
       .limit(1)
       .get();
   return snapshot.docs.isNotEmpty;

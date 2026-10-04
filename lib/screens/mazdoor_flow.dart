@@ -1556,20 +1556,59 @@ final _phone = TextEditingController();
   Future<void> _next() async {
     if (_isForgotPassword) {
       if (step == 0) {
-        final email = _emailController.text.trim();
-        setState(() {
-          _emailError = _emailValidationMessage(email);
-        });
-        if (_emailError != null) {
-          showToast('Please enter a valid email address');
-          return;
+        if (_selectedOtpMethod == 'email') {
+          final email = _emailController.text.trim();
+          setState(() {
+            _emailError = _emailValidationMessage(email);
+          });
+          if (_emailError != null) {
+            showToast('Please enter a valid email address');
+            return;
+          }
+        } else {
+          final phone = _phone.text.trim();
+          if (phone.isEmpty || phone.length < 10) {
+            setState(() => _phoneError = 'Enter a valid 10-digit phone number');
+            showToast('Please enter a valid phone number');
+            return;
+          } else {
+            setState(() => _phoneError = null);
+          }
+          // Look up the account's email by phone number in Firestore
+          try {
+            final qs = await FirebaseFirestore.instance
+                .collection('users')
+                .where('phone', isEqualTo: '+92$phone')
+                .limit(1)
+                .get();
+            if (qs.docs.isEmpty) {
+              showToast('No account found with this phone number.');
+              return;
+            }
+            final userEmail = qs.docs.first.data()['email']?.toString() ?? '';
+            if (userEmail.isEmpty) {
+              showToast('Could not retrieve account. Please use the email method.');
+              return;
+            }
+            _emailController.text = userEmail;
+          } catch (e) {
+            showToast('Error looking up account: ${e.toString()}');
+            return;
+          }
         }
         try {
           final random = math.Random();
           _generatedOtp = (1000 + random.nextInt(9000)).toString();
-          final sent = await SmtpService.sendPasswordResetOTP(email, _generatedOtp!);
+          final bool sent;
+          if (_selectedOtpMethod == 'email') {
+            sent = await SmtpService.sendPasswordResetOTP(_emailController.text.trim(), _generatedOtp!);
+          } else {
+            sent = await SmsService.sendOtp('+92${_phone.text.trim()}', _generatedOtp!);
+          }
           if (!sent) {
-            showToast('Failed to send reset code. Try again.');
+            showToast(_selectedOtpMethod == 'email'
+                ? 'Failed to send reset code via email. Try again.'
+                : 'Failed to send reset code via SMS. Try again.');
             return;
           }
           setState(() {
@@ -1578,7 +1617,9 @@ final _phone = TextEditingController();
               c.clear();
             }
           });
-          showToast('Password reset code sent!');
+          showToast(_selectedOtpMethod == 'email'
+              ? 'Password reset code sent to your email!'
+              : 'Password reset code sent via SMS!');
         } catch (e) {
           showToast(e.toString());
         }
@@ -2004,10 +2045,15 @@ final _phone = TextEditingController();
         : step == 1
             ? 'Enter OTP'
             : 'Create new password';
+    final otpTarget = _selectedOtpMethod == 'email'
+        ? _emailController.text.trim()
+        : '+92 ${_phone.text.trim()}';
     final subtitle = step == 0
-        ? 'Enter your email address to receive a reset code'
+        ? 'Choose how you want to receive your reset code'
         : step == 1
-            ? 'We sent a 4-digit code to ${_emailController.text.trim()}'
+            ? (_selectedOtpMethod == 'email'
+                ? 'We sent a 4-digit code to $otpTarget'
+                : 'We sent a 4-digit code via SMS to $otpTarget')
             : 'Enter and confirm your new password';
 
     return Column(
@@ -2025,24 +2071,120 @@ final _phone = TextEditingController();
         ),
         const SizedBox(height: 24),
         if (step == 0) ...[
-          const Text(
-            'Email',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+          // Method selector cards
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedOtpMethod = 'email'),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: _selectedOtpMethod == 'email' ? const Color(0xFFCCFBF1) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _selectedOtpMethod == 'email' ? const Color(0xFF0D9488) : const Color(0xFFE2E8F0),
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.email_outlined,
+                            color: _selectedOtpMethod == 'email' ? const Color(0xFF0D9488) : const Color(0xFF94A3B8),
+                            size: 28),
+                        const SizedBox(height: 6),
+                        Text('Email',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: _selectedOtpMethod == 'email' ? const Color(0xFF0D9488) : const Color(0xFF64748B),
+                            )),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedOtpMethod = 'phone'),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: _selectedOtpMethod == 'phone' ? const Color(0xFFCCFBF1) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _selectedOtpMethod == 'phone' ? const Color(0xFF0D9488) : const Color(0xFFE2E8F0),
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.sms_outlined,
+                            color: _selectedOtpMethod == 'phone' ? const Color(0xFF0D9488) : const Color(0xFF94A3B8),
+                            size: 28),
+                        const SizedBox(height: 6),
+                        Text('SMS',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: _selectedOtpMethod == 'phone' ? const Color(0xFF0D9488) : const Color(0xFF64748B),
+                            )),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              onChanged: _validateEmail,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.email_outlined),
-                hintText: 'john@example.com',
-                errorText: _emailError,
+          const SizedBox(height: 20),
+          // Input field based on selected method
+          if (_selectedOtpMethod == 'email') ...[
+            const Text(
+              'Email Address',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+            ),
+            const SizedBox(height: 8),
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                onChanged: _validateEmail,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  hintText: 'john@example.com',
+                  errorText: _emailError,
+                ),
               ),
             ),
-          ),
+          ] else ...[
+            const Text(
+              'Mobile Number',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+            ),
+            const SizedBox(height: 8),
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                maxLength: 10,
+                onChanged: (v) {
+                  if (_phoneError != null) setState(() => _phoneError = null);
+                },
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                  prefixText: '+92 ',
+                  hintText: '3001234567',
+                  counterText: '',
+                  errorText: _phoneError,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
@@ -2082,15 +2224,22 @@ final _phone = TextEditingController();
               onPressed: () async {
                 final random = math.Random();
                 _generatedOtp = (1000 + random.nextInt(9000)).toString();
-                final sent = await SmtpService.sendPasswordResetOTP(
-                  _emailController.text.trim(),
-                  _generatedOtp!,
-                );
+                final bool sent;
+                if (_selectedOtpMethod == 'email') {
+                  sent = await SmtpService.sendPasswordResetOTP(
+                    _emailController.text.trim(),
+                    _generatedOtp!,
+                  );
+                } else {
+                  sent = await SmsService.sendOtp('+92${_phone.text.trim()}', _generatedOtp!);
+                }
                 if (sent) {
                   for (final c in _otpControllers) {
                     c.clear();
                   }
-                  showToast('Password reset code resent successfully');
+                  showToast(_selectedOtpMethod == 'email'
+                      ? 'Reset code resent to your email'
+                      : 'Reset code resent via SMS to +92${_phone.text.trim()}');
                 } else {
                   showToast('Failed to resend code');
                 }
@@ -2260,9 +2409,13 @@ final _phone = TextEditingController();
               setState(() {
                 _isForgotPassword = true;
                 step = 0;
+                _selectedOtpMethod = 'email';
+                _emailController.clear();
                 _phone.clear();
                 _password.clear();
                 _confirmPassword.clear();
+                _emailError = null;
+                _phoneError = null;
               });
             },
             child: const Text('Forgot password?', style: TextStyle(color: Color(0xFF0D9488))),

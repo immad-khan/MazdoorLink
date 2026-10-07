@@ -166,7 +166,6 @@ Route<dynamic> buildRoute(RouteSettings settings) {
     case AppRoutes.rating:
       return _page(const RatingReviewScreen(), settings);
     case AppRoutes.workerOnboarding:
-      return _page(const WorkerOnboardingScreen(), settings);
     case AppRoutes.workerVerification:
       return _page(const WorkerVerificationScreen(), settings);
     case AppRoutes.workerDashboard:
@@ -6206,112 +6205,8 @@ class _BillRow extends StatelessWidget {
   }
 }
 
-class WorkerOnboardingScreen extends StatefulWidget {
-  const WorkerOnboardingScreen({super.key});
+// WorkerOnboardingScreen removed (deprecated)
 
-  @override
-  State<WorkerOnboardingScreen> createState() => _WorkerOnboardingScreenState();
-}
-
-class _WorkerOnboardingScreenState extends State<WorkerOnboardingScreen> {
-  int selectedSkill = 0;
-
-  final skills = const ['پلمبر', 'الیکٹریشن', 'کارپینٹر', 'اے سی مکینک', 'پینٹر', 'صفائی'];
-  final skillsEn = const ['Plumber', 'Electrician', 'Carpenter', 'AC Mechanic', 'Painter', 'Cleaner'];
-
-  @override
-  Widget build(BuildContext context) {
-    final isUrdu = AppScope.of(context).isUrdu;
-    
-    return MzScaffold(
-      showBottomNav: false,
-      showBack: true,
-      title: isUrdu ? 'ورکر آن بورڈنگ' : 'Worker Onboarding',
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(isUrdu ? 'اپنا ہنر منتخب کریں' : 'Choose Your Category', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            Text(isUrdu ? 'براہ کرم اپنا پیشہ منتخب کریں تاکہ سروسز کا سیٹ اپ ہو سکے' : 'Please select your profession to set up services', style: const TextStyle(fontSize: 14, color: Colors.black54)),
-            const SizedBox(height: 24),
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.2,
-                ),
-                itemCount: skills.length,
-                itemBuilder: (context, i) {
-                  final selected = i == selectedSkill;
-                  return InkWell(
-                    onTap: () => setState(() => selectedSkill = i),
-                    borderRadius: BorderRadius.circular(16),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        color: selected ? const Color(0xFFE6FFFA) : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: selected ? const Color(0xFF0D9488) : Colors.grey.shade300,
-                          width: selected ? 2 : 1,
-                        ),
-                        boxShadow: selected ? [
-                          BoxShadow(
-                            color: const Color(0xFF0D9488).withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          )
-                        ] : [],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.engineering, // Generic icon for now
-                            color: selected ? const Color(0xFF0D9488) : Colors.grey.shade600,
-                            size: 32,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            isUrdu ? skills[i] : skillsEn[i],
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                              color: selected ? const Color(0xFF0F766E) : AppTheme.darkerText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.workerServicesSetup,
-                    arguments: selectedSkill,
-                  );
-                },
-                child: Text(isUrdu ? 'آگے بڑھیں (سروسز کا انتخاب)' : 'Continue to Services'),
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────
 class WorkerDashboardScreen extends StatefulWidget {
   const WorkerDashboardScreen({super.key});
 

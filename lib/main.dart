@@ -52,7 +52,7 @@ Future<_AuthResult> _resolveAuth() async {
       // Pure worker account
       userRole = UserRole.worker;
       if (status == 'pending') {
-        route = AppRoutes.workerOnboarding;
+        route = AppRoutes.workerVerification;
       } else {
         final setupComplete = data['setupComplete'] as bool? ?? false;
         if (status == 'approved' && !setupComplete) {

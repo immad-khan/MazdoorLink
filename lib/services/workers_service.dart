@@ -262,6 +262,7 @@ Future<bool> workerHasActiveJob(String workerId) async {
 /// Active job statuses for customers (not yet completed/completedly cancelled in effect - any non-completed)
 const List<String> kCustomerActiveJobStatuses = [
   'pending',
+  'scheduled',
   'accepted',
   'arrival_pending',
   'working',
@@ -296,10 +297,29 @@ Future<void> scheduleAcceptedJob(String jobId, DateTime scheduledTime) async {
   });
 }
 
+/// Worker proposes a scheduled time without being busy — sets status to 'scheduled'
+Future<void> scheduleProposedJob(String jobId, DateTime scheduledTime) async {
+  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+    'status': 'scheduled',
+    'scheduledReminderAt': Timestamp.fromDate(scheduledTime),
+    'scheduleConfirmed': false,
+    'statusUpdatedAt': FieldValue.serverTimestamp(),
+  });
+}
+
 Future<void> confirmJobSchedule(String jobId) async {
   await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
     'scheduleConfirmed': true,
     'scheduleConfirmedAt': FieldValue.serverTimestamp(),
+  });
+}
+
+Future<void> startScheduledJob(String jobId) async {
+  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+    'scheduleStarted': true,
+    'scheduleStartedAt': FieldValue.serverTimestamp(),
+    'status': 'accepted',
+    'statusUpdatedAt': FieldValue.serverTimestamp(),
   });
 }
 
@@ -308,6 +328,24 @@ Stream<QuerySnapshot> streamWorkerUpcomingJobs(String workerId) {
       .collection('jobs')
       .where('workerId', isEqualTo: workerId)
       .where('status', isEqualTo: 'accepted')
+      .snapshots();
+}
+
+Stream<QuerySnapshot> streamWorkerScheduledJobs(String workerId) {
+  return FirebaseFirestore.instance
+      .collection('jobs')
+      .where('workerId', isEqualTo: workerId)
+      .where('status', isEqualTo: 'scheduled')
+      .orderBy('scheduledReminderAt')
+      .snapshots();
+}
+
+Stream<QuerySnapshot> streamCustomerScheduledJobs(String customerId) {
+  return FirebaseFirestore.instance
+      .collection('jobs')
+      .where('customerId', isEqualTo: customerId)
+      .where('status', isEqualTo: 'scheduled')
+      .orderBy('scheduledReminderAt')
       .snapshots();
 }
 
@@ -326,6 +364,14 @@ Stream<QuerySnapshot> streamWorkerActiveJobs(String workerId) {
       .where('status', whereIn: ['pending', 'accepted', 'arrival_pending', 'working', 'worker_completed', 'payment_pending', 'worker_payment_pending', 'payment_disputed'])
       .orderBy('createdAt', descending: true)
       .snapshots();
+}
+
+Future<void> acceptScheduledJob(String jobId) async {
+  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+    'scheduleConfirmed': true,
+    'scheduleConfirmedAt': FieldValue.serverTimestamp(),
+    'statusUpdatedAt': FieldValue.serverTimestamp(),
+  });
 }
 
 Stream<double> streamWorkerEarnings() {

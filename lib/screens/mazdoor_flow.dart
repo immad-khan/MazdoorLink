@@ -6550,6 +6550,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                               const SizedBox(height: 12),
                               Row(
                                 children: [
+                                  // Reject
                                   Expanded(
                                     child: OutlinedButton(
                                       onPressed: () {
@@ -6569,9 +6570,31 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                       child: Text(isUrdu ? 'رد کریں' : 'Reject'),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 6),
+                                  // Schedule
                                   Expanded(
-                                    flex: 2,
+                                    child: OutlinedButton(
+                                      onPressed: () async {
+                                        final scheduled = await _pickScheduleTime(context);
+                                        if (scheduled == null || !mounted) return;
+                                        await scheduleProposedJob(jobId, scheduled);
+                                        if (!mounted) return;
+                                        _notifyScheduleProposal(jobId, scheduled);
+                                        showToast(isUrdu
+                                            ? 'شیڈول تجویز گاہک کو بھیج دی گئی'
+                                            : 'Schedule proposal sent to customer');
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.amber.shade700,
+                                        side: BorderSide(color: Colors.amber.shade700),
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                      ),
+                                      child: Text(isUrdu ? 'شیڈول' : 'Schedule'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  // Accept
+                                  Expanded(
                                     child: FilledButton(
                                       onPressed: () {
                                         showDialog(
@@ -6601,7 +6624,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                       style: FilledButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(vertical: 10),
                                       ),
-                                      child: Text(isUrdu ? 'قبول کریں' : 'Accept'),
+                                      child: Text(isUrdu ? 'قبول' : 'Accept'),
                                     ),
                                   ),
                                 ],
@@ -6683,6 +6706,121 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                               );
                             },
                             child: Text(bilingual(context, 'Track', 'ٹریک')),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                );
+              },
+            ),
+          if (online && user != null)
+            StreamBuilder<QuerySnapshot>(
+              stream: streamWorkerScheduledJobs(user.uid),
+              builder: (context, snapshot) {
+                if (snapshot.hasError || !snapshot.hasData) return const SizedBox.shrink();
+                final docs = snapshot.data!.docs;
+                if (docs.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_month, color: Colors.amber.shade700, size: 18),
+                        const SizedBox(width: 6),
+                        Text(
+                          bilingual(context, 'Proposed Schedules', 'تجویز کردہ شیڈول'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...docs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final scheduled = (data['scheduledReminderAt'] as Timestamp?)?.toDate();
+                      final confirmed = data['scheduleConfirmed'] as bool? ?? false;
+                      final descEn = data['descriptionEn']?.toString() ?? 'Service';
+                      final descUr = data['descriptionUr']?.toString() ?? 'سروس';
+                      final price = (data['price'] as num?)?.toDouble() ?? 0;
+                      final timeStr = scheduled != null ? DateFormat('hh:mm a, d MMM').format(scheduled) : '';
+                      final isPast = scheduled != null && scheduled.isBefore(DateTime.now());
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            color: confirmed ? const Color(0xFF0D9488) : Colors.amber.shade400,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.calendar_month,
+                                      color: confirmed ? const Color(0xFF0D9488) : Colors.amber.shade700, size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      isUrdu ? descUr : descEn,
+                                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                    ),
+                                  ),
+                                  Text('Rs. $price',
+                                      style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(timeStr, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    confirmed ? Icons.check_circle : Icons.hourglass_empty,
+                                    size: 14,
+                                    color: confirmed ? const Color(0xFF0D9488) : Colors.amber.shade700,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      confirmed
+                                          ? bilingual(context, 'Customer approved — ready to start', 'گاہک نے منظور کیا — شروع کریں')
+                                          : bilingual(context, 'Waiting for customer approval', 'گاہک کی منظوری کا انتظار ہے'),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: confirmed ? const Color(0xFF0D9488) : Colors.amber.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (confirmed || isPast) ...[
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton.icon(
+                                    icon: const Icon(Icons.play_arrow),
+                                    label: Text(bilingual(context, 'Start Job Now', 'ابھی کام شروع کریں')),
+                                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                                    onPressed: () async {
+                                      await startScheduledJob(doc.id);
+                                      if (!mounted) return;
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => WorkerTrackingScreen(jobPrice: price, jobId: doc.id),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       );
@@ -7496,12 +7634,15 @@ class BookingHistoryScreen extends StatefulWidget {
 }
 
 class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
-  bool activeTab = true;
+  // 0 = Active, 1 = Scheduled, 2 = Past
+  int _tab = 0;
 
   String _bookingStatusLabel(BuildContext context, String status) {
     switch (status) {
       case 'pending':
         return bilingual(context, 'Pending', 'زیر التوا');
+      case 'scheduled':
+        return bilingual(context, 'Scheduled', 'شیڈول');
       case 'accepted':
         return bilingual(context, 'Worker on the way', 'ورکر راستے میں ہے');
       case 'arrival_pending':
@@ -7538,6 +7679,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     'payment_disputed',
   ];
 
+  static const List<String> _scheduledStatuses = ['scheduled'];
+
   static const List<String> _pastStatuses = [
     'completed',
     'rejected',
@@ -7568,9 +7711,30 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                Expanded(child: ChoiceChip(label: Text(bilingual(context, 'Active', 'ایکٹو')), selected: activeTab, onSelected: (_) => setState(() => activeTab = true))),
+                Expanded(
+                  child: ChoiceChip(
+                    label: Text(bilingual(context, 'Active', 'ایکٹو')),
+                    selected: _tab == 0,
+                    onSelected: (_) => setState(() => _tab = 0),
+                  ),
+                ),
                 const SizedBox(width: 8),
-                Expanded(child: ChoiceChip(label: Text(bilingual(context, 'Past', 'ماضی')), selected: !activeTab, onSelected: (_) => setState(() => activeTab = false))),
+                Expanded(
+                  child: ChoiceChip(
+                    label: Text(bilingual(context, 'Scheduled', 'شیڈول')),
+                    selected: _tab == 1,
+                    selectedColor: Colors.amber.shade100,
+                    onSelected: (_) => setState(() => _tab = 1),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ChoiceChip(
+                    label: Text(bilingual(context, 'Past', 'ماضی')),
+                    selected: _tab == 2,
+                    onSelected: (_) => setState(() => _tab = 2),
+                  ),
+                ),
               ],
             ),
           ),
@@ -7594,9 +7758,14 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final docs = snapshot.data!.docs;
+                final List<String> statusFilter = _tab == 0
+                    ? _activeStatuses
+                    : _tab == 1
+                        ? _scheduledStatuses
+                        : _pastStatuses;
                 final filtered = docs.where((doc) {
                   final status = (doc.data() as Map<String, dynamic>)['status']?.toString() ?? '';
-                  return activeTab ? _activeStatuses.contains(status) : _pastStatuses.contains(status);
+                  return statusFilter.contains(status);
                 }).toList()
                   ..sort((a, b) {
                     final aTime = ((a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
@@ -7632,67 +7801,184 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                           : '${bilingual(context, 'Schedule approval pending', 'شیڈول کی منظوری زیر التوا')} • $t';
                     }
 
-                    return Card(
-                      child: InkWell(
-                        onTap: () async {
-                          if (activeTab && AppScope.of(context).role == UserRole.worker) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => WorkerTrackingScreen(
-                                  jobPrice: (price as num?)?.toDouble() ?? 0,
-                                  jobId: doc.id,
-                                ),
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () async {
+                        if (_tab != 2 && AppScope.of(context).role == UserRole.worker) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => WorkerTrackingScreen(
+                                jobPrice: (price as num?)?.toDouble() ?? 0,
+                                jobId: doc.id,
                               ),
-                            );
-                          } else if (activeTab) {
-                            final workerId = data['workerId']?.toString() ?? '';
-                            if (workerId.isNotEmpty) {
-                              final workerDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
-                              final workerData = workerDoc.data();
-                              if (workerData != null && context.mounted) {
-                                final worker = WorkerModel.fromFirestore(workerData, docId: workerDoc.id);
-                                final jobArgs = JobPostingArguments(
-                                  descriptionEn: descEn,
-                                  descriptionUr: descUr,
-                                  price: (price as num?)?.toDouble() ?? 0,
-                                  categoryKey: data['categoryKey']?.toString() ?? '',
-                                  paymentMethod: data['paymentMethod']?.toString() ?? 'Cash',
-                                  customerLatitude: (data['customerLatitude'] as num?)?.toDouble(),
-                                  customerLongitude: (data['customerLongitude'] as num?)?.toDouble(),
-                                );
-                                Navigator.pushNamed(context, AppRoutes.tracking, arguments: TrackingArguments(
-                                  worker: worker,
-                                  job: jobArgs,
-                                  jobId: doc.id,
-                                ));
-                              }
+                            ),
+                          );
+                        } else if (_tab == 0) {
+                          final workerId = data['workerId']?.toString() ?? '';
+                          if (workerId.isNotEmpty) {
+                            final workerDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
+                            final workerData = workerDoc.data();
+                            if (workerData != null && context.mounted) {
+                              final worker = WorkerModel.fromFirestore(workerData, docId: workerDoc.id);
+                              final jobArgs = JobPostingArguments(
+                                descriptionEn: descEn,
+                                descriptionUr: descUr,
+                                price: (price as num?)?.toDouble() ?? 0,
+                                categoryKey: data['categoryKey']?.toString() ?? '',
+                                paymentMethod: data['paymentMethod']?.toString() ?? 'Cash',
+                                customerLatitude: (data['customerLatitude'] as num?)?.toDouble(),
+                                customerLongitude: (data['customerLongitude'] as num?)?.toDouble(),
+                              );
+                              Navigator.pushNamed(context, AppRoutes.tracking, arguments: TrackingArguments(
+                                worker: worker,
+                                job: jobArgs,
+                                jobId: doc.id,
+                              ));
                             }
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Job Details opened')),
-                            );
                           }
-                        },
-                        child: ListTile(
-                          leading: Icon(status == 'completed' ? Icons.check_circle : Icons.schedule,
-                              color: status == 'completed' ? Colors.green : Colors.amber.shade700),
-                          title: Text(isUrdu ? descUr : descEn),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('$timeStr • ${_bookingStatusLabel(context, status)}'),
-                              if (reminderLine != null)
-                                Text(
-                                  reminderLine,
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFFB45309), fontWeight: FontWeight.w600),
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  status == 'completed' ? Icons.check_circle
+                                  : status == 'scheduled' ? Icons.calendar_month
+                                  : Icons.schedule,
+                                  color: status == 'completed' ? Colors.green
+                                  : status == 'scheduled' ? Colors.amber.shade700
+                                  : const Color(0xFF0D9488),
+                                  size: 18,
                                 ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    isUrdu ? descUr : descEn,
+                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                  ),
+                                ),
+                                Text(priceStr, style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$timeStr • ${_bookingStatusLabel(context, status)}',
+                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            ),
+                            if (reminderLine != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                reminderLine,
+                                style: const TextStyle(fontSize: 12, color: Color(0xFFB45309), fontWeight: FontWeight.w600),
+                              ),
                             ],
-                          ),
-                          trailing: Text(priceStr, style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
+                            // --- Scheduled tab actions ---
+                            if (_tab == 1) ...[
+                              const SizedBox(height: 12),
+                              if (AppScope.of(context).role == UserRole.worker) ...[
+                                // Worker: start the job
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton.icon(
+                                    icon: const Icon(Icons.play_arrow),
+                                    label: Text(bilingual(context, 'Start Job Now', 'ابھی کام شروع کریں')),
+                                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                                    onPressed: () async {
+                                      await startScheduledJob(doc.id);
+                                      if (context.mounted) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => WorkerTrackingScreen(
+                                              jobPrice: (price as num?)?.toDouble() ?? 0,
+                                              jobId: doc.id,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ] else ...[
+                                // Customer: Approve / Decline / Message worker
+                                if (!(data['scheduleConfirmed'] as bool? ?? false)) ...[
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent)),
+                                          onPressed: () async {
+                                            await FirebaseFirestore.instance.collection('jobs').doc(doc.id).update({
+                                              'status': 'rejected',
+                                              'scheduleDeclined': true,
+                                              'statusUpdatedAt': FieldValue.serverTimestamp(),
+                                            });
+                                          },
+                                          child: Text(bilingual(context, 'Decline', 'مسترد کریں')),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: FilledButton(
+                                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                                          onPressed: () async {
+                                            await acceptScheduledJob(doc.id);
+                                            if (context.mounted) setState(() {});
+                                          },
+                                          child: Text(bilingual(context, 'Approve', 'منظور کریں')),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ] else ...[
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.check_circle, color: Color(0xFF0D9488), size: 16),
+                                      const SizedBox(width: 6),
+                                      Text(bilingual(context, 'Schedule approved', 'شیڈول منظور'), style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.chat_outlined),
+                                    label: Text(bilingual(context, 'Message Worker', 'ورکر کو میسیج کریں')),
+                                    onPressed: () async {
+                                      final workerId = data['workerId']?.toString();
+                                      if (workerId == null || workerId.isEmpty) return;
+                                      final workerName = data['workerName']?.toString() ?? 'Worker';
+                                      final existingId = await findExistingConversation(workerId);
+                                      if (!context.mounted) return;
+                                      if (existingId != null) {
+                                        Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                                          arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: ''));
+                                      } else {
+                                        final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: '');
+                                        if (context.mounted) {
+                                          Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                                            arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: ''));
+                                        }
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ],
                         ),
                       ),
-                    );
+                    ),
+                  );
                   }).toList(),
                 );
               },

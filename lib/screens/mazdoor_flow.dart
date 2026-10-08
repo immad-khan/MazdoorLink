@@ -302,6 +302,7 @@ class RoleBottomNav extends StatelessWidget {
     final items = role == UserRole.worker
         ? const [
             _NavItem('/worker/dashboard', Icons.work_outline, Icons.work, 'Dashboard', 'ڈیش بورڈ'),
+            _NavItem('/shared/history', Icons.calendar_month_outlined, Icons.calendar_month, 'Schedule', 'شیڈول'),
             _NavItem('/worker/earnings', Icons.account_balance_wallet_outlined, Icons.account_balance_wallet, 'Earnings', 'آمدنی'),
             _NavItem('/shared/chat', Icons.chat_bubble_outline, Icons.chat_bubble, 'Chat', 'چیٹ'),
             _NavItem('/shared/settings', Icons.settings_outlined, Icons.settings, 'Settings', 'ترتیبات'),
@@ -5013,6 +5014,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           _trackingState = 5;
         } else if (status == 'arrival_declined') {
           _trackingState = 7;
+        } else if (status == 'scheduled') {
+          _trackingState = 8;
         } else {
           _trackingState = 0;
         }
@@ -5056,6 +5059,9 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     final scheduled = _scheduledTime;
     if (scheduled == null) return const SizedBox.shrink();
     final t = DateFormat('hh:mm a, d MMM').format(scheduled);
+    final args = ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
+    final worker = args?.worker;
+
     if (_scheduleConfirmed) {
       final remaining = scheduled.difference(DateTime.now());
       final String reminder;
@@ -5076,20 +5082,49 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFF59E0B)),
         ),
-        child: Row(
+        child: Column(
           children: [
-            const Icon(Icons.alarm, color: Color(0xFFB45309)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    bilingual(context, 'Reminder set for $t', 'یاد دہانی $t پر مقرر'),
-                    style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+            Row(
+              children: [
+                const Icon(Icons.check_circle, color: Color(0xFF0D9488)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        bilingual(context, 'Schedule confirmed for $t', 'شیڈول $t کے لیے منظور شدہ'),
+                        style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0D9488)),
+                      ),
+                      Text(reminder, style: const TextStyle(fontSize: 12, color: Color(0xFF92400E))),
+                    ],
                   ),
-                  Text(reminder, style: const TextStyle(fontSize: 12, color: Color(0xFF92400E))),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.chat_outlined, size: 18),
+                label: Text(bilingual(context, 'Message Worker', 'ورکر کو میسج کریں')),
+                onPressed: () async {
+                  final workerId = worker?.id;
+                  if (workerId == null || workerId.isEmpty) return;
+                  final workerName = worker?.name ?? 'Worker';
+                  final existingId = await findExistingConversation(workerId);
+                  if (!context.mounted) return;
+                  if (existingId != null) {
+                    Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                      arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: worker?.image));
+                  } else {
+                    final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: worker?.image ?? '');
+                    if (context.mounted) {
+                      Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                        arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: worker?.image));
+                    }
+                  }
+                },
               ),
             ),
           ],
@@ -5114,7 +5149,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  bilingual(context, 'Worker is busy with another job', 'ورکر دوسرے کام میں مصروف ہے'),
+                  bilingual(context, 'Worker is not available right now', 'ورکر ابھی دستیاب نہیں ہے'),
                   style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
                 ),
               ),
@@ -5122,8 +5157,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            bilingual(context, 'They proposed to arrive at $t. Do you agree?', 'انہوں نے $t پر پہنچنے کی تجویز دی۔ کیا آپ متفق ہیں؟'),
-            style: const TextStyle(fontSize: 13, color: Color(0xFF92400E)),
+            bilingual(context, 'Can we schedule at $t?', 'کیا ہم $t پر شیڈول کر سکتے ہیں؟'),
+            style: const TextStyle(fontSize: 13, color: Color(0xFF92400E), fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 10),
           Row(
@@ -5140,7 +5175,10 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       _notifyScheduleDeclined(jobId);
                     }
                   },
-                  style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
+                  ),
                   child: Text(bilingual(context, 'Decline', 'مسترد کریں')),
                 ),
               ),
@@ -5149,15 +5187,40 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                 child: FilledButton(
                   onPressed: () async {
                     if (jobId != null) {
-                      await confirmJobSchedule(jobId);
+                      await acceptScheduledJob(jobId);
                       _notifyScheduleApproval(jobId);
                     }
                   },
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-                  child: Text(bilingual(context, 'Approve', 'منظور کریں')),
+                  child: Text(bilingual(context, 'Accept', 'منظور کریں')),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.chat_outlined, size: 18),
+              label: Text(bilingual(context, 'Message Worker', 'ورکر کو میسج کریں')),
+              onPressed: () async {
+                final workerId = worker?.id;
+                if (workerId == null || workerId.isEmpty) return;
+                final workerName = worker?.name ?? 'Worker';
+                final existingId = await findExistingConversation(workerId);
+                if (!context.mounted) return;
+                if (existingId != null) {
+                  Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                    arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: worker?.image));
+                } else {
+                  final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: worker?.image ?? '');
+                  if (context.mounted) {
+                    Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                      arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: worker?.image));
+                  }
+                }
+              },
+            ),
           ),
         ],
       ),
@@ -5233,6 +5296,12 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         return bilingual(context, 'Awaiting payment confirmation', 'ادائیگی کی تصدیق زیر التوا');
       case 7:
         return bilingual(context, 'Worker arrival was declined', 'ورکر کی آمد مسترد کر دی گئی');
+      case 8:
+        if (_scheduleConfirmed) {
+          final t = _scheduledTime != null ? DateFormat('hh:mm a, d MMM').format(_scheduledTime!) : '';
+          return bilingual(context, 'Scheduled for $t', 'شیڈول $t کے لیے منظور شدہ');
+        }
+        return bilingual(context, 'Worker is not available right now', 'ورکر ابھی دستیاب نہیں ہے');
       default:
         return bilingual(context, 'Tracking job', 'کام ٹریک ہو رہا ہے');
     }
@@ -5248,6 +5317,11 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         return bilingual(context, 'Waiting for the worker to confirm receipt of payment.', 'ورکر ادائیگی موصول ہونے کی تصدیق کرے گا۔');
       case 7:
         return bilingual(context, 'This job has been closed because the arrival was declined.', 'آمد مسترد ہونے کی وجہ سے یہ کام بند ہو گیا۔');
+      case 8:
+        if (!_scheduleConfirmed) {
+          return bilingual(context, 'Can we schedule at this time? Please accept or decline.', 'کیا ہم اس وقت شیڈول کر سکتے ہیں؟ براہ کرم قبول یا مسترد کریں۔');
+        }
+        return bilingual(context, 'This request is scheduled. The job will become active once it starts.', 'یہ درخواست شیڈول ہو چکی ہے۔ کام شروع ہوتے ہی ایکٹو ہو جائے گی۔');
       default:
         return null;
     }
@@ -5433,7 +5507,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     ],
                   ),
                   if (_trackingState == 1) Text(bilingual(context, 'Worker has accepted the job', 'ورکر نے کام قبول کر لیا ہے')),
-                  if (_trackingState == 1 && _scheduledTime != null) _buildSchedulePanel(context, jobId),
+                  if ((_trackingState == 1 || _trackingState == 8) && _scheduledTime != null) _buildSchedulePanel(context, jobId),
                   if (_trackingDetail(context) != null) Text(_trackingDetail(context)!),
                   if (_trackingState == 2) ...[
                     const SizedBox(height: 8),
@@ -6820,6 +6894,31 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                   ),
                                 ),
                               ],
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.chat_outlined, size: 18),
+                                  label: Text(bilingual(context, 'Message Customer', 'گاہک کو میسیج کریں')),
+                                  onPressed: () async {
+                                    final customerId = data['customerId']?.toString();
+                                    if (customerId == null || customerId.isEmpty) return;
+                                    final customerName = data['customerName']?.toString() ?? 'Customer';
+                                    final existingId = await findExistingConversation(customerId);
+                                    if (!context.mounted) return;
+                                    if (existingId != null) {
+                                      Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                                        arguments: ConversationArguments(conversationId: existingId, otherName: customerName, otherImage: ''));
+                                    } else {
+                                      final newId = await createConversation(otherUserId: customerId, otherUserName: customerName, otherUserImage: '');
+                                      if (context.mounted) {
+                                        Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                                          arguments: ConversationArguments(conversationId: newId, otherName: customerName, otherImage: ''));
+                                      }
+                                    }
+                                  },
+                                ),
+                              ),
                             ],
                           ),
                         ),

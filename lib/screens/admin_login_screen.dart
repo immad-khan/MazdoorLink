@@ -34,12 +34,21 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   }
 
   Future<void> _login() async {
-    final email = _emailController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text;
     if (email.isEmpty || password.isEmpty) {
       _showMessage('Enter admin email and password');
       return;
     }
+
+    // Direct hardcoded admin credentials bypass
+    if ((email == 'admin@mazdoorlink.com' || email == 'admin@mazdoorlink') &&
+        password == 'mazdoorlink123') {
+      AppScope.of(context).selectRole(UserRole.admin);
+      Navigator.pushReplacementNamed(context, '/admin/dashboard');
+      return;
+    }
+
     if (_loading) return;
     setState(() => _loading = true);
     try {
@@ -152,7 +161,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.email_outlined, color: Colors.black54),
-                        hintText: 'admin@serviceplatform.com',
+                        hintText: 'admin@mazdoorlink.com',
                         hintStyle: const TextStyle(color: Colors.black38),
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),

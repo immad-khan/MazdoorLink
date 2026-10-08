@@ -7803,7 +7803,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
 
     return MzScaffold(
       showBottomNav: true,
-      title: bilingual(context, 'Bookings', 'بکنگز'),
+      title: AppScope.of(context).role == UserRole.worker
+          ? bilingual(context, 'Schedule & Jobs', 'شیڈول اور کام')
+          : bilingual(context, 'Bookings', 'بکنگز'),
       child: Column(
         children: [
           Padding(
@@ -8006,9 +8008,55 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                     },
                                   ),
                                 ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.chat_outlined),
+                                    label: Text(bilingual(context, 'Message Customer', 'گاہک کو میسیج کریں')),
+                                    onPressed: () async {
+                                      final customerId = data['customerId']?.toString();
+                                      if (customerId == null || customerId.isEmpty) return;
+                                      final customerName = data['customerName']?.toString() ?? 'Customer';
+                                      final existingId = await findExistingConversation(customerId);
+                                      if (!context.mounted) return;
+                                      if (existingId != null) {
+                                        Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                                          arguments: ConversationArguments(conversationId: existingId, otherName: customerName, otherImage: ''));
+                                      } else {
+                                        final newId = await createConversation(otherUserId: customerId, otherUserName: customerName, otherUserImage: '');
+                                        if (context.mounted) {
+                                          Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                                            arguments: ConversationArguments(conversationId: newId, otherName: customerName, otherImage: ''));
+                                        }
+                                      }
+                                    },
+                                  ),
+                                ),
                               ] else ...[
                                 // Customer: Approve / Decline / Message worker
                                 if (!(data['scheduleConfirmed'] as bool? ?? false)) ...[
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEF3C7),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFF59E0B)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.schedule, color: Color(0xFFB45309), size: 16),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            bilingual(context, 'Worker is not available right now. Can we schedule at this time?', 'ورکر ابھی دستیاب نہیں ہے۔ کیا ہم اس وقت شیڈول کر سکتے ہیں؟'),
+                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF92400E)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                   Row(
                                     children: [
                                       Expanded(
@@ -8032,7 +8080,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                             await acceptScheduledJob(doc.id);
                                             if (context.mounted) setState(() {});
                                           },
-                                          child: Text(bilingual(context, 'Approve', 'منظور کریں')),
+                                          child: Text(bilingual(context, 'Accept', 'منظور کریں')),
                                         ),
                                       ),
                                     ],

@@ -12,7 +12,7 @@ class _JobsTabState extends State<JobsTab> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         backgroundColor: const Color(0xFFF1F5FA),
         appBar: AppBar(
@@ -24,8 +24,9 @@ class _JobsTabState extends State<JobsTab> {
             unselectedLabelColor: Colors.white70,
             indicatorColor: Color(0xFFFFC107),
             tabs: [
-              Tab(text: 'Completed'),
               Tab(text: 'Ongoing'),
+              Tab(text: 'Scheduled'),
+              Tab(text: 'Completed'),
             ],
           ),
         ),
@@ -42,19 +43,25 @@ class _JobsTabState extends State<JobsTab> {
               return const Center(child: CircularProgressIndicator());
             }
             final allDocs = snapshot.data?.docs ?? [];
+            final ongoingJobs = allDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final st = data['status']?.toString();
+              return st != 'completed' && st != 'scheduled' && st != 'rejected';
+            }).toList();
+            final scheduledJobs = allDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return data['status'] == 'scheduled';
+            }).toList();
             final completedJobs = allDocs.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
               return data['status'] == 'completed';
             }).toList();
-            final ongoingJobs = allDocs.where((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              return data['status'] == 'accepted' || data['status'] == 'pending';
-            }).toList();
 
             return TabBarView(
               children: [
-                _buildJobsList(context, completedJobs),
                 _buildJobsList(context, ongoingJobs),
+                _buildJobsList(context, scheduledJobs),
+                _buildJobsList(context, completedJobs),
               ],
             );
           },
@@ -72,16 +79,33 @@ class _JobsTabState extends State<JobsTab> {
       itemCount: docs.length,
       itemBuilder: (context, index) {
         final job = docs[index].data() as Map<String, dynamic>;
-        final isCompleted = job['status'] == 'completed';
+        final status = job['status']?.toString() ?? '';
+        final isCompleted = status == 'completed';
+        final isScheduled = status == 'scheduled';
         final title = job['descriptionEn']?.toString() ?? job['descriptionUr']?.toString() ?? 'Service';
         final worker = job['workerName']?.toString() ?? 'Unknown';
         final customer = job['customerName']?.toString() ?? 'Unknown';
         final price = (job['price'] as num?)?.toDouble() ?? 0;
-        final status = job['status']?.toString() ?? '';
         final timestamp = job['createdAt'] as Timestamp?;
         final date = timestamp != null
             ? '${timestamp.toDate().day} ${_monthName(timestamp.toDate().month)} ${timestamp.toDate().year}'
             : 'N/A';
+        final scheduledRaw = job['scheduledReminderAt'];
+        final scheduledDate = scheduledRaw is Timestamp ? scheduledRaw.toDate() : null;
+        final scheduledStr = scheduledDate != null
+            ? '\nScheduled: ${scheduledDate.day} ${_monthName(scheduledDate.month)} at ${scheduledDate.hour.toString().padLeft(2, '0')}:${scheduledDate.minute.toString().padLeft(2, '0')}'
+            : '';
+
+        final badgeColor = isCompleted
+            ? Colors.green
+            : isScheduled
+                ? Colors.amber.shade800
+                : Colors.orange;
+        final badgeBg = isCompleted
+            ? Colors.green.shade100
+            : isScheduled
+                ? Colors.amber.shade100
+                : Colors.orange.shade100;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -92,11 +116,18 @@ class _JobsTabState extends State<JobsTab> {
           ),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: isCompleted ? Colors.green.shade100 : Colors.orange.shade100,
-              child: Icon(isCompleted ? Icons.check_circle : Icons.handyman, color: isCompleted ? Colors.green : Colors.orange),
+              backgroundColor: badgeBg,
+              child: Icon(
+                isCompleted
+                    ? Icons.check_circle
+                    : isScheduled
+                        ? Icons.calendar_month
+                        : Icons.handyman,
+                color: badgeColor,
+              ),
             ),
             title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Worker: $worker • Customer: $customer\nDate: $date'),
+            subtitle: Text('Worker: $worker • Customer: $customer\nDate: $date$scheduledStr'),
             isThreeLine: true,
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -104,7 +135,7 @@ class _JobsTabState extends State<JobsTab> {
               children: [
                 Text('Rs. ${price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 Text(_statusLabel(status), style: TextStyle(
-                  color: isCompleted ? Colors.green : Colors.orange,
+                  color: badgeColor,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 )),
@@ -121,6 +152,7 @@ class _JobsTabState extends State<JobsTab> {
     switch (status) {
       case 'completed': return 'Completed';
       case 'accepted': return 'Ongoing';
+      case 'scheduled': return 'Scheduled';
       case 'pending': return 'Pending';
       case 'rejected': return 'Rejected';
       default: return status;

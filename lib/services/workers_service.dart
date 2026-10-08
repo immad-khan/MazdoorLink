@@ -289,10 +289,9 @@ Future<bool> customerHasActiveJobInCategory(
 
 Future<void> scheduleAcceptedJob(String jobId, DateTime scheduledTime) async {
   await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
-    'status': 'accepted',
+    'status': 'scheduled',
     'scheduledReminderAt': Timestamp.fromDate(scheduledTime),
     'scheduleConfirmed': false,
-    'acceptedAt': FieldValue.serverTimestamp(),
     'statusUpdatedAt': FieldValue.serverTimestamp(),
   });
 }
@@ -336,7 +335,6 @@ Stream<QuerySnapshot> streamWorkerScheduledJobs(String workerId) {
       .collection('jobs')
       .where('workerId', isEqualTo: workerId)
       .where('status', isEqualTo: 'scheduled')
-      .orderBy('scheduledReminderAt')
       .snapshots();
 }
 
@@ -345,7 +343,6 @@ Stream<QuerySnapshot> streamCustomerScheduledJobs(String customerId) {
       .collection('jobs')
       .where('customerId', isEqualTo: customerId)
       .where('status', isEqualTo: 'scheduled')
-      .orderBy('scheduledReminderAt')
       .snapshots();
 }
 

@@ -69,6 +69,8 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
           _status = 3;
         } else if (jobStatus == 'arrival_declined') {
           _status = 5;
+        } else if (jobStatus == 'scheduled') {
+          _status = 7;
         } else {
           _status = 0;
         }
@@ -549,6 +551,88 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         child: Text(isUrdu ? 'ڈیش بورڈ پر واپس جائیں' : 'Back to Dashboard'),
+                      ),
+                    ),
+                  ]
+                  // Status 7: Scheduled
+                  else if (_status == 7) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFF59E0B)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _scheduleConfirmed ? Icons.event_available : Icons.schedule,
+                                color: _scheduleConfirmed ? const Color(0xFF0D9488) : const Color(0xFFB45309),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _scheduledTime != null
+                                      ? (isUrdu
+                                          ? 'شیڈول وقت: ${DateFormat('hh:mm a, d MMM').format(_scheduledTime!)}'
+                                          : 'Scheduled for: ${DateFormat('hh:mm a, d MMM').format(_scheduledTime!)}')
+                                      : (isUrdu ? 'شیڈول کام' : 'Scheduled Job'),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(
+                                _scheduleConfirmed ? Icons.check_circle : Icons.hourglass_empty,
+                                size: 15,
+                                color: _scheduleConfirmed ? const Color(0xFF0D9488) : const Color(0xFFB45309),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _scheduleConfirmed
+                                    ? (isUrdu ? 'گاہک نے شیڈول منظور کر لیا ہے' : 'Customer approved the schedule')
+                                    : (isUrdu ? 'گاہک کی منظوری کا انتظار ہے' : 'Waiting for customer approval'),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: _scheduleConfirmed ? const Color(0xFF0D9488) : const Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildCustomerInfoTile(isUrdu),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        icon: const Icon(Icons.play_arrow),
+                        onPressed: () async {
+                          await startScheduledJob(widget.jobId);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(isUrdu ? 'کام شروع کر دیا گیا ہے!' : 'Job started! Now active.'),
+                            backgroundColor: const Color(0xFF0D9488),
+                          ));
+                        },
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: const Color(0xFF0D9488),
+                        ),
+                        child: Text(
+                          isUrdu ? 'ابھی کام شروع کریں' : 'Start Job Now',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ]

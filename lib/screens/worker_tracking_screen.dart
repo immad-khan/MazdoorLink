@@ -629,7 +629,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: const Color(0xFF0D9488),
                         ),
-                        child: Text(
+                        label: Text(
                           isUrdu ? 'ابھی کام شروع کریں' : 'Start Job Now',
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),

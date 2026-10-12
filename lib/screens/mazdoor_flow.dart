@@ -1135,6 +1135,63 @@ class _AuthScreenState extends State<AuthScreen> {
     });
   }
 
+  bool _isPhoneLike(String value) {
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    return digits.length >= 10 && digits.length <= 13;
+  }
+
+  String? _loginIdValidationMessage(String value) {
+    if (value.isEmpty) return 'Email or mobile number is required';
+    if (_isValidEmail(value)) return null;
+    if (_isPhoneLike(value)) return null;
+    return 'Enter a valid email or 10-digit mobile number';
+  }
+
+  void _validateLoginId(String val) {
+    final value = val.trim();
+    if (value.isEmpty) {
+      setState(() => _emailError = null);
+      return;
+    }
+    setState(() {
+      _emailError = _loginIdValidationMessage(value);
+    });
+  }
+
+  Future<String?> _resolveEmailByPhone(String input) async {
+    final digits = input.replaceAll(RegExp(r'\D'), '');
+    final withoutCc = (digits.startsWith('92') && digits.length > 10)
+        ? digits.substring(2)
+        : digits;
+    final national = withoutCc.startsWith('0')
+        ? withoutCc.substring(1)
+        : withoutCc;
+    final candidates = <String>{
+      input.trim(),
+      digits,
+      withoutCc,
+      national,
+      '0$national',
+      '+92$national',
+      '92$national',
+    };
+    try {
+      for (final candidate in candidates) {
+        if (candidate.isEmpty) continue;
+        final qs = await FirebaseFirestore.instance
+            .collection('users')
+            .where('phone', isEqualTo: candidate)
+            .limit(1)
+            .get();
+        if (qs.docs.isNotEmpty) {
+          final email = qs.docs.first.data()['email']?.toString() ?? '';
+          if (email.isNotEmpty) return email;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   void _validatePassword(String val) {
     setState(() {
       _pwHasMinLength = val.length >= 8;
@@ -1917,17 +1974,29 @@ final _phone = TextEditingController();
       } 
     } else {
       // Login flow
+      final loginId = _emailController.text.trim();
       setState(() {
-        _emailError = _emailValidationMessage(_emailController.text.trim());
+        _emailError = _loginIdValidationMessage(loginId);
         _passwordError = _password.text.isEmpty ? 'Password is required' : null;
       });
       if (_emailError != null || _passwordError != null) {
-        showToast('Please enter your email and password');
+        showToast('Please enter your email/mobile number and password');
         return;
+      }
+      var loginEmail = loginId;
+      if (!_isValidEmail(loginId)) {
+        final resolvedEmail = await _resolveEmailByPhone(loginId);
+        if (resolvedEmail == null) {
+          if (mounted) {
+            showToast('No account found with this mobile number. Please sign up first.');
+          }
+          return;
+        }
+        loginEmail = resolvedEmail;
       }
       try {
         final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _emailController.text.trim(),
+          email: loginEmail,
           password: _password.text,
         );
         
@@ -2365,7 +2434,7 @@ final _phone = TextEditingController();
         ),
         const SizedBox(height: 24),
         const Text(
-          'Email',
+          'Email or Mobile Number',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
         ),
         const SizedBox(height: 8),
@@ -2374,10 +2443,10 @@ final _phone = TextEditingController();
           child: TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            onChanged: _validateEmail,
+            onChanged: _validateLoginId,
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.email_outlined),
-              hintText: 'john@example.com',
+              prefixIcon: const Icon(Icons.person_outline),
+              hintText: 'Email or 03000000000',
               errorText: _emailError,
             ),
           ),

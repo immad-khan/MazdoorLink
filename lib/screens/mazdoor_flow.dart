@@ -302,7 +302,6 @@ class RoleBottomNav extends StatelessWidget {
     final items = role == UserRole.worker
         ? const [
             _NavItem('/worker/dashboard', Icons.work_outline, Icons.work, 'Dashboard', 'ڈیش بورڈ'),
-            _NavItem('/shared/history', Icons.calendar_month_outlined, Icons.calendar_month, 'Schedule', 'شیڈول'),
             _NavItem('/worker/earnings', Icons.account_balance_wallet_outlined, Icons.account_balance_wallet, 'Earnings', 'آمدنی'),
             _NavItem('/shared/chat', Icons.chat_bubble_outline, Icons.chat_bubble, 'Chat', 'چیٹ'),
             _NavItem('/shared/settings', Icons.settings_outlined, Icons.settings, 'Settings', 'ترتیبات'),
@@ -1158,39 +1157,54 @@ class _AuthScreenState extends State<AuthScreen> {
     });
   }
 
-  Future<String?> _resolveEmailByPhone(String input) async {
-    final digits = input.replaceAll(RegExp(r'\D'), '');
-    final withoutCc = (digits.startsWith('92') && digits.length > 10)
-        ? digits.substring(2)
-        : digits;
-    final national = withoutCc.startsWith('0')
-        ? withoutCc.substring(1)
-        : withoutCc;
+  Future<List<String>> _resolveEmailsByPhone(String input) async {
+    final rawTrimmed = input.trim();
+    String digits = rawTrimmed.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('92') && digits.length > 10) {
+      digits = digits.substring(2);
+    }
+    if (digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
+    // `digits` is the normalized 10-digit number (e.g. 3001234567)
     final candidates = <String>{
-      input.trim(),
+      rawTrimmed,
       digits,
-      withoutCc,
-      national,
-      '0$national',
-      '+92$national',
-      '92$national',
+      '0$digits',
+      '+92$digits',
+      '+92 $digits',
+      '92$digits',
     };
-    try {
-      for (final candidate in candidates) {
-        if (candidate.isEmpty) continue;
+    if (digits.length >= 7) {
+      final prefix = digits.substring(0, 3);
+      final rest = digits.substring(3);
+      candidates.add('0$prefix $rest');
+      candidates.add('0$prefix-$rest');
+      candidates.add('+92 $prefix $rest');
+      candidates.add('+92-$prefix-$rest');
+    }
+
+    final emails = <String>{};
+    for (final candidate in candidates) {
+      if (candidate.isEmpty) continue;
+      try {
         final qs = await FirebaseFirestore.instance
             .collection('users')
             .where('phone', isEqualTo: candidate)
-            .limit(1)
             .get();
-        if (qs.docs.isNotEmpty) {
-          final email = qs.docs.first.data()['email']?.toString() ?? '';
-          if (email.isNotEmpty) return email;
+        for (final doc in qs.docs) {
+          final email = doc.data()['email']?.toString().trim();
+          if (email != null && email.isNotEmpty) {
+            emails.add(email);
+          }
         }
+      } catch (e) {
+        debugPrint('Candidate query failed for "$candidate": $e');
       }
-    } catch (_) {}
-    return null;
+    }
+    return emails.toList();
   }
+
 
   void _validatePassword(String val) {
     setState(() {
@@ -1227,12 +1241,16 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _nameError = _fullNameController.text.trim().isEmpty ? 'Full name is required' : null;
       _emailError = _emailValidationMessage(_emailController.text.trim());
-      final phone = _phone.text.trim();
-      _phoneError = phone.isEmpty
+      final rawPhone = _phone.text.trim();
+      final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
+      final national = (digits.startsWith('92') && digits.length > 10)
+          ? digits.substring(2)
+          : (digits.startsWith('0') ? digits.substring(1) : digits);
+      _phoneError = rawPhone.isEmpty
           ? 'Mobile number is required'
-          : (RegExp(r'^\d{10}$').hasMatch(phone)
+          : (national.length == 10
               ? null
-              : 'Enter a correct 10-digit mobile number');
+              : 'Enter a valid 10-digit mobile number');
       if (_password.text.isEmpty) {
         _passwordError = 'Password is required';
       } else {
@@ -1632,21 +1650,12 @@ final _phone = TextEditingController();
           }
           // Look up the account's email by phone number in Firestore
           try {
-            final qs = await FirebaseFirestore.instance
-                .collection('users')
-                .where('phone', isEqualTo: '+92$phone')
-                .limit(1)
-                .get();
-            if (qs.docs.isEmpty) {
+            final emails = await _resolveEmailsByPhone(phone);
+            if (emails.isEmpty) {
               showToast('No account found with this phone number.');
               return;
             }
-            final userEmail = qs.docs.first.data()['email']?.toString() ?? '';
-            if (userEmail.isEmpty) {
-              showToast('Could not retrieve account. Please use the email method.');
-              return;
-            }
-            _emailController.text = userEmail;
+            _emailController.text = emails.first;
           } catch (e) {
             showToast('Error looking up account: ${e.toString()}');
             return;
@@ -1975,40 +1984,80 @@ final _phone = TextEditingController();
     } else {
       // Login flow
       final loginId = _emailController.text.trim();
+      final password = _password.text;
       setState(() {
         _emailError = _loginIdValidationMessage(loginId);
-        _passwordError = _password.text.isEmpty ? 'Password is required' : null;
+        _passwordError = password.isEmpty ? 'Password is required' : null;
       });
       if (_emailError != null || _passwordError != null) {
         showToast('Please enter your email/mobile number and password');
         return;
       }
-      var loginEmail = loginId;
-      if (!_isValidEmail(loginId)) {
-        final resolvedEmail = await _resolveEmailByPhone(loginId);
-        if (resolvedEmail == null) {
+
+      List<String> targetEmails = [];
+      if (_isValidEmail(loginId)) {
+        targetEmails = [loginId];
+      } else {
+        setState(() => _isUploading = true);
+        targetEmails = await _resolveEmailsByPhone(loginId);
+        setState(() => _isUploading = false);
+        if (targetEmails.isEmpty) {
           if (mounted) {
-            showToast('No account found with this mobile number. Please sign up first.');
+            showToast('No account found with this mobile number. Please check the number or sign up.');
           }
           return;
         }
-        loginEmail = resolvedEmail;
       }
+
+      setState(() => _isUploading = true);
+      UserCredential? userCredential;
+      dynamic lastAuthError;
+
+      for (final email in targetEmails) {
+        try {
+          userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          if (userCredential.user != null) {
+            break;
+          }
+        } catch (e) {
+          lastAuthError = e;
+        }
+      }
+
+      setState(() => _isUploading = false);
+
+      if (userCredential == null || userCredential.user == null) {
+        if (mounted) {
+          final msg = (lastAuthError?.toString() ?? '').toLowerCase();
+          if (msg.contains('invalid-credential') ||
+              msg.contains('invalid_credential') ||
+              msg.contains('wrong-password') ||
+              msg.contains('password is invalid') ||
+              msg.contains('user-not-found') ||
+              msg.contains('no user record')) {
+            showToast('Invalid email/mobile number or password. Please try again.');
+          } else if (msg.contains('too-many-requests')) {
+            showToast('Too many failed attempts. Please wait a few minutes and try again.');
+          } else if (msg.contains('network-request-failed')) {
+            showToast('Network error. Please check your internet connection.');
+          } else {
+            showToast('Login failed: ${lastAuthError?.toString() ?? "Check your credentials"}');
+          }
+        }
+        return;
+      }
+
       try {
-        final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: loginEmail,
-          password: _password.text,
-        );
-        
-        
-        
         // Fetch user data from Firestore
         final doc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
         if (doc.exists && mounted) {
           if (_rememberMe) {
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString('remembered_email', _emailController.text.trim());
-            await prefs.setString('remembered_password', _password.text);
+            await prefs.setString('remembered_password', password);
           }
           final data = doc.data()!;
           final firestoreRole = data['role']?.toString() ?? 'customer';
@@ -2055,16 +2104,7 @@ final _phone = TextEditingController();
         return;
       } catch (e) {
         if (mounted) {
-          final msg = e.toString();
-          if (msg.contains('user-not-found') || msg.contains('no user record')) {
-            showToast('No account found with this email. Please sign up first.');
-          } else if (msg.contains('wrong-password') || msg.contains('password is invalid')) {
-            showToast('Wrong password. Try again or tap "Forgot password?" to reset it.');
-          } else if (msg.contains('too-many-requests')) {
-            showToast('Too many failed attempts. Please wait a few minutes and try again.');
-          } else {
-            showToast(msg);
-          }
+          showToast('Error loading user profile: ${e.toString()}');
         }
         return;
       }
@@ -2597,7 +2637,7 @@ final _phone = TextEditingController();
             child: TextField(
               controller: _phone,
               keyboardType: TextInputType.phone,
-              maxLength: 10,
+              maxLength: 11,
               onChanged: (_) { if (_phoneError != null) setState(() => _phoneError = null); },
               decoration: InputDecoration(
                 counterText: '',
@@ -2606,7 +2646,7 @@ final _phone = TextEditingController();
                   child: Text('+92', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                 ),
                 prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                hintText: '03000000000',
+                hintText: '3000000000',
                 errorText: _phoneError,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 focusedBorder: OutlineInputBorder(
@@ -6520,7 +6560,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                 ),
                 subtitle: Text(isUrdu && categoryUr.isNotEmpty ? categoryUr : categoryEn),
-                trailing: const SizedBox(width: 48),
+                trailing: IconButton(
+                  icon: const Icon(Icons.assignment_outlined, color: Color(0xFF0D9488), size: 26),
+                  tooltip: isUrdu ? 'میرے کام' : 'My Jobs',
+                  onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
+                ),
               );
             },
           ),
@@ -6551,6 +6595,48 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   onChanged: _loadingOnline ? null : _toggleOnline,
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.assignment_outlined, color: Color(0xFF0D9488), size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          bilingual(context, 'My Jobs', 'میرے کام'),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        Text(
+                          bilingual(context, 'Active, Scheduled & Past jobs', 'ایکٹو، شیڈول اور پچھلے کام'),
+                          style: const TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.black45),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -7873,8 +7959,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     return MzScaffold(
       showBottomNav: true,
       title: AppScope.of(context).role == UserRole.worker
-          ? bilingual(context, 'Schedule & Jobs', 'شیڈول اور کام')
-          : bilingual(context, 'Bookings', 'بکنگز'),
+          ? bilingual(context, 'My Jobs', 'میرے کام')
+          : bilingual(context, 'My Bookings', 'میری بکنگز'),
       child: Column(
         children: [
           Padding(
@@ -8502,6 +8588,11 @@ class SettingsScreen extends StatelessWidget {
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, '/worker/support'),
               child: _SettingsItem(icon: Icons.help_outline, color: const Color(0xFF0D9488), title: bilingual(context, 'Worker Support', 'ورکر سپورٹ')),
+            ),
+          if (isWorker)
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
+              child: _SettingsItem(icon: Icons.assignment_outlined, color: const Color(0xFF0D9488), title: bilingual(context, 'My Jobs & History', 'میرے کام اور ہسٹری')),
             ),
           if (isWorker)
             GestureDetector(

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math';
 import 'package:flutter/widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -296,7 +296,7 @@ Future<void> scheduleAcceptedJob(String jobId, DateTime scheduledTime) async {
   });
 }
 
-/// Worker proposes a scheduled time without being busy — sets status to 'scheduled'
+/// Worker proposes a scheduled time without being busy â€” sets status to 'scheduled'
 Future<void> scheduleProposedJob(String jobId, DateTime scheduledTime) async {
   await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
     'status': 'scheduled',
@@ -421,7 +421,7 @@ Stream<DocumentSnapshot> streamJobById(String jobId) {
   return FirebaseFirestore.instance.collection('jobs').doc(jobId).snapshots();
 }
 
-// ── Complaints ──────────────────────────────
+// â”€â”€ Complaints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 Stream<QuerySnapshot> streamComplaints() {
   return FirebaseFirestore.instance
@@ -436,7 +436,7 @@ Future<void> resolveComplaint(String complaintId) async {
   });
 }
 
-// ── Damage Claims ───────────────────────────
+// â”€â”€ Damage Claims â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 Stream<QuerySnapshot> streamDamageClaims() {
   return FirebaseFirestore.instance
@@ -451,7 +451,7 @@ Future<void> updateDamageClaimStatus(String claimId, String status) async {
   });
 }
 
-// ── Security Deposits ───────────────────────
+// â”€â”€ Security Deposits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 Stream<QuerySnapshot> streamSecurityDeposits() {
   return FirebaseFirestore.instance
@@ -460,7 +460,7 @@ Stream<QuerySnapshot> streamSecurityDeposits() {
       .snapshots();
 }
 
-// ── Favourite Workers ───────────────────────
+// â”€â”€ Favourite Workers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 Future<void> addFavouriteWorker(String workerId) async {
   final user = FirebaseAuth.instance.currentUser;
@@ -491,7 +491,7 @@ Stream<List<String>> streamFavouriteWorkerIds() {
       });
 }
 
-// ── Conversations & Chat ────────────────────
+// â”€â”€ Conversations & Chat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /// Creates a conversation with [otherUserId]. Uses a deterministic document id
 /// (`conv_<uidA>_<uidB>`, uids sorted) so two users starting a chat
@@ -530,7 +530,7 @@ Future<String> createConversation({
       });
     });
   } catch (_) {
-    // Already exists (created concurrently) — reuse it.
+    // Already exists (created concurrently) â€” reuse it.
   }
   return convId;
 }
@@ -670,6 +670,110 @@ Future<String?> findExistingConversation(String otherUserId) async {
 }
 
 /// Global service managing worker online presence and app lifecycle.
+
+// ── Worker Ratings & Reviews ───────────────────────
+
+/// Submits a rating and review for a worker after job completion.
+/// Updates the worker's average rating and total review count.
+/// Also stores the individual review in a subcollection.
+Future<void> submitWorkerRating({
+  required String workerId,
+  required String jobId,
+  required int rating,
+  String? reviewText,
+}) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+  
+  if (rating < 1 || rating > 5) {
+    throw ArgumentError('Rating must be between 1 and 5');
+  }
+  
+  final firestore = FirebaseFirestore.instance;
+  
+  // Get customer info
+  final customerDoc = await firestore.collection('users').doc(user.uid).get();
+  final customerName = customerDoc.data()?['name']?.toString() ?? 'Customer';
+  
+  // Get job info for context
+  final jobDoc = await firestore.collection('jobs').doc(jobId).get();
+  final jobData = jobDoc.data();
+  final jobTitle = jobData?['descriptionEn']?.toString() ?? 'Service';
+  
+  // Store the individual review
+  await firestore
+      .collection('users')
+      .doc(workerId)
+      .collection('reviews')
+      .add({
+    'customerId': user.uid,
+    'customerName': customerName,
+    'jobId': jobId,
+    'jobTitle': jobTitle,
+    'rating': rating,
+    'review': reviewText ?? '',
+    'createdAt': FieldValue.serverTimestamp(),
+  });
+  
+  // Update the worker's average rating and review count
+  final workerRef = firestore.collection('users').doc(workerId);
+  
+  await firestore.runTransaction((txn) async {
+    final workerDoc = await txn.get(workerRef);
+    if (!workerDoc.exists) return;
+    
+    final currentRating = (workerDoc.data()?['rating'] as num?)?.toDouble() ?? 0.0;
+    final currentReviews = (workerDoc.data()?['reviews'] as int?) ?? 0;
+    
+    // Calculate new average
+    final totalRating = currentRating * currentReviews;
+    final newReviews = currentReviews + 1;
+    final newRating = (totalRating + rating) / newReviews;
+    
+    txn.update(workerRef, {
+      'rating': double.parse(newRating.toStringAsFixed(2)),
+      'reviews': newReviews,
+    });
+  });
+  
+  // Update the job to mark it as reviewed
+  await firestore.collection('jobs').doc(jobId).update({
+    'reviewed': true,
+    'reviewedAt': FieldValue.serverTimestamp(),
+    'customerRating': rating,
+    if (reviewText != null && reviewText.isNotEmpty) 'customerReview': reviewText,
+  });
+}
+
+/// Gets the list of reviews for a worker
+Stream<QuerySnapshot> streamWorkerReviews(String workerId) {
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(workerId)
+      .collection('reviews')
+      .orderBy('createdAt', descending: true)
+      .snapshots();
+}
+
+/// Gets recent reviews for a worker (limited)
+Future<List<Map<String, dynamic>>> getWorkerReviews(String workerId, {int limit = 10}) async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(workerId)
+      .collection('reviews')
+      .orderBy('createdAt', descending: true)
+      .limit(limit)
+      .get();
+  
+  return snapshot.docs.map((doc) {
+    final data = doc.data();
+    return {
+      'id': doc.id,
+      ...data,
+    };
+  }).toList();
+}
+
 /// Keeps worker online while navigating within the app, and temporarily
 /// marks worker offline only when the worker actually leaves the app
 /// (paused/detached) or explicitly toggles off / logs out.

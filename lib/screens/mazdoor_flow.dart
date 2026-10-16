@@ -2077,25 +2077,10 @@ final _phone = TextEditingController();
             AppScope.of(context).selectRole(UserRole.worker);
             Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
           } else {
-            // Customer account — check if they also have worker access
-            final roles = (data['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
-            final workerStatus = data['workerStatus']?.toString();
-            final hasWorkerAccess = roles.contains('worker') && workerStatus == 'approved';
-
-            // Check saved preference — if they last used worker mode, route there
-            String? savedRole;
-            try {
-              final prefs = await SharedPreferences.getInstance();
-              savedRole = prefs.getString('active_role');
-            } catch (_) {}
-
-            if (hasWorkerAccess && savedRole == 'worker') {
-              AppScope.of(context).selectRole(UserRole.worker);
-              Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
-            } else {
-              AppScope.of(context).selectRole(UserRole.customer);
-              Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
-            }
+            // Customer account — route to customer home
+            // Dual-role users with worker access can switch to worker mode from settings
+            AppScope.of(context).selectRole(UserRole.customer);
+            Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
           }
         } else if (mounted) {
           // Default fallback
@@ -5914,6 +5899,33 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
     );
   }
 
+  Future<void> _submitRating(BuildContext context) async {
+    final args = _trackingArgs(context);
+    final workerId = args?.worker?.id;
+    final jobId = args?.jobId;
+    
+    if (workerId == null || jobId == null) {
+      showToast(bilingual(context, 'Unable to submit rating', 'درجہ بندی جمع نہیں ہو سکی'));
+      setState(() => _step = PostJobStep.completed);
+      return;
+    }
+    
+    try {
+      await submitWorkerRating(
+        workerId: workerId,
+        jobId: jobId,
+        rating: rating,
+        reviewText: review.text.trim().isNotEmpty ? review.text.trim() : null,
+      );
+      if (!mounted) return;
+      setState(() => _step = PostJobStep.completed);
+    } catch (e) {
+      if (!mounted) return;
+      showToast(bilingual(context, 'Error submitting rating', 'درجہ بندی جمع کرنے میں خرابی'));
+      setState(() => _step = PostJobStep.completed);
+    }
+  }
+
   String _getTitle(BuildContext context) {
     if (_step == PostJobStep.chooseAction) return bilingual(context, 'Service Summary', 'سروس کا خلاصہ');
     if (_step == PostJobStep.complaintForm) return bilingual(context, 'Lodge Complaint', 'شکایت درج کریں');
@@ -6325,7 +6337,7 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         ),
         const SizedBox(height: 24),
         FilledButton(
-          onPressed: rating == 0 ? null : () => setState(() => _step = PostJobStep.completed),
+          onPressed: rating == 0 ? null : () => _submitRating(context),
           child: Text(bilingual(context, 'Submit Review', 'جائزہ جمع کریں')),
         )
       ],

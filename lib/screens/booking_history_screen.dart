@@ -1,25 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:service_frontend/app_theme.dart';
+import 'package:intl/intl.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/icon_helper.dart';
-
-class BookingItem {
-  final String title;
-  final String category;
-  final String status;
-  final String date;
-  final double amount;
-  final bool isCompleted;
-
-  BookingItem({
-    required this.title,
-    required this.category,
-    required this.status,
-    required this.date,
-    required this.amount,
-    required this.isCompleted,
-  });
-}
+import '../app_state.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
   @override
@@ -32,49 +18,23 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   int _selectedTab = 0;
   late AnimationController _fadeController;
   late AnimationController _slideController;
+  String _searchQuery = '';
 
-  final List<BookingItem> _allBookings = [
-    BookingItem(
-      title: 'Plumber repair - Pipe leak fix',
-      category: 'Plumber',
-      status: 'Completed',
-      date: '2 days ago',
-      amount: 2500,
-      isCompleted: true,
-    ),
-    BookingItem(
-      title: 'Electrician rewiring - 3 rooms',
-      category: 'Electrician',
-      status: 'In Progress',
-      date: 'Today',
-      amount: 5000,
-      isCompleted: false,
-    ),
-    BookingItem(
-      title: 'Carpentry shelf installation',
-      category: 'Carpentry',
-      status: 'Completed',
-      date: '1 week ago',
-      amount: 3200,
-      isCompleted: true,
-    ),
-    BookingItem(
-      title: 'AC cleaning and maintenance',
-      category: 'AC Repair',
-      status: 'Pending',
-      date: 'Tomorrow',
-      amount: 1500,
-      isCompleted: false,
-    ),
+  static const List<String> _activeStatuses = [
+    'pending', 'accepted', 'arrival_pending', 'working',
+    'worker_completed', 'payment_pending', 'worker_payment_pending',
+    'payment_disputed', 'scheduled',
+  ];
+
+  static const List<String> _completedStatuses = [
+    'completed', 'rejected', 'cancelled',
   ];
 
   @override
   void initState() {
     super.initState();
-    _fadeController =
-        AnimationController(duration: Duration(milliseconds: 300), vsync: this);
-    _slideController =
-        AnimationController(duration: Duration(milliseconds: 400), vsync: this);
+    _fadeController = AnimationController(duration: Duration(milliseconds: 300), vsync: this);
+    _slideController = AnimationController(duration: Duration(milliseconds: 400), vsync: this);
     Future.delayed(Duration(milliseconds: 100), () {
       _fadeController.forward();
       _slideController.forward();
@@ -89,48 +49,85 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     super.dispose();
   }
 
-  List<BookingItem> get _filteredBookings {
-    var filtered = _selectedTab == 0
-        ? _allBookings.where((b) => !b.isCompleted).toList()
-        : _allBookings.where((b) => b.isCompleted).toList();
-
-    final query = _searchController.text.toLowerCase();
-    return filtered
-        .where((item) =>
-            item.title.toLowerCase().contains(query) ||
-            item.category.toLowerCase().contains(query))
-        .toList();
-  }
-
   Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Completed':
-        return Color(0xFF059669);
-      case 'In Progress':
-        return Color(0xFFF59E0B);
-      case 'Pending':
-        return Color(0xFF3B82F6);
-      default:
-        return AppTheme.lightText;
+    switch (status.toLowerCase()) {
+      case 'completed': return Color(0xFF059669);
+      case 'working':
+      case 'arrival_pending':
+      case 'accepted': return Color(0xFFF59E0B);
+      case 'pending':
+      case 'scheduled': return Color(0xFF3B82F6);
+      case 'rejected':
+      case 'cancelled': return Color(0xFFEF4444);
+      default: return AppTheme.lightText;
     }
   }
 
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'Plumber':
-        return IconHelper.Plumber;
-      case 'Electrician':
-        return IconHelper.electrician;
-      case 'Carpentry':
-        return IconHelper.carpentry;
-      case 'AC Repair':
-        return IconHelper.ac;
-      default:
-        return Icons.work;
+  String _getDisplayStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed': return 'Completed';
+      case 'working': return 'In Progress';
+      case 'arrival_pending': return 'Arrival Pending';
+      case 'accepted': return 'Accepted';
+      case 'pending': return 'Pending';
+      case 'scheduled': return 'Scheduled';
+      case 'rejected': return 'Rejected';
+      case 'cancelled': return 'Cancelled';
+      case 'worker_completed': return 'Work Done';
+      case 'payment_pending':
+      case 'worker_payment_pending': return 'Payment Pending';
+      case 'payment_disputed': return 'Disputed';
+      default: return status;
     }
   }
 
-  Widget _buildBookingCard(BookingItem booking) {
+  IconData _getCategoryIcon(String? categoryKey) {
+    if (categoryKey == null) return Icons.work;
+    switch (categoryKey.toLowerCase()) {
+      case 'plumber': return IconHelper.Plumber;
+      case 'electrician': return IconHelper.electrician;
+      case 'carpenter':
+      case 'carpentry': return IconHelper.carpentry;
+      case 'ac_mechanic':
+      case 'ac': return IconHelper.ac;
+      default: return Icons.work;
+    }
+  }
+
+  String _formatDate(dynamic timestamp) {
+    if (timestamp == null) return '';
+    DateTime? dt;
+    if (timestamp is Timestamp) {
+      dt = timestamp.toDate();
+    } else if (timestamp is String) {
+      dt = DateTime.tryParse(timestamp);
+    }
+    if (dt == null) return '';
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inDays == 0) {
+      if (diff.inHours == 0) return '\ min ago';
+      return '\h ago';
+    } else if (diff.inDays == 1) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      return '\ days ago';
+    } else {
+      return DateFormat('MMM d, y').format(dt);
+    }
+  }
+
+  Widget _buildBookingCard(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final title = data['descriptionEn']?.toString() ?? 'Service';
+    final categoryKey = data['categoryKey']?.toString() ?? '';
+    final status = data['status']?.toString() ?? 'pending';
+    final amount = (data['price'] as num?)?.toDouble() ?? 0;
+    final createdAt = data['createdAt'];
+    final jobId = doc.id;
+    final isUrdu = AppScope.of(context).isUrdu;
+    final displayStatus = _getDisplayStatus(status);
+
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -139,7 +136,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         border: Border.all(color: AppTheme.spacer),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha:0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -151,13 +148,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
           color: Colors.transparent,
           child: InkWell(
             onTap: () {
-              if (!booking.isCompleted) {
-                Navigator.pushNamed(context, '/customer/tracking');
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Job Details opened')),
-                );
-              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Job ID: \')),
+              );
             },
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -173,7 +166,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                           color: AppTheme.notWhite,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(_getCategoryIcon(booking.category),
+                        child: Icon(_getCategoryIcon(categoryKey),
                             color: Theme.of(context).primaryColor, size: 24),
                       ),
                       SizedBox(width: 12),
@@ -181,44 +174,23 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              booking.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.darkerText,
-                              ),
-                            ),
+                            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.darkerText)),
                             SizedBox(height: 4),
-                            Text(
-                              booking.date,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.deactivatedText,
-                              ),
-                            ),
+                            Text(_formatDate(createdAt),
+                              style: TextStyle(fontSize: 12, color: AppTheme.deactivatedText)),
                           ],
                         ),
                       ),
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(booking.status).withValues(alpha:0.1),
+                          color: _getStatusColor(status).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _getStatusColor(booking.status).withValues(alpha:0.3),
-                          ),
+                          border: Border.all(color: _getStatusColor(status).withValues(alpha: 0.3)),
                         ),
-                        child: Text(
-                          booking.status,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: _getStatusColor(booking.status),
-                          ),
-                        ),
+                        child: Text(displayStatus,
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _getStatusColor(status))),
                       ),
                     ],
                   ),
@@ -228,21 +200,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Amount',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.lightText,
-                        ),
-                      ),
-                      Text(
-                        'Rs ${booking.amount.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.darkerText,
-                        ),
-                      ),
+                      Text(isUrdu ? 'رقب' : 'Amount', style: TextStyle(fontSize: 12, color: AppTheme.lightText)),
+                      Text('Rs \',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.darkerText)),
                     ],
                   ),
                 ],
@@ -257,197 +217,151 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final user = FirebaseAuth.instance.currentUser;
+    final isUrdu = AppScope.of(context).isUrdu;
 
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Theme.of(context).primaryColor,
-        title: Text(
-          t.t('booking_history'),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
+        title: Text(t.t('booking_history'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         leading: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: () => Navigator.pop(context),
             borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.arrow_back, color: Colors.white, size: 24),
-            ),
+            child: Padding(padding: EdgeInsets.all(8),
+              child: Icon(Icons.arrow_back, color: Colors.white, size: 24)),
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: FadeTransition(
-          opacity: _fadeController,
-          child: Column(
-            children: [
-              // Search Bar
-              TextField(
-                controller: _searchController,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  prefixIcon: Icon(IconHelper.search, color: AppTheme.deactivatedText, size: 20),
-                  hintText: t.t('search_booking_history'),
-                  hintStyle: TextStyle(color: AppTheme.deactivatedText),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppTheme.spacer),
+      body: user == null
+        ? Center(child: Text(isUrdu ? 'براہ کرم لاگ ان کریں' : 'Please log in'))
+        : SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: FadeTransition(
+            opacity: _fadeController,
+            child: Column(
+              children: [
+                TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => _searchQuery = val),
+                  decoration: InputDecoration(
+                    prefixIcon: Icon(IconHelper.search, color: AppTheme.deactivatedText, size: 20),
+                    hintText: t.t('search_booking_history'),
+                    hintStyle: TextStyle(color: AppTheme.deactivatedText),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.spacer)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.spacer)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2)),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppTheme.spacer),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Theme.of(context).primaryColor,
-                      width: 2,
-                    ),
-                  ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
-              ),
-              SizedBox(height: 20),
+                SizedBox(height: 20),
+                Container(
+                  decoration: BoxDecoration(color: AppTheme.notWhite, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.spacer)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedTab = 0),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _selectedTab == 0 ? Colors.white : Colors.transparent,
+                              borderRadius: BorderRadius.only(topLeft: Radius.circular(11), bottomLeft: Radius.circular(11)),
+                              border: _selectedTab == 0 ? Border.all(color: AppTheme.spacer) : null,
+                            ),
+                            child: Center(child: Text(isUrdu ? 'فعال' : 'Active',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+                                color: _selectedTab == 0 ? Theme.of(context).primaryColor : AppTheme.lightText))),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedTab = 1),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _selectedTab == 1 ? Colors.white : Colors.transparent,
+                              borderRadius: BorderRadius.only(topRight: Radius.circular(11), bottomRight: Radius.circular(11)),
+                              border: _selectedTab == 1 ? Border.all(color: AppTheme.spacer) : null,
+                            ),
+                            child: Center(child: Text(isUrdu ? 'مکمل' : 'Completed',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+                                color: _selectedTab == 1 ? Theme.of(context).primaryColor : AppTheme.lightText))),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20),
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('jobs')
+                      .where('workerId', isEqualTo: user.uid)
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 40), child: CircularProgressIndicator()));
+                    }
+                    if (snapshot.hasError) {
+                      return Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Text(isUrdu ? 'لوڈ کرنے میں خرابی' : 'Error loading jobs', style: TextStyle(color: Colors.red))));
+                    }
+                    final allDocs = snapshot.data?.docs ?? [];
+                    final filteredByStatus = allDocs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final status = (data['status']?.toString() ?? '').toLowerCase();
+                      if (_selectedTab == 0) return _activeStatuses.contains(status);
+                      return _completedStatuses.contains(status);
+                    }).toList();
+                    final filteredDocs = _searchQuery.isEmpty ? filteredByStatus : filteredByStatus.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final title = (data['descriptionEn']?.toString() ?? '').toLowerCase();
+                      final category = (data['categoryKey']?.toString() ?? '').toLowerCase();
+                      return title.contains(_searchQuery.toLowerCase()) || category.contains(_searchQuery.toLowerCase());
+                    }).toList();
 
-              // Tabs
-              Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.notWhite,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.spacer),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedTab = 0),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: _selectedTab == 0
-                                ? Colors.white
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(11),
-                              bottomLeft: Radius.circular(11),
-                            ),
-                            border: _selectedTab == 0
-                                ? Border.all(color: AppTheme.spacer)
-                                : null,
+                    if (filteredDocs.isEmpty) {
+                      return Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Column(
+                          children: [
+                            Icon(Icons.inbox_outlined, size: 48, color: AppTheme.deactivatedText),
+                            SizedBox(height: 16),
+                            Text(isUrdu ? 'کوئی کام نہیں ملا' : 'No jobs found',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.lightText)),
+                            SizedBox(height: 8),
+                            Text(_selectedTab == 0
+                                ? (isUrdu ? 'کوئی فعال کام نہیں' : 'You have no active jobs')
+                                : (isUrdu ? 'کوئی مکمل کام نہیں' : 'No completed jobs yet'),
+                              style: TextStyle(fontSize: 14, color: AppTheme.deactivatedText)),
+                          ],
+                        )),
+                      );
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      itemCount: filteredDocs.length,
+                      itemBuilder: (context, index) {
+                        return SlideTransition(
+                          position: Tween<Offset>(begin: Offset(1, 0), end: Offset.zero).animate(
+                            CurvedAnimation(parent: _slideController,
+                              curve: Interval((index * 0.1).clamp(0.0, 0.9), (0.7 + index * 0.1).clamp(0.0, 1.0), curve: Curves.easeOut)),
                           ),
-                          child: Center(
-                            child: Text(
-                              'Active',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: _selectedTab == 0
-                                    ? Theme.of(context).primaryColor
-                                    : AppTheme.lightText,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedTab = 1),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: _selectedTab == 1
-                                ? Colors.white
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.only(
-                              topRight: Radius.circular(11),
-                              bottomRight: Radius.circular(11),
-                            ),
-                            border: _selectedTab == 1
-                                ? Border.all(color: AppTheme.spacer)
-                                : null,
-                          ),
-                          child: Center(
-                            child: Text(
-                              'Completed',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: _selectedTab == 1
-                                    ? Theme.of(context).primaryColor
-                                    : AppTheme.lightText,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 20),
-
-              // Bookings List
-              if (_filteredBookings.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40),
-                    child: Column(
-                      children: [
-                        Icon(Icons.inbox_outlined,
-                            size: 48, color: AppTheme.deactivatedText),
-                        SizedBox(height: 16),
-                        Text(
-                          'No bookings found',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.lightText,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          _selectedTab == 0
-                              ? 'You have no active bookings'
-                              : 'No completed bookings yet',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.deactivatedText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: _filteredBookings.length,
-                  itemBuilder: (context, index) {
-                    return SlideTransition(
-                      position: Tween<Offset>(begin: Offset(1, 0), end: Offset.zero)
-                          .animate(
-                        CurvedAnimation(
-                          parent: _slideController,
-                          curve: Interval(
-                            index * 0.1,
-                            0.7 + (index * 0.1),
-                            curve: Curves.easeOut,
-                          ),
-                        ),
-                      ),
-                      child: _buildBookingCard(_filteredBookings[index]),
+                          child: _buildBookingCard(filteredDocs[index]),
+                        );
+                      },
                     );
                   },
                 ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
     );
   }
 }

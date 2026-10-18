@@ -38,6 +38,9 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
   String _selectedCategory = 'Select a category';
   String _status = '';
   bool _isWorker = false;
+  double _rating = 0.0;
+  int _reviewsCount = 0;
+  int _jobsCompleted = 0;
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -76,6 +79,9 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
         _idBackUrl = data['idBackUrl']?.toString() ?? '';
         _policeCertUrl = data['policeCertUrl']?.toString() ?? '';
         _status = data['status']?.toString() ?? '';
+        _rating = (data['rating'] as num?)?.toDouble() ?? 0.0;
+        _reviewsCount = (data['reviews'] as num?)?.toInt() ?? (data['ratingCount'] as num?)?.toInt() ?? 0;
+        _jobsCompleted = (data['jobsCompleted'] as num?)?.toInt() ?? 0;
         _selectedCategory =
             data['categoryNameEn']?.toString() ?? _categoryKeyToName(data['category']?.toString());
         if (!_categories.contains(_selectedCategory)) {
@@ -537,7 +543,102 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _imageHeader(),
-              const SizedBox(height: 24),
+              if (_isWorker) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Column(
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
+                              const SizedBox(width: 4),
+                              Text(
+                                _rating > 0 ? _rating.toStringAsFixed(1) : 'New',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Rating',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(width: 1, height: 32, color: Colors.white.withValues(alpha: 0.25)),
+                      Column(
+                        children: [
+                          Text(
+                            '$_reviewsCount',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Reviews',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(width: 1, height: 32, color: Colors.white.withValues(alpha: 0.25)),
+                      Column(
+                        children: [
+                          Text(
+                            '$_jobsCompleted',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Completed',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
               _section(
                 'SIGN UP DETAILS',
                 [

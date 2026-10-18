@@ -303,6 +303,7 @@ class RoleBottomNav extends StatelessWidget {
     final items = role == UserRole.worker
         ? const [
             _NavItem('/worker/dashboard', Icons.work_outline, Icons.work, 'Dashboard', 'ڈیش بورڈ'),
+            _NavItem('/shared/history', Icons.assignment_outlined, Icons.assignment, 'My Jobs', 'میرے کام'),
             _NavItem('/worker/earnings', Icons.account_balance_wallet_outlined, Icons.account_balance_wallet, 'Earnings', 'آمدنی'),
             _NavItem('/shared/chat', Icons.chat_bubble_outline, Icons.chat_bubble, 'Chat', 'چیٹ'),
             _NavItem('/shared/settings', Icons.settings_outlined, Icons.settings, 'Settings', 'ترتیبات'),
@@ -1528,6 +1529,42 @@ final _phone = TextEditingController();
     );
   }
   
+  void _showErrorPopup(String title, String message) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Color(0xFFEF4444)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
+        ),
+        actions: [
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0D9488),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   XFile? _idFrontImage;
   XFile? _idBackImage;
   XFile? _profilePicFile;      // Optional for worker
@@ -2003,7 +2040,10 @@ final _phone = TextEditingController();
         _passwordError = password.isEmpty ? 'Password is required' : null;
       });
       if (_emailError != null || _passwordError != null) {
-        showToast('Please enter your email/mobile number and password');
+        _showErrorPopup(
+          bilingual(context, 'Missing Credentials', 'معلومات درکار ہے'),
+          bilingual(context, 'Please enter your email or mobile number and password.', 'براہ کرم اپنا ای میل یا موبائل نمبر اور پاس ورڈ درج کریں۔'),
+        );
         return;
       }
 
@@ -2016,7 +2056,10 @@ final _phone = TextEditingController();
         setState(() => _isUploading = false);
         if (targetEmails.isEmpty) {
           if (mounted) {
-            showToast('No account found with this mobile number. Please check the number or sign up.');
+            _showErrorPopup(
+              bilingual(context, 'Account Not Found', 'اکاؤنٹ نہیں ملا'),
+              bilingual(context, 'No account was found with this mobile number. Please check the number or sign up.', 'اس موبائل نمبر سے کوئی اکاؤنٹ نہیں ملا۔ نمبر درست کریں یا نیا اکاؤنٹ بنائیں۔'),
+            );
           }
           return;
         }
@@ -2045,20 +2088,25 @@ final _phone = TextEditingController();
       if (userCredential == null || userCredential.user == null) {
         if (mounted) {
           final msg = (lastAuthError?.toString() ?? '').toLowerCase();
+          String title = bilingual(context, 'Login Failed', 'لاگ ان ناکام');
+          String friendlyMsg;
           if (msg.contains('invalid-credential') ||
               msg.contains('invalid_credential') ||
               msg.contains('wrong-password') ||
               msg.contains('password is invalid') ||
               msg.contains('user-not-found') ||
               msg.contains('no user record')) {
-            showToast('Invalid email/mobile number or password. Please try again.');
+            friendlyMsg = bilingual(context, 'Invalid email/mobile number or password. Please check your credentials and try again.', 'غلط ای میل / موبائل نمبر یا پاس ورڈ۔ براہ کرم دوبارہ کوشش کریں۔');
           } else if (msg.contains('too-many-requests')) {
-            showToast('Too many failed attempts. Please wait a few minutes and try again.');
+            title = bilingual(context, 'Too Many Attempts', 'بہت زیادہ کوششیں');
+            friendlyMsg = bilingual(context, 'Too many failed login attempts. Please wait a few minutes and try again.', 'لاگ ان کی ناکام کوششیں زیادہ ہو گئیں۔ براہ کرم چند منٹ بعد کوشش کریں۔');
           } else if (msg.contains('network-request-failed')) {
-            showToast('Network error. Please check your internet connection.');
+            title = bilingual(context, 'Network Error', 'انٹرنیٹ مسئلہ');
+            friendlyMsg = bilingual(context, 'Unable to connect to the server. Please check your internet connection.', 'سرور سے رابطہ ممکن نہیں۔ انٹرنیٹ کنکشن چیک کریں۔');
           } else {
-            showToast('Login failed: ${lastAuthError?.toString() ?? "Check your credentials"}');
+            friendlyMsg = bilingual(context, 'Login failed: ${lastAuthError?.toString() ?? "Check your credentials"}', 'لاگ ان ناکام: اپنی معلومات چیک کریں۔');
           }
+          _showErrorPopup(title, friendlyMsg);
         }
         return;
       }
@@ -2074,35 +2122,166 @@ final _phone = TextEditingController();
           }
           final data = doc.data()!;
           final firestoreRole = data['role']?.toString() ?? 'customer';
+          final roles = (data['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
+          final hasWorkerAccess = firestoreRole == 'worker' || roles.contains('worker');
+          final workerStatus = data['workerStatus']?.toString() ?? data['status']?.toString();
+          final targetRole = AppScope.of(context).role ?? UserRole.customer;
 
-          if (firestoreRole == 'worker') {
-            final status = data['status'] ?? 'pending';
-            if (status == 'pending') {
-              await FirebaseAuth.instance.signOut();
-              if (mounted) showToast('Your account is pending admin approval.');
-              return;
-            } else if (status == 'rejected') {
-              await FirebaseAuth.instance.signOut();
-              final reason = data['rejectReason'] ?? 'Not specified';
-              if (mounted) showToast('Account rejected by admin. Reason: $reason');
-              return;
-            }
-            AppScope.of(context).selectRole(UserRole.worker);
-            Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
-          } else {
-            // Customer account — route to customer home
-            // Dual-role users with worker access can switch to worker mode from settings
+          // ── Case 1: Logging in as Customer ──────────────────────────────
+          // A registered worker CAN login as customer directly!
+          if (targetRole == UserRole.customer) {
             AppScope.of(context).selectRole(UserRole.customer);
             Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+            return;
+          }
+
+          // ── Case 2: Logging in as Worker ────────────────────────────────
+          if (targetRole == UserRole.worker) {
+            if (!hasWorkerAccess) {
+              // Registered customer trying to login as worker without worker profile
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: Row(
+                      children: [
+                        const Icon(Icons.verified_user_outlined, color: Color(0xFF0D9488)),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(bilingual(context, 'Worker Verification Required', 'ورکر تصدیق درکار ہے'))),
+                      ],
+                    ),
+                    content: Text(bilingual(
+                      context,
+                      'You are registered as a Customer. To login as a Worker, you must complete worker verification (CNIC, police certificate, and skills) and be approved by admin.\\n\\nYou can continue as a Customer or submit worker registration.',
+                      'آپ کسٹمر کے طور پر رجسٹرڈ ہیں۔ ورکر لاگ ان کے لیے شناختی کارڈ، پولیس سرٹیفکیٹ اور مہارت کی ایڈمن منظوری لازمی ہے۔\\n\\nآپ کسٹمر کے طور پر جاری رکھ سکتے ہیں۔',
+                    )),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(bilingual(context, 'Cancel', 'منسوخ')),
+                      ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          AppScope.of(context).selectRole(UserRole.customer);
+                          Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+                        },
+                        child: Text(bilingual(context, 'Continue as Customer', 'گاہک کے طور پر جاری رکھیں')),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return;
+            }
+
+            if (workerStatus == 'pending') {
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: Row(
+                      children: [
+                        const Icon(Icons.pending_actions, color: Color(0xFFF59E0B)),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(bilingual(context, 'Application Pending', 'درخواست زیر جائزہ'))),
+                      ],
+                    ),
+                    content: Text(bilingual(
+                      context,
+                      'Your worker verification request is under admin review. You can log in as a Worker once approved.\\n\\nIn the meantime, you can continue using MazdoorLink as a Customer.',
+                      'آپ کی ورکر تصدیقی درخواست ایڈمن کے جائزے میں ہے۔ منظوری پر آپ ورکر لاگ ان کر سکیں گے۔\\n\\nاس دوران آپ کسٹمر کے طور پر ایپ استعمال کر سکتے ہیں۔',
+                    )),
+                    actions: [
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          await FirebaseAuth.instance.signOut();
+                        },
+                        child: Text(bilingual(context, 'OK', 'ٹھیک ہے')),
+                      ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          AppScope.of(context).selectRole(UserRole.customer);
+                          Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+                        },
+                        child: Text(bilingual(context, 'Continue as Customer', 'گاہک کے طور پر جاری رکھیں')),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return;
+            } else if (workerStatus == 'rejected') {
+              if (mounted) {
+                final reason = data['rejectReason'] ?? 'Documents not verified';
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Color(0xFFEF4444)),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(bilingual(context, 'Worker Application Rejected', 'ورکر درخواست مسترد'))),
+                      ],
+                    ),
+                    content: Text(bilingual(
+                      context,
+                      'Your worker application was rejected by admin.\nReason: $reason\n\nYou can continue as a Customer or update your verification documents.',
+                      'ایڈمن کی جانب سے آپ کی ورکر درخواست مسترد ہو گئی ہے۔\nوجہ: $reason\n\nآپ کسٹمر کے طور پر جاری رکھ سکتے ہیں یا دستاویزات درست کریں۔',
+                    )),
+                    actions: [
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          await FirebaseAuth.instance.signOut();
+                        },
+                        child: Text(bilingual(context, 'OK', 'ٹھیک ہے')),
+                      ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          AppScope.of(context).selectRole(UserRole.customer);
+                          Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+                        },
+                        child: Text(bilingual(context, 'Continue as Customer', 'گاہک کے طور پر جاری رکھیں')),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return;
+            }
+
+            // Approved worker
+            final setupComplete = data['setupComplete'] as bool? ?? false;
+            AppScope.of(context).selectRole(UserRole.worker);
+            if (!setupComplete) {
+              Navigator.pushReplacementNamed(context, AppRoutes.workerServicesSetup);
+            } else {
+              Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
+            }
+            return;
           }
         } else if (mounted) {
           // Default fallback
+          AppScope.of(context).selectRole(UserRole.customer);
           Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
         }
         return;
       } catch (e) {
         if (mounted) {
-          showToast('Error loading user profile: ${e.toString()}');
+          _showErrorPopup(
+            bilingual(context, 'Profile Error', 'پروفائل خرابی'),
+            bilingual(context, 'Error loading user profile: ${e.toString()}', 'پروفائل لوڈ کرنے میں خرابی: ${e.toString()}'),
+          );
         }
         return;
       }
@@ -2457,20 +2636,112 @@ final _phone = TextEditingController();
   }
 
   Widget _loginScreen() {
+    final selectedRole = AppScope.of(context).role ?? UserRole.customer;
+    final isUrdu = AppScope.of(context).isUrdu;
     return Column(
       key: const ValueKey('loginScreen'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Welcome back',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+        Text(
+          bilingual(context, 'Welcome back', 'خوش آمدید'),
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
         ),
-        const SizedBox(height: 8),
-        const Text(
-          'Login to your MazdoorLink account',
-          style: TextStyle(fontSize: 15, color: Colors.black54),
+        const SizedBox(height: 6),
+        Text(
+          bilingual(context, 'Login to your MazdoorLink account', 'اپنے مزدور لنک اکاؤنٹ میں لاگ ان کریں'),
+          style: const TextStyle(fontSize: 14, color: Colors.black54),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+        // Role Selector Toggle (Customer vs Worker)
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    AppScope.of(context).selectRole(UserRole.customer, updateLocale: false);
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selectedRole == UserRole.customer ? const Color(0xFF0D9488) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: selectedRole == UserRole.customer
+                          ? [BoxShadow(color: const Color(0xFF0D9488).withOpacity(0.25), blurRadius: 4, offset: const Offset(0, 2))]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.person,
+                          size: 18,
+                          color: selectedRole == UserRole.customer ? Colors.white : Colors.black87,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          bilingual(context, 'Customer Mode', 'گاہک موڈ'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: selectedRole == UserRole.customer ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    AppScope.of(context).selectRole(UserRole.worker, updateLocale: false);
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selectedRole == UserRole.worker ? const Color(0xFF0D9488) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: selectedRole == UserRole.worker
+                          ? [BoxShadow(color: const Color(0xFF0D9488).withOpacity(0.25), blurRadius: 4, offset: const Offset(0, 2))]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.handyman,
+                          size: 18,
+                          color: selectedRole == UserRole.worker ? Colors.white : Colors.black87,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          bilingual(context, 'Worker Mode', 'ورکر موڈ'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: selectedRole == UserRole.worker ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
         const Text(
           'Email or Mobile Number',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
@@ -5760,6 +6031,66 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     } catch (_) {}
   }
 
+  Future<void> _onCustomerClickJobCompleted(BuildContext context, String? jobId, TrackingArguments? args) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Color(0xFF0D9488)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(bilingual(context, 'Completed?', 'کیا کام مکمل ہو گیا ہے؟'))),
+          ],
+        ),
+        content: Text(bilingual(
+          context,
+          'Are you sure the worker has completed the job satisfactorily?',
+          'کیا آپ تصدیق کرتے ہیں کہ ورکر نے تسلی بخش طریقے سے کام مکمل کر لیا ہے؟',
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(bilingual(context, 'Cancel', 'منسوخ کریں')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(bilingual(context, 'Yes', 'ہاں')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(bilingual(context, 'Job confirmed completed!', 'کام مکمل ہونے کی تصدیق ہو گئی!')),
+        backgroundColor: const Color(0xFF0D9488),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    if (jobId != null) {
+      try {
+        await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+          'customerCompleted': true,
+          'customerCompletedAt': FieldValue.serverTimestamp(),
+          'status': 'completed',
+          'completedAt': FieldValue.serverTimestamp(),
+          'statusUpdatedAt': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        debugPrint('Error updating customer completion: $e');
+      }
+    }
+
+    if (!context.mounted) return;
+    Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: args);
+  }
+
   String _trackingTitle(BuildContext context) {
     switch (_trackingState) {
       case 0:
@@ -6098,7 +6429,6 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                               if (jobId != null) {
                                 await updateJobStatus(jobId, 'working');
                               }
-                              // explicitly stay on the current screen/state
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text(bilingual(context, 'Waiting for worker to finish.', 'ورکر کا انتظار کیا جا رہا ہے۔'))),
                               );
@@ -6108,15 +6438,34 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: FilledButton(
-                            onPressed: () {
-                              if (jobId != null) {
-                                updateJobStatus(jobId, 'payment_pending');
-                              }
-                              Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: args);
-                            },
+                          child: FilledButton.icon(
+                            onPressed: () => _onCustomerClickJobCompleted(context, jobId, args),
                             style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-                            child: Text(bilingual(context, 'Yes', 'ہاں')),
+                            icon: const Icon(Icons.check_circle_outline, size: 18),
+                            label: Text(bilingual(context, 'Yes, Completed', 'ہاں، مکمل ہو گیا')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if (_trackingState == 4) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const CancelJobScreen()),
+                            ),
+                            child: Text(bilingual(context, 'Cancel Job', 'کام منسوخ کریں')),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => _onCustomerClickJobCompleted(context, jobId, args),
+                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                            icon: const Icon(Icons.check_circle_outline, size: 18),
+                            label: Text(bilingual(context, 'Job Completed', 'کام مکمل ہو گیا')),
                           ),
                         ),
                       ],
@@ -6154,16 +6503,30 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       ),
                     )
                   ] else ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const CancelJobScreen()),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const CancelJobScreen()),
+                            ),
+                            child: Text(bilingual(context, 'Cancel Job', 'کام منسوخ کریں')),
+                          ),
                         ),
-                        child: Text(bilingual(context, 'Cancel Job', 'کام منسوخ کریں')),
-                      ),
-                    )
+                        if (_trackingState == 1) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: () => _onCustomerClickJobCompleted(context, jobId, args),
+                              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                              icon: const Icon(Icons.check_circle_outline, size: 18),
+                              label: Text(bilingual(context, 'Job Completed', 'کام مکمل ہو گیا')),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ]
                 ],
               ),
@@ -6239,6 +6602,21 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         setState(() {
           _loadedJobData = data;
         });
+
+        // If online payment gateway was selected, open payment gateway immediately
+        final method = data['paymentMethod']?.toString() ?? _jobPaymentMethod(context);
+        final isOnline = method.toLowerCase() != 'cash';
+        if (isOnline) {
+          _selectedProvider = method;
+          final amount = (data['price'] as num?)?.toDouble() ?? _jobAmount(context);
+          if (amount > 0) {
+            _payAmount.text = amount.toStringAsFixed(0);
+          }
+          setState(() {
+            _step = PostJobStep.onlinePaymentForm;
+          });
+        }
+
         final wid = data['workerId']?.toString() ?? '';
         if (wid.isNotEmpty) {
           final wDoc = await FirebaseFirestore.instance.collection('users').doc(wid).get();
@@ -6301,10 +6679,11 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   Future<void> _markCustomerPaid(BuildContext context) async {
     final jobId = _jobId(context);
     if (jobId != null) {
-      await updateJobStatus(jobId, 'worker_payment_pending');
+      await updateJobCompleted(jobId);
     }
     if (!mounted) return;
-    setState(() => _step = PostJobStep.workerConfirmationWaiting);
+    // Independent completion: cash payment confirmed directly opens rating
+    setState(() => _step = PostJobStep.ratingForm);
   }
 
   Future<void> _completeOnlinePayment(BuildContext context) async {
@@ -9169,7 +9548,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ChoiceChip(
-                    label: Text(bilingual(context, 'Past', 'ماضی')),
+                    label: Text(bilingual(context, 'Completed', 'مکمل')),
                     selected: _tab == 2,
                     onSelected: (_) => setState(() => _tab = 2),
                   ),
@@ -9738,6 +10117,176 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  Widget _buildNotificationChannelCard(BuildContext context, Map<String, dynamic>? data) {
+    final currentPref = data?['notificationPreference']?.toString() ??
+        (data?['otpVerifiedVia'] == 'phone' ? 'phone' : 'email');
+    final user = FirebaseAuth.instance.currentUser;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: const Color(0xFF0D9488).withOpacity(0.3)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: const Color(0xFF0D9488).withOpacity(0.12),
+                    child: const Icon(Icons.notifications_active_outlined, color: Color(0xFF0D9488)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          bilingual(context, 'Notification Channel', 'نوٹیفیکیشن کا ذریعہ'),
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          bilingual(
+                            context,
+                            'Choose where you want to receive admin updates & alerts',
+                            'ایڈمن منظوری اور الرٹس وصول کرنے کا ذریعہ منتخب کریں',
+                          ),
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _buildNotificationChannelChip(
+                    context,
+                    label: bilingual(context, 'Number (SMS)', 'موبائل نمبر (SMS)'),
+                    icon: Icons.sms_outlined,
+                    selected: currentPref == 'phone',
+                    onTap: () async {
+                      if (user != null) {
+                        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                          'notificationPreference': 'phone',
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(bilingual(context, 'Notifications set to Phone Number (SMS)', 'نوٹیفیکیشنز موبائل نمبر پر سیٹ ہو گئیں')),
+                              backgroundColor: const Color(0xFF0D9488),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildNotificationChannelChip(
+                    context,
+                    label: bilingual(context, 'Email', 'ای میل'),
+                    icon: Icons.email_outlined,
+                    selected: currentPref == 'email',
+                    onTap: () async {
+                      if (user != null) {
+                        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                          'notificationPreference': 'email',
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(bilingual(context, 'Notifications set to Email', 'نوٹیفیکیشنز ای میل پر سیٹ ہو گئیں')),
+                              backgroundColor: const Color(0xFF0D9488),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildNotificationChannelChip(
+                    context,
+                    label: bilingual(context, 'Both', 'دونوں'),
+                    icon: Icons.all_inclusive,
+                    selected: currentPref == 'both',
+                    onTap: () async {
+                      if (user != null) {
+                        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                          'notificationPreference': 'both',
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(bilingual(context, 'Notifications set to Both (SMS & Email)', 'نوٹیفیکیشنز دونوں پر سیٹ ہو گئیں')),
+                              backgroundColor: const Color(0xFF0D9488),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationChannelChip(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF0D9488) : const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? const Color(0xFF0D9488) : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: selected ? Colors.white : Colors.black87),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                  color: selected ? Colors.white : Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppScope.of(context);
@@ -9843,6 +10392,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   roleSwitcher,
+                  if (isWorker) _buildNotificationChannelCard(context, data),
                 ],
               );
             },
@@ -9879,9 +10429,31 @@ class SettingsScreen extends StatelessWidget {
               child: _SettingsItem(icon: Icons.help_outline, color: const Color(0xFF0D9488), title: bilingual(context, 'Worker Support', 'ورکر سپورٹ')),
             ),
           if (isWorker)
-            GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
-              child: _SettingsItem(icon: Icons.assignment_outlined, color: const Color(0xFF0D9488), title: bilingual(context, 'My Jobs & History', 'میرے کام اور ہسٹری')),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Color(0xFF0D9488), width: 1.5),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFF0D9488).withOpacity(0.15),
+                    child: const Icon(Icons.assignment, color: Color(0xFF0D9488)),
+                  ),
+                  title: Text(
+                    bilingual(context, 'My Jobs', 'میرے کام'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  subtitle: Text(
+                    bilingual(context, 'View Scheduled, Active & Completed work', 'شیڈول، موجودہ اور مکمل شدہ کام دیکھیں'),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Color(0xFF0D9488)),
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
+                ),
+              ),
             ),
           if (isWorker)
             GestureDetector(

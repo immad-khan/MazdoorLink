@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:service_frontend/app_theme.dart';
@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/icon_helper.dart';
 import '../app_state.dart';
+import 'mazdoor_flow.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
   @override
@@ -106,12 +107,12 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     final now = DateTime.now();
     final diff = now.difference(dt);
     if (diff.inDays == 0) {
-      if (diff.inHours == 0) return '\ min ago';
-      return '\h ago';
+      if (diff.inHours == 0) return '${diff.inMinutes} min ago';
+      return '${diff.inHours}h ago';
     } else if (diff.inDays == 1) {
       return 'Yesterday';
     } else if (diff.inDays < 7) {
-      return '\ days ago';
+      return '${diff.inDays} days ago';
     } else {
       return DateFormat('MMM d, y').format(dt);
     }
@@ -149,7 +150,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
           child: InkWell(
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Job ID: \')),
+                SnackBar(content: Text('Job ID: $jobId')),
               );
             },
             child: Padding(
@@ -200,11 +201,64 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(isUrdu ? 'رقب' : 'Amount', style: TextStyle(fontSize: 12, color: AppTheme.lightText)),
-                      Text('Rs \',
+                      Text(isUrdu ? 'رقم' : 'Amount', style: TextStyle(fontSize: 12, color: AppTheme.lightText)),
+                      Text('Rs ${amount.toStringAsFixed(0)}',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.darkerText)),
                     ],
                   ),
+                  if (status == 'completed') ...[
+                    SizedBox(height: 10),
+                    if (data['reviewed'] == true || data['customerRating'] != null) ...[
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Color(0xFFFDE68A)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              '${isUrdu ? 'درجہ بندی' : 'Rated'}: ${(data['customerRating'] as num?)?.toStringAsFixed(1) ?? '5.0'} / 5.0',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                            ),
+                            if (data['customerReview'] != null && data['customerReview'].toString().trim().isNotEmpty) ...[
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '"${data['customerReview']}"',
+                                  style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFF78350F)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          icon: Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                          label: Text(isUrdu ? 'ورکر کی درجہ بندی کریں' : 'Rate Worker'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Color(0xFF0D9488),
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              AppRoutes.rating,
+                              arguments: TrackingArguments(jobId: jobId),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
                 ],
               ),
             ),

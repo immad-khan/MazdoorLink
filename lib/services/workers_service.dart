@@ -1,10 +1,11 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../data/mock_data.dart';
 import 'translation_service.dart';
+import 'location_service.dart';
 
 Future<List<WorkerModel>> getAllApprovedWorkers() async {
   final snapshot = await FirebaseFirestore.instance
@@ -815,9 +816,17 @@ class WorkerPresenceService with WidgetsBindingObserver {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     try {
+      final loc = LocationService.instance.currentLocation;
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'isOnline': value,
         'lastSeenAt': FieldValue.serverTimestamp(),
+        if (value) ...{
+          'latitude': loc.latitude,
+          'longitude': loc.longitude,
+          'city': loc.city,
+          'area': loc.area,
+          'locationAddress': loc.fullAddress,
+        },
       });
       await setPresence(online: value);
     } catch (_) {}

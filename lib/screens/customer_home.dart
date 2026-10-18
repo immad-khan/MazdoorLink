@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/location_service.dart';
+import '../services/workers_service.dart';
 
 class CustomerHome extends StatefulWidget {
   @override
@@ -41,13 +43,63 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
     super.dispose();
   }
 
+  void _showCategoryBlockedDialog(String categoryName, CustomerActiveJobInfo activeJob) {
+    final isUrdu = Localizations.localeOf(context).languageCode == 'ur';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEF3C7),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.lock_rounded, color: Color(0xFFD97706), size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                isUrdu ? '$categoryName کا کام جاری ہے' : '$categoryName In Progress',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          isUrdu
+              ? 'آپ کا $categoryName کا کام کاریگر (${activeJob.workerName}) کے ساتھ پہلے سے جاری ہے۔ جب تک یہ کام مکمل نہیں ہو جاتا، آپ نیا کام شروع نہیں کر سکتے۔'
+              : 'You already have an active $categoryName job with ${activeJob.workerName}. Until this job is completed, you cannot start a new $categoryName request.',
+          style: const TextStyle(fontSize: 13.5, height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(isUrdu ? 'سمجھ گیا' : 'OK'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pushNamed(context, '/customer/tracking');
+            },
+            child: Text(isUrdu ? 'ٹریک کریں' : 'Track Job', style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAnimatedCard(
     int index,
     IconData icon,
     String label,
     Color bgColor,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool isLocked = false,
+  }) {
     return ScaleTransition(
       scale: Tween<double>(begin: 0.8, end: 1).animate(
         CurvedAnimation(parent: _controllers[index], curve: Curves.easeOut),
@@ -60,36 +112,77 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
             onTap: onTap,
             borderRadius: BorderRadius.circular(16),
             child: Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isLocked ? const Color(0xFFFFFBEB) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.spacer, width: 1),
+                border: Border.all(
+                  color: isLocked ? const Color(0xFFF59E0B) : AppTheme.spacer,
+                  width: isLocked ? 1.5 : 1,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha:0.04),
                     blurRadius: 8,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: Column(
+              child: Stack(
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: bgColor.withValues(alpha:0.1),
-                      borderRadius: BorderRadius.circular(12),
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isLocked ? const Color(0xFFFEF3C7) : bgColor.withValues(alpha:0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            icon,
+                            color: isLocked ? const Color(0xFFD97706) : Theme.of(context).primaryColor,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          label,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isLocked ? FontWeight.bold : FontWeight.w600,
+                            color: isLocked ? const Color(0xFF92400E) : AppTheme.darkText,
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Icon(icon, color: Theme.of(context).primaryColor, size: 24),
                   ),
-                  SizedBox(height: 12),
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.darkText),
-                  ),
+                  if (isLocked)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.lock, size: 9, color: Colors.white),
+                            SizedBox(width: 2),
+                            Text(
+                              'Active',
+                              style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -224,20 +317,111 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
           style: Theme.of(context).textTheme.titleLarge,
         ),
         SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: 3,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          children: [
-            _buildAnimatedCard(0, Icons.home_repair_service, 'Plumber', Color(0xFF3B82F6), () => Navigator.pushNamed(context, '/customer/job-posting')),
-            _buildAnimatedCard(1, Icons.bolt, 'Electrician', Color(0xFFFCD34D), () => Navigator.pushNamed(context, '/customer/job-posting')),
-            _buildAnimatedCard(2, Icons.handyman, 'Carpentry', Color(0xFF8B5A3C), () => Navigator.pushNamed(context, '/customer/job-posting')),
-            _buildAnimatedCard(3, Icons.cleaning_services, 'Cleaning', Color(0xFF06B6D4), () => Navigator.pushNamed(context, '/customer/job-posting')),
-            _buildAnimatedCard(4, Icons.format_paint, 'Painting', Color(0xFFEC4899), () => Navigator.pushNamed(context, '/customer/job-posting')),
-            _buildAnimatedCard(5, Icons.ac_unit, 'AC Repair', Color(0xFF10B981), () => Navigator.pushNamed(context, '/customer/job-posting')),
-          ],
+        StreamBuilder<Map<String, CustomerActiveJobInfo>>(
+          stream: streamCustomerActiveCategoriesMap(FirebaseAuth.instance.currentUser?.uid ?? ''),
+          builder: (context, snapshot) {
+            final activeMap = snapshot.data ?? {};
+            final activePlumber = activeMap['plumber'];
+            final activeElectrician = activeMap['electrician'];
+            final activeCarpenter = activeMap['carpentry'] ?? activeMap['carpenter'];
+            final activeCleaner = activeMap['cleaning'] ?? activeMap['cleaner'];
+            final activePainter = activeMap['painting'] ?? activeMap['painter'];
+            final activeAc = activeMap['ac repair'] ?? activeMap['ac'];
+
+            return GridView.count(
+              crossAxisCount: 3,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _buildAnimatedCard(
+                  0,
+                  Icons.home_repair_service,
+                  'Plumber',
+                  const Color(0xFF3B82F6),
+                  () {
+                    if (activePlumber != null) {
+                      _showCategoryBlockedDialog('Plumber', activePlumber);
+                    } else {
+                      Navigator.pushNamed(context, '/customer/job-posting');
+                    }
+                  },
+                  isLocked: activePlumber != null,
+                ),
+                _buildAnimatedCard(
+                  1,
+                  Icons.bolt,
+                  'Electrician',
+                  const Color(0xFFFCD34D),
+                  () {
+                    if (activeElectrician != null) {
+                      _showCategoryBlockedDialog('Electrician', activeElectrician);
+                    } else {
+                      Navigator.pushNamed(context, '/customer/job-posting');
+                    }
+                  },
+                  isLocked: activeElectrician != null,
+                ),
+                _buildAnimatedCard(
+                  2,
+                  Icons.handyman,
+                  'Carpentry',
+                  const Color(0xFF8B5A3C),
+                  () {
+                    if (activeCarpenter != null) {
+                      _showCategoryBlockedDialog('Carpentry', activeCarpenter);
+                    } else {
+                      Navigator.pushNamed(context, '/customer/job-posting');
+                    }
+                  },
+                  isLocked: activeCarpenter != null,
+                ),
+                _buildAnimatedCard(
+                  3,
+                  Icons.cleaning_services,
+                  'Cleaning',
+                  const Color(0xFF06B6D4),
+                  () {
+                    if (activeCleaner != null) {
+                      _showCategoryBlockedDialog('Cleaning', activeCleaner);
+                    } else {
+                      Navigator.pushNamed(context, '/customer/job-posting');
+                    }
+                  },
+                  isLocked: activeCleaner != null,
+                ),
+                _buildAnimatedCard(
+                  4,
+                  Icons.format_paint,
+                  'Painting',
+                  const Color(0xFFEC4899),
+                  () {
+                    if (activePainter != null) {
+                      _showCategoryBlockedDialog('Painting', activePainter);
+                    } else {
+                      Navigator.pushNamed(context, '/customer/job-posting');
+                    }
+                  },
+                  isLocked: activePainter != null,
+                ),
+                _buildAnimatedCard(
+                  5,
+                  Icons.ac_unit,
+                  'AC Repair',
+                  const Color(0xFF10B981),
+                  () {
+                    if (activeAc != null) {
+                      _showCategoryBlockedDialog('AC Repair', activeAc);
+                    } else {
+                      Navigator.pushNamed(context, '/customer/job-posting');
+                    }
+                  },
+                  isLocked: activeAc != null,
+                ),
+              ],
+            );
+          },
         ),
         SizedBox(height: 24),
 

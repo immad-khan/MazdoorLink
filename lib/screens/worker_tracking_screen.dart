@@ -239,16 +239,158 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
     );
   }
 
-  Future<void> _requestCompletionConfirmation() async {
-    await updateJobStatus(widget.jobId, 'worker_completed');
-    if (!mounted) return;
+  Future<void> _onWorkerClickJobCompleted() async {
     final isUrdu = AppScope.of(context).isUrdu;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(isUrdu
-          ? 'کسٹمر کو کام مکمل ہونے کی تصدیق بھیج دی گئی ہے۔'
-          : 'Customer has been asked to confirm the job is completed.'),
-      backgroundColor: const Color(0xFF0D9488),
-    ));
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Color(0xFF0D9488)),
+            const SizedBox(width: 8),
+            Text(isUrdu ? 'کیا کام مکمل ہو گیا ہے؟' : 'Completed?'),
+          ],
+        ),
+        content: Text(isUrdu
+            ? 'کیا آپ تصدیق کرتے ہیں کہ یہ کام مکمل ہو چکا ہے؟'
+            : 'Are you sure this job is completed?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(isUrdu ? 'منسوخ' : 'Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(isUrdu ? 'ہاں' : 'Yes'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(widget.jobId).get();
+      final jData = jobDoc.data() ?? {};
+      final customerAlreadyCompleted = jData['customerCompleted'] == true || jData['status'] == 'completed';
+
+      await FirebaseFirestore.instance.collection('jobs').doc(widget.jobId).update({
+        'workerCompleted': true,
+        'workerCompletedAt': FieldValue.serverTimestamp(),
+        'status': customerAlreadyCompleted ? 'completed' : 'worker_completed',
+        'statusUpdatedAt': FieldValue.serverTimestamp(),
+      });
+
+      setState(() {
+        _status = customerAlreadyCompleted ? 3 : 2;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isUrdu
+              ? 'کام مکمل ہو گیا۔ گاہک کو ریٹ کریں۔'
+              : 'Job marked as completed. Please rate the customer.'),
+          backgroundColor: const Color(0xFF0D9488),
+        ));
+        // Immediately show rating for customer
+        _showRateCustomerDialog();
+      }
+    } catch (e) {
+      debugPrint('Error marking worker completed: $e');
+    }
+  }
+
+  void _showRateCustomerDialog() {
+    final isUrdu = AppScope.of(context).isUrdu;
+    int selectedRating = 5;
+    final feedbackCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.star, color: Colors.amber),
+              const SizedBox(width: 8),
+              Expanded(child: Text(isUrdu ? 'گاہک کو ریٹ کریں' : 'Rate Customer')),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isUrdu
+                    ? 'اس گاہک کے ساتھ آپ کا کام کا تجربہ کیسا رہا؟'
+                    : 'How was your experience with $_customerName?',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  final star = index + 1;
+                  return IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(
+                      star <= selectedRating ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                      size: 36,
+                    ),
+                    onPressed: () {
+                      setDialogState(() => selectedRating = star);
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: feedbackCtrl,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  hintText: isUrdu ? 'کوئی تبصرہ لکھیں (اختیاری)...' : 'Write a comment (optional)...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(isUrdu ? 'چھوڑیں' : 'Skip'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                try {
+                  await FirebaseFirestore.instance.collection('jobs').doc(widget.jobId).update({
+                    'workerRatingForCustomer': selectedRating,
+                    'workerReviewForCustomer': feedbackCtrl.text.trim(),
+                    'workerRated': true,
+                  });
+                } catch (_) {}
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(isUrdu ? 'گاہک کی درجہ بندی محفوظ ہو گئی۔' : 'Customer rating submitted!'),
+                      backgroundColor: const Color(0xFF0D9488),
+                    ),
+                  );
+                }
+              },
+              child: Text(isUrdu ? 'جمع کروائیں' : 'Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _confirmPaymentReceived() async {
@@ -690,12 +832,12 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: _requestCompletionConfirmation,
+                        onPressed: _onWorkerClickJobCompleted,
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: const Color(0xFF0D9488),
                         ),
-                        child: Text(isUrdu ? 'کیا کام مکمل ہو گیا ہے؟' : 'Is work completed?', style: const TextStyle(fontSize: 16)),
+                        child: Text(isUrdu ? 'کام مکمل ہو گیا' : 'Job Completed', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ]
@@ -753,35 +895,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: () {
-                          final isUrdu = AppScope.of(context).isUrdu;
-                          showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text(isUrdu ? 'گاہک کو ریٹ کریں' : 'Rate Customer'),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(isUrdu ? 'اس گاہک کے ساتھ آپ کا تجربہ کیسا رہا؟' : 'How was your experience with this customer?'),
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: List.generate(5, (index) => const Icon(Icons.star_border, color: Colors.amber, size: 36)),
-                                  )
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(ctx);
-                                    Navigator.pop(context);
-                                  },
-                                  child: Text(isUrdu ? 'جمع کروائیں' : 'Submit'),
-                                )
-                              ],
-                            ),
-                          );
-                        },
+                        onPressed: _showRateCustomerDialog,
                         style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
                         child: Text(isUrdu ? 'گاہک کو ریٹ کریں' : 'Rate Customer'),
                       ),

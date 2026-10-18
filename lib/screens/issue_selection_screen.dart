@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../app_state.dart';
+import '../services/workers_service.dart';
 import 'mazdoor_flow.dart';
 import 'recommendation_arguments.dart';
 
@@ -88,6 +90,23 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
       final args = ModalRoute.of(context)?.settings.arguments as String?;
       if (args != null) _categoryKey = args;
       _initialized = true;
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && _categoryKey.isNotEmpty) {
+        customerHasActiveJobInCategory(user.uid, _categoryKey).then((hasActive) {
+          if (hasActive && mounted) {
+            showToast(
+              bilingual(
+                context,
+                'You already have an active job in this category. Complete it before requesting a new one.',
+                'آپ کا اس کیٹیگری میں کام پہلے سے جاری ہے۔ نیا کام شروع کرنے سے پہلے اسے مکمل کریں۔',
+              ),
+            );
+            Navigator.pop(context);
+          }
+        });
+      }
+
       _loadCustomSkills();
     }
   }

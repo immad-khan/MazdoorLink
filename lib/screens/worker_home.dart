@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../l10n/app_localizations.dart';
+import '../services/location_service.dart';
+import '../services/workers_service.dart';
 
 class WorkerHome extends StatefulWidget {
   @override
@@ -18,6 +21,11 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
     _toggleController = AnimationController(duration: Duration(milliseconds: 400), vsync: this);
     _cardController = AnimationController(duration: Duration(milliseconds: 600), vsync: this);
     _cardController.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        LocationService.instance.ensureLocationReady(context);
+      }
+    });
   }
 
   @override
@@ -27,7 +35,15 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _setOnline(bool online) {
+  Future<void> _setOnline(bool online) async {
+    if (online) {
+      final allowed = await LocationService.instance.verifyWorkerLocationForOnline(context);
+      if (!allowed || !mounted) {
+        setState(() => _online = false);
+        _toggleController.reverse();
+        return;
+      }
+    }
     if (online != _online) {
       setState(() => _online = online);
       if (online) {
@@ -35,6 +51,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
       } else {
         _toggleController.reverse();
       }
+      await WorkerPresenceService.instance.setOnline(online);
     }
   }
 
@@ -119,29 +136,64 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-              Stack(
+              Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha:0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.notifications_outlined, color: Colors.white, size: 20),
+                  ValueListenableBuilder<AppLocation>(
+                    valueListenable: LocationService.instance.currentLocationNotifier,
+                    builder: (context, loc, _) {
+                      return InkWell(
+                        onTap: () => LocationService.instance.showAreaPickerDialog(context),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.location_on, color: Colors.white, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                loc.shortDisplayName,
+                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(width: 2),
+                              const Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 14),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  Positioned(
-                    top: 2,
-                    right: 2,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Color(0xFFEF4444),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.white, width: 1),
+                  const SizedBox(width: 8),
+                  Stack(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha:0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 20),
                       ),
-                    ),
+                      Positioned(
+                        top: 2,
+                        right: 2,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.white, width: 1),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -225,8 +277,10 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                   ),
                   SizedBox(height: 12),
                   Text(
-                    _online ? 'You are receiving new job requests' : 'Go online to get job requests',
-                    style: TextStyle(color: Colors.white.withValues(alpha:0.9), fontSize: 14),
+                    _online
+                        ? 'Location Active • Receiving job requests in Twin Cities'
+                        : 'Location must be on to go online and receive jobs',
+                    style: TextStyle(color: Colors.white.withValues(alpha:0.9), fontSize: 13),
                   ),
                 ],
               ),
@@ -239,66 +293,79 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
         // Quick Stats
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.spacer, width: 1),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 8, offset: Offset(0, 2))],
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(Icons.wallet, color: Color(0xFFD97706), size: 20),
+          child: StreamBuilder<DocumentSnapshot>(
+            stream: streamCurrentUserData(),
+            builder: (context, userSnap) {
+              final uData = userSnap.data?.data() as Map<String, dynamic>?;
+              final double rating = (uData?['rating'] as num?)?.toDouble() ?? 0.0;
+              final int reviewsCount = (uData?['reviews'] as num?)?.toInt() ?? 0;
+              final int jobsCompleted = (uData?['jobsCompleted'] as num?)?.toInt() ?? 0;
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.spacer, width: 1),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: Offset(0, 2))],
                       ),
-                      SizedBox(height: 8),
-                      Text('Today Earnings', style: TextStyle(color: AppTheme.lightText, fontSize: 12)),
-                      SizedBox(height: 4),
-                      Text('Rs. 2,500', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkerText)),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.spacer, width: 1),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 8, offset: Offset(0, 2))],
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Color(0xFFDCFCE7),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(Icons.check_circle, color: Color(0xFF059669), size: 20),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 24),
+                          ),
+                          SizedBox(height: 8),
+                          Text('Rating', style: TextStyle(color: AppTheme.lightText, fontSize: 12)),
+                          SizedBox(height: 4),
+                          Text(
+                            rating > 0 ? '${rating.toStringAsFixed(1)} ($reviewsCount)' : 'New Worker',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.darkerText),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 8),
-                      Text('Completed', style: TextStyle(color: AppTheme.lightText, fontSize: 12)),
-                      SizedBox(height: 4),
-                      Text('2 jobs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkerText)),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ],
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.spacer, width: 1),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: Offset(0, 2))],
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.check_circle, color: Color(0xFF059669), size: 20),
+                          ),
+                          SizedBox(height: 8),
+                          Text('Completed', style: TextStyle(color: AppTheme.lightText, fontSize: 12)),
+                          SizedBox(height: 4),
+                          Text('$jobsCompleted jobs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkerText)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
 

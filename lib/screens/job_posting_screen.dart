@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/icon_helper.dart';
+import '../services/location_service.dart';
 
 class JobPostingScreen extends StatefulWidget {
   @override
@@ -25,6 +26,7 @@ class _JobPostingScreenState extends State<JobPostingScreen>
   @override
   void initState() {
     super.initState();
+    _locationController.text = LocationService.instance.currentLocation.shortDisplayName;
     _fadeController =
         AnimationController(duration: Duration(milliseconds: 300), vsync: this);
     _slideController =
@@ -328,7 +330,7 @@ class _JobPostingScreenState extends State<JobPostingScreen>
               controller: _locationController,
               decoration: InputDecoration(
                 prefixIcon: Icon(IconHelper.location, size: 18),
-                hintText: 'Gulberg III, Lahore',
+                hintText: 'F-7, Islamabad / Saddar, Rawalpindi',
                 hintStyle: TextStyle(color: AppTheme.deactivatedText),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),

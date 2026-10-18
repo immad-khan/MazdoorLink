@@ -4897,7 +4897,7 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                               color: const Color(0xFFF9FAFB),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFE5E7EB)),
+                                side: const BorderSide(color: Color(0xFFE5E7EB)),
                               ),
                               child: ListTile(
                                 dense: true,
@@ -5620,77 +5620,92 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  bilingual(context, 'Worker is not available right now', 'ورکر ابھی دستیاب نہیں ہے'),
-                  style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                  bilingual(
+                    context,
+                    'Worker wants to schedule this work to $t',
+                    'ورکر یہ کام $t پر شیڈول کرنا چاہتا ہے',
+                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF92400E), fontSize: 14),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            bilingual(context, 'Can we schedule at $t?', 'کیا ہم $t پر شیڈول کر سکتے ہیں؟'),
-            style: const TextStyle(fontSize: 13, color: Color(0xFF92400E), fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () async {
-                    if (jobId != null) {
-                      await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
-                        'status': 'rejected',
-                        'scheduleDeclined': true,
-                        'statusUpdatedAt': FieldValue.serverTimestamp(),
-                      });
-                      _notifyScheduleDeclined(jobId);
-                    }
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    side: const BorderSide(color: Colors.redAccent),
-                  ),
-                  child: Text(bilingual(context, 'Decline', 'مسترد کریں')),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton(
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.check, size: 18),
                   onPressed: () async {
                     if (jobId != null) {
                       await acceptScheduledJob(jobId);
                       _notifyScheduleApproval(jobId);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(bilingual(context, 'Schedule accepted!', 'شیڈول منظور ہو گیا!')),
+                            backgroundColor: const Color(0xFF0D9488),
+                          ),
+                        );
+                      }
                     }
                   },
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-                  child: Text(bilingual(context, 'Accept', 'منظور کریں')),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9488),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  label: Text(bilingual(context, 'Accept', 'قبول کریں')),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.chat_outlined, size: 18),
+                  label: Text(bilingual(context, 'Chat', 'چیٹ کریں')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0D9488),
+                    side: const BorderSide(color: Color(0xFF0D9488)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () async {
+                    final workerId = worker?.id;
+                    if (workerId == null || workerId.isEmpty) return;
+                    final workerName = worker?.name ?? 'Worker';
+                    final existingId = await findExistingConversation(workerId);
+                    if (!context.mounted) return;
+                    if (existingId != null) {
+                      Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                        arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: worker?.image));
+                    } else {
+                      final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: worker?.image ?? '');
+                      if (context.mounted) {
+                        Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                          arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: worker?.image));
+                      }
+                    }
+                  },
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.chat_outlined, size: 18),
-              label: Text(bilingual(context, 'Message Worker', 'ورکر کو میسج کریں')),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
               onPressed: () async {
-                final workerId = worker?.id;
-                if (workerId == null || workerId.isEmpty) return;
-                final workerName = worker?.name ?? 'Worker';
-                final existingId = await findExistingConversation(workerId);
-                if (!context.mounted) return;
-                if (existingId != null) {
-                  Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                    arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: worker?.image));
-                } else {
-                  final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: worker?.image ?? '');
-                  if (context.mounted) {
-                    Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                      arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: worker?.image));
-                  }
+                if (jobId != null) {
+                  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
+                    'status': 'rejected',
+                    'scheduleDeclined': true,
+                    'statusUpdatedAt': FieldValue.serverTimestamp(),
+                  });
+                  _notifyScheduleDeclined(jobId);
                 }
               },
+              child: Text(
+                bilingual(context, 'Decline', 'مسترد کریں'),
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              ),
             ),
           ),
         ],
@@ -5772,7 +5787,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           final t = _scheduledTime != null ? DateFormat('hh:mm a, d MMM').format(_scheduledTime!) : '';
           return bilingual(context, 'Scheduled for $t', 'شیڈول $t کے لیے منظور شدہ');
         }
-        return bilingual(context, 'Worker is not available right now', 'ورکر ابھی دستیاب نہیں ہے');
+        final t = _scheduledTime != null ? DateFormat('hh:mm a, d MMM').format(_scheduledTime!) : '';
+        return bilingual(context, 'Worker wants to schedule ($t)', 'ورکر شیڈول کرنا چاہتا ہے ($t)');
       default:
         return bilingual(context, 'Tracking job', 'کام ٹریک ہو رہا ہے');
     }
@@ -5790,7 +5806,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         return bilingual(context, 'This job has been closed because the arrival was declined.', 'آمد مسترد ہونے کی وجہ سے یہ کام بند ہو گیا۔');
       case 8:
         if (!_scheduleConfirmed) {
-          return bilingual(context, 'Can we schedule at this time? Please accept or decline.', 'کیا ہم اس وقت شیڈول کر سکتے ہیں؟ براہ کرم قبول یا مسترد کریں۔');
+          return bilingual(context, 'Worker wants to schedule this work. Accept or Chat to discuss.', 'ورکر یہ کام شیڈول کرنا چاہتا ہے۔ قبول کریں یا بات چیت کے لیے چیٹ کریں۔');
         }
         return bilingual(context, 'This request is scheduled. The job will become active once it starts.', 'یہ درخواست شیڈول ہو چکی ہے۔ کام شروع ہوتے ہی ایکٹو ہو جائے گی۔');
       default:
@@ -7070,34 +7086,50 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     return scheduled;
   }
 
-  Future<void> _handleAcceptJob(BuildContext context, String jobId, double price) async {
-    final isUrdu = AppScope.of(context).isUrdu;
+  Future<void> _handleInstantAcceptJob(BuildContext context, String jobId, double price) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final busy = await workerHasActiveJob(user.uid);
+    await updateJobStatus(jobId, 'accepted');
     if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkerTrackingScreen(jobPrice: price, jobId: jobId),
+      ),
+    );
+  }
 
-    if (!busy) {
-      await updateJobStatus(jobId, 'accepted');
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => WorkerTrackingScreen(jobPrice: price, jobId: jobId),
-        ),
-      );
-      return;
-    }
-
+  Future<void> _handleScheduleJob(BuildContext context, String jobId) async {
+    final isUrdu = AppScope.of(context).isUrdu;
     final scheduled = await _pickScheduleTime(context);
     if (scheduled == null || !mounted) return;
-    await scheduleAcceptedJob(jobId, scheduled);
+    await scheduleProposedJob(jobId, scheduled);
     if (!mounted) return;
     _notifyScheduleProposal(jobId, scheduled);
+
+    try {
+      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+      final data = jobDoc.data();
+      final customerId = data?['customerId']?.toString();
+      final customerName = data?['customerName']?.toString() ?? 'Customer';
+      final formattedTime = DateFormat('hh:mm a, d MMM yyyy').format(scheduled);
+      if (customerId != null && customerId.isNotEmpty) {
+        final convId = await createConversation(
+          otherUserId: customerId,
+          otherUserName: customerName,
+          otherUserImage: '',
+        );
+        await sendMessage(
+          convId,
+          'I would like to schedule this work for $formattedTime. Please accept or let me know if another time works better.',
+        );
+      }
+    } catch (_) {}
+
     showToast(isUrdu
-        ? 'آپ کی تجویز کردہ آمد کا وقت گاہک کی منظوری کے لیے بھیج دیا گیا'
-        : 'Your proposed arrival time was sent to the customer for approval');
+        ? 'شیڈول تجویز گاہک کو بھیج دی گئی'
+        : 'Schedule proposal sent to customer');
   }
 
   Future<void> _notifyScheduleProposal(String jobId, DateTime scheduled) async {
@@ -7786,57 +7818,25 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                   // Schedule
                                   Expanded(
                                     child: OutlinedButton(
-                                      onPressed: () async {
-                                        final scheduled = await _pickScheduleTime(context);
-                                        if (scheduled == null || !mounted) return;
-                                        await scheduleProposedJob(jobId, scheduled);
-                                        if (!mounted) return;
-                                        _notifyScheduleProposal(jobId, scheduled);
-                                        showToast(isUrdu
-                                            ? 'شیڈول تجویز گاہک کو بھیج دی گئی'
-                                            : 'Schedule proposal sent to customer');
-                                      },
+                                      onPressed: () => _handleScheduleJob(context, jobId),
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.amber.shade700,
-                                        side: BorderSide(color: Colors.amber.shade700),
+                                        foregroundColor: Colors.amber.shade800,
+                                        side: BorderSide(color: Colors.amber.shade800),
                                         padding: const EdgeInsets.symmetric(vertical: 10),
                                       ),
                                       child: Text(isUrdu ? 'شیڈول' : 'Schedule'),
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                  // Accept
+                                  // Accept (Instantly accepts and starts workflow of maps)
                                   Expanded(
                                     child: FilledButton(
-                                      onPressed: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (_) => AlertDialog(
-                                            title: Text(isUrdu ? 'تصدیق کریں' : 'Confirm?'),
-                                            content: Text(isUrdu
-                                                ? 'کیا آپ اس کام کو قبول کرنا چاہتے ہیں؟'
-                                                : 'Are you sure you want to accept this job?'),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(context),
-                                                child: Text(isUrdu ? 'نہیں' : 'No',
-                                                    style: const TextStyle(color: Colors.red)),
-                                              ),
-                                              TextButton(
-                                                onPressed: () {
-                                                  Navigator.pop(context);
-                                                  _handleAcceptJob(context, jobId, price);
-                                                },
-                                                child: Text(isUrdu ? 'جی ہاں' : 'Yes'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
+                                      onPressed: () => _handleInstantAcceptJob(context, jobId, price),
                                       style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(0xFF0D9488),
                                         padding: const EdgeInsets.symmetric(vertical: 10),
                                       ),
-                                      child: Text(isUrdu ? 'قبول' : 'Accept'),
+                                      child: Text(isUrdu ? 'قبول کریں' : 'Accept'),
                                     ),
                                   ),
                                 ],
@@ -8623,6 +8623,205 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return DateFormat('hh:mm a').format(ts.toDate().toLocal());
   }
 
+  Widget _buildJobScheduleBanner(BuildContext context) {
+    final me = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (me.isEmpty || _otherId.isEmpty) return const SizedBox.shrink();
+
+    final isCustomer = AppScope.of(context).role == UserRole.customer;
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('jobs')
+          .where(isCustomer ? 'customerId' : 'workerId', isEqualTo: me)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+
+        final docs = snapshot.data!.docs;
+        QueryDocumentSnapshot? jobDoc;
+        for (final doc in docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final otherMatch = (isCustomer ? data['workerId'] : data['customerId']) == _otherId;
+          if (otherMatch && data['status'] == 'scheduled') {
+            jobDoc = doc;
+            break;
+          }
+        }
+
+        if (jobDoc == null) return const SizedBox.shrink();
+
+        final data = jobDoc.data() as Map<String, dynamic>;
+        final isConfirmed = data['scheduleConfirmed'] as bool? ?? false;
+        final scheduledRaw = data['scheduledReminderAt'];
+        String timeStr = '';
+        if (scheduledRaw is Timestamp) {
+          timeStr = DateFormat('hh:mm a, d MMM').format(scheduledRaw.toDate());
+        }
+        final price = data['price'];
+        final priceStr = price != null ? 'Rs. ${(price as num).toStringAsFixed(0)}' : '';
+        final isUrdu = AppScope.of(context).isUrdu;
+        final title = isUrdu
+            ? (data['descriptionUr']?.toString() ?? data['categoryKey']?.toString() ?? 'کام')
+            : (data['descriptionEn']?.toString() ?? data['categoryKey']?.toString() ?? 'Job');
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isConfirmed ? const Color(0xFFF0FDF4) : const Color(0xFFFEF3C7),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isConfirmed ? const Color(0xFF22C55E) : const Color(0xFFF59E0B),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isConfirmed ? const Color(0xFFDCFCE7) : const Color(0xFFFDE68A),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isConfirmed ? Icons.check_circle : Icons.schedule,
+                      size: 18,
+                      color: isConfirmed ? const Color(0xFF16A34A) : const Color(0xFFB45309),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (timeStr.isNotEmpty)
+                          Text(
+                            timeStr,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isConfirmed ? const Color(0xFF16A34A) : const Color(0xFF92400E),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (priceStr.isNotEmpty)
+                    Text(
+                      priceStr,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: Color(0xFF0D9488),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (isConfirmed) ...[
+                Row(
+                  children: [
+                    const Icon(Icons.verified, size: 14, color: Color(0xFF16A34A)),
+                    const SizedBox(width: 4),
+                    Text(
+                      bilingual(context, 'Schedule Confirmed', 'شیڈول منظور شدہ'),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF16A34A)),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                if (isCustomer) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          bilingual(
+                            context,
+                            'Worker proposed this schedule. Accept when ready:',
+                            'ورکر نے یہ وقت تجویز کیا ہے۔ تیار ہونے پر منظور کریں:',
+                          ),
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF92400E)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9488),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.check, size: 14),
+                        label: Text(
+                          bilingual(context, 'Accept', 'منظور کریں'),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        onPressed: () async {
+                          final currentJobId = jobDoc!.id;
+                          await acceptScheduledJob(currentJobId);
+                          await sendMessage(
+                            widget.conversationId,
+                            'I have accepted the scheduled time: $timeStr.',
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  bilingual(
+                                    context,
+                                    'Schedule accepted successfully!',
+                                    'شیڈول کامیابی سے منظور ہو گیا!',
+                                  ),
+                                ),
+                                backgroundColor: const Color(0xFF0D9488),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.hourglass_top, size: 14, color: Color(0xFFB45309)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          bilingual(
+                            context,
+                            'Waiting for customer to accept schedule...',
+                            'گاہک کی جانب سے شیڈول قبول کرنے کا انتظار...',
+                          ),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF92400E)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MzScaffold(
@@ -8631,6 +8830,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       titleWidget: _buildHeader(context),
       child: Column(
         children: [
+          _buildJobScheduleBanner(context),
           Expanded(child: _buildMessages(context)),
           if (_otherTyping) _buildTypingBanner(context),
           _buildInput(context),
@@ -9032,12 +9232,14 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
 
                     String? reminderLine;
                     final scheduledRaw = data['scheduledReminderAt'];
+                    final schedTime = scheduledRaw is Timestamp
+                        ? DateFormat('hh:mm a').format(scheduledRaw.toDate())
+                        : '';
                     if (scheduledRaw is Timestamp) {
-                      final t = DateFormat('hh:mm a').format(scheduledRaw.toDate());
                       final confirmed = data['scheduleConfirmed'] as bool? ?? false;
                       reminderLine = confirmed
-                          ? '${bilingual(context, 'Reminder: worker arrives at', 'یاد دہانی: ورکر آئے گا')} $t'
-                          : '${bilingual(context, 'Schedule approval pending', 'شیڈول کی منظوری زیر التوا')} • $t';
+                          ? '${bilingual(context, 'Reminder: worker arrives at', 'یاد دہانی: ورکر آئے گا')} $schedTime'
+                          : '${bilingual(context, 'Schedule approval pending', 'شیڈول کی منظوری زیر التوا')} • $schedTime';
                     }
 
                   return Card(
@@ -9188,7 +9390,15 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                         const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
-                                            bilingual(context, 'Worker is not available right now. Can we schedule at this time?', 'ورکر ابھی دستیاب نہیں ہے۔ کیا ہم اس وقت شیڈول کر سکتے ہیں؟'),
+                                            bilingual(
+                                              context,
+                                              schedTime.isNotEmpty
+                                                  ? 'Worker wants to schedule this work to $schedTime. Accept or Chat?'
+                                                  : 'Worker wants to schedule this work. Accept or Chat?',
+                                              schedTime.isNotEmpty
+                                                  ? 'ورکر اس کام کو $schedTime پر شیڈول کرنا چاہتا ہے۔ منظور کریں یا بات چیت کریں؟'
+                                                  : 'ورکر اس کام کو شیڈول کرنا چاہتا ہے۔ منظور کریں یا بات چیت کریں؟',
+                                            ),
                                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF92400E)),
                                           ),
                                         ),
@@ -9198,27 +9408,42 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: OutlinedButton(
-                                          style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent)),
+                                        child: OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: const Color(0xFF0D9488),
+                                            side: const BorderSide(color: Color(0xFF0D9488)),
+                                          ),
+                                          icon: const Icon(Icons.chat_outlined, size: 16),
+                                          label: Text(bilingual(context, 'Chat', 'چیٹ کریں')),
                                           onPressed: () async {
-                                            await FirebaseFirestore.instance.collection('jobs').doc(doc.id).update({
-                                              'status': 'rejected',
-                                              'scheduleDeclined': true,
-                                              'statusUpdatedAt': FieldValue.serverTimestamp(),
-                                            });
+                                            final workerId = data['workerId']?.toString();
+                                            if (workerId == null || workerId.isEmpty) return;
+                                            final workerName = data['workerName']?.toString() ?? 'Worker';
+                                            final existingId = await findExistingConversation(workerId);
+                                            if (!context.mounted) return;
+                                            if (existingId != null) {
+                                              Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                                                arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: ''));
+                                            } else {
+                                              final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: '');
+                                              if (context.mounted) {
+                                                Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                                                  arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: ''));
+                                              }
+                                            }
                                           },
-                                          child: Text(bilingual(context, 'Decline', 'مسترد کریں')),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
                                       Expanded(
-                                        child: FilledButton(
+                                        child: FilledButton.icon(
                                           style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                                          icon: const Icon(Icons.check_circle_outline, size: 16),
+                                          label: Text(bilingual(context, 'Accept', 'منظور کریں')),
                                           onPressed: () async {
                                             await acceptScheduledJob(doc.id);
                                             if (context.mounted) setState(() {});
                                           },
-                                          child: Text(bilingual(context, 'Accept', 'منظور کریں')),
                                         ),
                                       ),
                                     ],
@@ -9231,32 +9456,32 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                       Text(bilingual(context, 'Schedule approved', 'شیڈول منظور'), style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w600)),
                                     ],
                                   ),
-                                ],
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    icon: const Icon(Icons.chat_outlined),
-                                    label: Text(bilingual(context, 'Message Worker', 'ورکر کو میسیج کریں')),
-                                    onPressed: () async {
-                                      final workerId = data['workerId']?.toString();
-                                      if (workerId == null || workerId.isEmpty) return;
-                                      final workerName = data['workerName']?.toString() ?? 'Worker';
-                                      final existingId = await findExistingConversation(workerId);
-                                      if (!context.mounted) return;
-                                      if (existingId != null) {
-                                        Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                                          arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: ''));
-                                      } else {
-                                        final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: '');
-                                        if (context.mounted) {
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      icon: const Icon(Icons.chat_outlined),
+                                      label: Text(bilingual(context, 'Message Worker', 'ورکر کو میسیج کریں')),
+                                      onPressed: () async {
+                                        final workerId = data['workerId']?.toString();
+                                        if (workerId == null || workerId.isEmpty) return;
+                                        final workerName = data['workerName']?.toString() ?? 'Worker';
+                                        final existingId = await findExistingConversation(workerId);
+                                        if (!context.mounted) return;
+                                        if (existingId != null) {
                                           Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                                            arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: ''));
+                                            arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: ''));
+                                        } else {
+                                          final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: '');
+                                          if (context.mounted) {
+                                            Navigator.pushNamed(context, AppRoutes.sharedConversation,
+                                              arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: ''));
+                                          }
                                         }
-                                      }
-                                    },
+                                      },
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
                             ],
                             // --- Past tab actions (Completed jobs & Ratings) ---
@@ -9331,10 +9556,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                             category: workerCategory,
                                             rating: 5.0,
                                             reviews: 0,
-                                            hourlyRate: 0,
                                             image: '',
-                                            experienceYears: 0,
-                                            jobsCompleted: 0,
                                           ),
                                         ),
                                       );

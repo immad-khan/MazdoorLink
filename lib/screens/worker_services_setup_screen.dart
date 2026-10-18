@@ -1,10 +1,11 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../app_state.dart';
 import '../services/skill_deduplicator.dart';
+import '../services/location_service.dart';
 import 'signup_data.dart';
 
 class ServiceItem {
@@ -405,6 +406,12 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
           'categoryNameEn': _skillNamesEn[_categoryIndex],
           'categoryNameUr': _skillNamesUr[_categoryIndex],
           'setupComplete': true,
+          'latitude': LocationService.instance.currentLocation.latitude,
+          'longitude': LocationService.instance.currentLocation.longitude,
+          'city': LocationService.instance.currentLocation.city,
+          'area': LocationService.instance.currentLocation.area,
+          'locationAddress': LocationService.instance.currentLocation.fullAddress,
+          'isInsideTwinCities': LocationService.instance.currentLocation.isInsideTwinCities,
         };
         if (_signupData!.cnicNumber != null && _signupData!.cnicNumber!.isNotEmpty) {
           userData['cnicNumber'] = _signupData!.cnicNumber;

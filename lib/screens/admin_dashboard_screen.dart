@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'admin_jobs_screen.dart';
 import '../services/smtp_service.dart';
+import '../services/sms_service.dart';
 import '../services/workers_service.dart';
 import '../services/voice_assistant_service.dart';
 import '../app_state.dart';
@@ -800,27 +801,100 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     BuildContext context,
     String docId,
     String workerName,
-    String workerEmail,
-  ) async {
+    String workerEmail, {
+    String? workerPhone,
+    String? otpVerifiedVia,
+    String? notificationPreference,
+  }) async {
+    // Fetch latest user document to ensure up-to-date phone and notification preference
+    Map<String, dynamic> uData = {};
+    try {
+      final snap = await FirebaseFirestore.instance.collection('users').doc(docId).get();
+      uData = snap.data() ?? {};
+    } catch (_) {}
+
+    final phone = (uData['phone']?.toString().isNotEmpty == true)
+        ? uData['phone'].toString()
+        : (workerPhone ?? '');
+    final email = (uData['email']?.toString().isNotEmpty == true)
+        ? uData['email'].toString()
+        : workerEmail;
+    final name = (uData['name']?.toString().isNotEmpty == true)
+        ? uData['name'].toString()
+        : workerName;
+    final otpVia = uData['otpVerifiedVia']?.toString() ?? otpVerifiedVia ?? '';
+    final pref = uData['notificationPreference']?.toString() ?? notificationPreference;
+
     await FirebaseFirestore.instance.collection('users').doc(docId).update({
       'status': 'approved',
       'workerStatus': 'approved',
       'roles': FieldValue.arrayUnion(['worker']),
     });
-    final emailSent = await SmtpService.sendWorkerApprovalEmail(
-      email: workerEmail,
-      workerName: workerName,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          emailSent
-              ? '$workerName approved and email sent.'
-              : '$workerName approved, but email could not be sent.',
+
+    // Notification channel logic:
+    // If worker specified a preference in settings:
+    // 'phone' -> SMS only
+    // 'email' -> Email only
+    // 'both' -> Both SMS and Email
+    // If no preference set yet:
+    // If worker asked OTP on number ('phone') -> send SMS on number as well!
+    // If worker used OTP for email ('email') -> send email.
+    bool sendEmail = false;
+    bool sendSms = false;
+
+    if (pref == 'phone') {
+      sendSms = true;
+    } else if (pref == 'email') {
+      sendEmail = true;
+    } else if (pref == 'both') {
+      sendEmail = true;
+      sendSms = true;
+    } else {
+      if (otpVia == 'phone') {
+        sendSms = true;
+        if (email.isNotEmpty && email != 'No email' && email.contains('@')) {
+          sendEmail = true;
+        }
+      } else {
+        sendEmail = true;
+      }
+    }
+
+    bool emailSent = false;
+    bool smsSent = false;
+
+    if (sendEmail && email.isNotEmpty && email != 'No email' && email.contains('@')) {
+      emailSent = await SmtpService.sendWorkerApprovalEmail(
+        email: email,
+        workerName: name,
+      );
+    }
+
+    if (sendSms && phone.isNotEmpty && phone != 'No phone') {
+      smsSent = await SmsService.sendWorkerApprovalSms(
+        phoneNumber: phone,
+        workerName: name,
+      );
+    }
+
+    final List<String> details = [];
+    if (sendEmail) {
+      details.add(emailSent ? 'Email sent' : 'Email failed');
+    }
+    if (sendSms) {
+      details.add(smsSent ? 'SMS sent to $phone' : 'SMS failed');
+    }
+    final summary = details.isNotEmpty ? ' (${details.join(', ')})' : '';
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$name approved.$summary'),
+          duration: const Duration(seconds: 7),
+          backgroundColor: const Color(0xFF10B981),
         ),
-        duration: const Duration(seconds: 7),
-      ),
-    );
+      );
+    }
   }
 
   void _showWorkerDetail(BuildContext context, Map<String, dynamic> w, String docId) {
@@ -1057,7 +1131,15 @@ class _WorkerRegistrationsTab extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: () {
                               Navigator.pop(context);
-                              _approveWorker(context, docId, name.toString(), email.toString());
+                              _approveWorker(
+                                context,
+                                docId,
+                                name.toString(),
+                                email.toString(),
+                                workerPhone: phone.toString(),
+                                otpVerifiedVia: w['otpVerifiedVia']?.toString(),
+                                notificationPreference: w['notificationPreference']?.toString(),
+                              );
                             },
                             icon: const Icon(Icons.check_rounded, size: 16),
                             label: const Text('Approve'),

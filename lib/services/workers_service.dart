@@ -278,14 +278,66 @@ Future<bool> customerHasActiveJobInCategory(
   String categoryKey,
 ) async {
   if (customerId.isEmpty) return false;
-  final snapshot = await FirebaseFirestore.instance
+  try {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('jobs')
+        .where('customerId', isEqualTo: customerId)
+        .get();
+    final targetCat = categoryKey.toLowerCase().trim();
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final status = (data['status']?.toString() ?? '').toLowerCase().trim();
+      if (!kCustomerActiveJobStatuses.contains(status)) continue;
+      final cat = (data['categoryKey']?.toString() ?? data['category']?.toString() ?? '').toLowerCase().trim();
+      if (cat == targetCat) {
+        return true;
+      }
+    }
+  } catch (_) {}
+  return false;
+}
+
+class CustomerActiveJobInfo {
+  final String jobId;
+  final String categoryKey;
+  final String workerName;
+  final String status;
+  final double price;
+
+  const CustomerActiveJobInfo({
+    required this.jobId,
+    required this.categoryKey,
+    required this.workerName,
+    required this.status,
+    required this.price,
+  });
+}
+
+Stream<Map<String, CustomerActiveJobInfo>> streamCustomerActiveCategoriesMap(String customerId) {
+  if (customerId.isEmpty) return Stream.value({});
+  return FirebaseFirestore.instance
       .collection('jobs')
       .where('customerId', isEqualTo: customerId)
-      .where('categoryKey', isEqualTo: categoryKey.toLowerCase())
-      .where('status', whereIn: kCustomerActiveJobStatuses)
-      .limit(1)
-      .get();
-  return snapshot.docs.isNotEmpty;
+      .snapshots()
+      .map((snapshot) {
+        final map = <String, CustomerActiveJobInfo>{};
+        for (final doc in snapshot.docs) {
+          final data = doc.data();
+          final status = (data['status']?.toString() ?? '').toLowerCase().trim();
+          if (!kCustomerActiveJobStatuses.contains(status)) continue;
+          final cat = (data['categoryKey']?.toString() ?? data['category']?.toString() ?? '').toLowerCase().trim();
+          if (cat.isNotEmpty && !map.containsKey(cat)) {
+            map[cat] = CustomerActiveJobInfo(
+              jobId: doc.id,
+              categoryKey: cat,
+              workerName: data['workerName']?.toString() ?? 'Worker',
+              status: data['status']?.toString() ?? 'pending',
+              price: (data['price'] as num?)?.toDouble() ?? 0.0,
+            );
+          }
+        }
+        return map;
+      });
 }
 
 Future<void> scheduleAcceptedJob(String jobId, DateTime scheduledTime) async {
@@ -684,66 +736,117 @@ Future<void> submitWorkerRating({
   String? reviewText,
 }) async {
   final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
-  
+  if (user == null) {
+    throw StateError('User must be logged in to submit a rating');
+  }
+
   if (rating < 1 || rating > 5) {
     throw ArgumentError('Rating must be between 1 and 5');
   }
-  
+
   final firestore = FirebaseFirestore.instance;
-  
-  // Get customer info
-  final customerDoc = await firestore.collection('users').doc(user.uid).get();
-  final customerName = customerDoc.data()?['name']?.toString() ?? 'Customer';
-  
-  // Get job info for context
+
+  // 1. Get job info to ensure valid context and resolve workerId if not provided
   final jobDoc = await firestore.collection('jobs').doc(jobId).get();
   final jobData = jobDoc.data();
-  final jobTitle = jobData?['descriptionEn']?.toString() ?? 'Service';
-  
-  // Store the individual review
-  await firestore
-      .collection('users')
-      .doc(workerId)
-      .collection('reviews')
-      .add({
+  final actualWorkerId = workerId.isNotEmpty
+      ? workerId
+      : (jobData?['workerId']?.toString() ?? '');
+
+  if (actualWorkerId.isEmpty) {
+    throw StateError('No worker found associated with this job');
+  }
+
+  final jobTitle = jobData?['descriptionEn']?.toString() ??
+      jobData?['categoryKey']?.toString() ??
+      'Service';
+
+  // 2. Get customer info
+  String customerName = 'Customer';
+  try {
+    final customerDoc = await firestore.collection('users').doc(user.uid).get();
+    customerName = customerDoc.data()?['name']?.toString() ??
+        jobData?['customerName']?.toString() ??
+        user.displayName ??
+        'Customer';
+  } catch (_) {
+    customerName = jobData?['customerName']?.toString() ?? user.displayName ?? 'Customer';
+  }
+
+  final cleanReviewText = reviewText?.trim() ?? '';
+
+  final reviewPayload = {
     'customerId': user.uid,
     'customerName': customerName,
     'jobId': jobId,
     'jobTitle': jobTitle,
     'rating': rating,
-    'review': reviewText ?? '',
+    'review': cleanReviewText,
     'createdAt': FieldValue.serverTimestamp(),
-  });
-  
-  // Update the worker's average rating and review count
-  final workerRef = firestore.collection('users').doc(workerId);
-  
-  await firestore.runTransaction((txn) async {
-    final workerDoc = await txn.get(workerRef);
-    if (!workerDoc.exists) return;
-    
-    final currentRating = (workerDoc.data()?['rating'] as num?)?.toDouble() ?? 0.0;
-    final currentReviews = (workerDoc.data()?['reviews'] as int?) ?? 0;
-    
-    // Calculate new average
-    final totalRating = currentRating * currentReviews;
-    final newReviews = currentReviews + 1;
-    final newRating = (totalRating + rating) / newReviews;
-    
-    txn.update(workerRef, {
-      'rating': double.parse(newRating.toStringAsFixed(2)),
-      'reviews': newReviews,
-    });
-  });
-  
-  // Update the job to mark it as reviewed
+  };
+
+  // 3. Store the individual review in worker's reviews subcollection
+  try {
+    await firestore
+        .collection('users')
+        .doc(actualWorkerId)
+        .collection('reviews')
+        .add(reviewPayload);
+  } catch (e) {
+    debugPrint('Subcollection review save note: $e');
+  }
+
+  // Also store in top-level reviews collection for cross-querying
+  try {
+    await firestore.collection('reviews').doc('${jobId}_${user.uid}').set(
+      reviewPayload,
+      SetOptions(merge: true),
+    );
+  } catch (e) {
+    debugPrint('Top-level review save note: $e');
+  }
+
+  // 4. Update the worker's average rating and review count
+  final workerRef = firestore.collection('users').doc(actualWorkerId);
+  try {
+    final workerDoc = await workerRef.get();
+    if (workerDoc.exists) {
+      final currentRating = (workerDoc.data()?['rating'] as num?)?.toDouble() ?? 0.0;
+      final currentReviews = (workerDoc.data()?['reviews'] as num?)?.toInt() ?? 0;
+
+      final newReviews = currentReviews + 1;
+      final newRating = currentReviews > 0
+          ? ((currentRating * currentReviews) + rating) / newReviews
+          : rating.toDouble();
+
+      final roundedRating = double.parse(newRating.toStringAsFixed(1));
+
+      await workerRef.update({
+        'rating': roundedRating,
+        'reviews': newReviews,
+        'ratingCount': newReviews,
+        'ratingSum': FieldValue.increment(rating),
+      });
+    }
+  } catch (e) {
+    debugPrint('Worker doc rating update note: $e');
+  }
+
+  // 5. Update the job to mark it as reviewed and ensure status is completed
   await firestore.collection('jobs').doc(jobId).update({
     'reviewed': true,
     'reviewedAt': FieldValue.serverTimestamp(),
     'customerRating': rating,
-    if (reviewText != null && reviewText.isNotEmpty) 'customerReview': reviewText,
+    'status': 'completed',
+    if (cleanReviewText.isNotEmpty) 'customerReview': cleanReviewText,
   });
+
+  // 6. Track ratings given by customer
+  try {
+    await firestore.collection('users').doc(user.uid).update({
+      'ratingsGivenCount': FieldValue.increment(1),
+    });
+  } catch (_) {}
 }
 
 /// Gets the list of reviews for a worker

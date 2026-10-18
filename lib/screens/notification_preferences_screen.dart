@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:service_frontend/app_theme.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../l10n/app_localizations.dart';
 
 class NotificationPreferencesScreen extends StatefulWidget {
@@ -15,6 +17,7 @@ class _NotificationPreferencesScreenState
   bool _chatMessages = true;
   bool _priceUpdates = false;
   bool _workerReviews = true;
+  String _notificationChannel = 'email'; // 'phone', 'email', 'both'
 
   late AnimationController _slideController;
 
@@ -26,6 +29,23 @@ class _NotificationPreferencesScreenState
     Future.delayed(Duration(milliseconds: 100), () {
       _slideController.forward();
     });
+    _loadPreferences();
+  }
+
+  void _loadPreferences() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        final data = doc.data();
+        if (data != null && mounted) {
+          setState(() {
+            _notificationChannel = data['notificationPreference']?.toString() ??
+                (data['otpVerifiedVia'] == 'phone' ? 'phone' : 'email');
+          });
+        }
+      } catch (_) {}
+    }
   }
 
   @override
@@ -120,6 +140,56 @@ class _NotificationPreferencesScreenState
     );
   }
 
+  Widget _buildChannelOption({
+    required String label,
+    required IconData icon,
+    required String value,
+  }) {
+    final selected = _notificationChannel == value;
+    final primary = Theme.of(context).primaryColor;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() => _notificationChannel = value);
+          final uid = FirebaseAuth.instance.currentUser?.uid;
+          if (uid != null) {
+            FirebaseFirestore.instance.collection('users').doc(uid).update({
+              'notificationPreference': value,
+            });
+          }
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          decoration: BoxDecoration(
+            color: selected ? primary : const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? primary : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: selected ? Colors.white : AppTheme.darkerText),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                  color: selected ? Colors.white : AppTheme.darkerText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -205,7 +275,66 @@ class _NotificationPreferencesScreenState
                 ],
               ),
             ),
-            SizedBox(height: 28),
+            const SizedBox(height: 24),
+
+            // Preferred Channel (Phone, Email, Both)
+            Text(
+              'Notification Delivery Channel',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.darkText,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.spacer),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Choose where you want to receive admin updates & alerts:',
+                    style: TextStyle(fontSize: 13, color: AppTheme.lightText),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _buildChannelOption(
+                        label: 'SMS / Phone',
+                        icon: Icons.sms_outlined,
+                        value: 'phone',
+                      ),
+                      const SizedBox(width: 8),
+                      _buildChannelOption(
+                        label: 'Email',
+                        icon: Icons.email_outlined,
+                        value: 'email',
+                      ),
+                      const SizedBox(width: 8),
+                      _buildChannelOption(
+                        label: 'Both',
+                        icon: Icons.all_inclusive,
+                        value: 'both',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
 
             // Job Alerts Section
             Text(
@@ -295,7 +424,15 @@ class _NotificationPreferencesScreenState
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
+                  final uid = FirebaseAuth.instance.currentUser?.uid;
+                  if (uid != null) {
+                    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+                      'notificationPreference': _notificationChannel,
+                    });
+                  }
+
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Row(

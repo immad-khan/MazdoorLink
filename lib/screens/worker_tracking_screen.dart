@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import '../app_state.dart';
 import '../services/workers_service.dart';
+import '../services/location_service.dart';
 
 class WorkerTrackingScreen extends StatefulWidget {
   final double jobPrice;
@@ -91,7 +92,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   }
 
   void _updateMarkers() {
-    final center = _customerLocation ?? const LatLng(31.5204, 74.3587);
+    final center = _customerLocation ?? LocationService.defaultIslamabad;
     _markers = {
       Marker(
         markerId: const MarkerId('customer'),
@@ -364,7 +365,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
             child: GoogleMap(
               mapType: MapType.normal,
               initialCameraPosition: CameraPosition(
-                target: _customerLocation ?? const LatLng(31.5204, 74.3587),
+                target: _customerLocation ?? LocationService.defaultIslamabad,
                 zoom: 15,
               ),
               markers: _markers,

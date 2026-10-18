@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../l10n/app_localizations.dart';
+import '../services/location_service.dart';
 
 class CustomerHome extends StatefulWidget {
   @override
@@ -23,6 +24,11 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
     Future.delayed(Duration(milliseconds: 100), () {
       for (var controller in _controllers) {
         controller.forward();
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        LocationService.instance.ensureLocationReady(context);
       }
     });
   }
@@ -122,25 +128,52 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizations.of(context).t('current_location'),
-                        style: TextStyle(color: Colors.white.withValues(alpha:0.7), fontSize: 12),
-                      ),
-                      SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, color: Colors.white, size: 18),
-                          SizedBox(width: 4),
-                          Text(
-                            'Gulberg III, Lahore',
-                            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ],
+                  ValueListenableBuilder<AppLocation>(
+                    valueListenable: LocationService.instance.currentLocationNotifier,
+                    builder: (context, loc, _) {
+                      return InkWell(
+                        onTap: () => LocationService.instance.showAreaPickerDialog(context),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  AppLocalizations.of(context).t('current_location'),
+                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.22),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    'ISB / RWP',
+                                    style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on, color: Colors.white, size: 18),
+                                const SizedBox(width: 4),
+                                Text(
+                                  loc.shortDisplayName,
+                                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 18),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   Container(
                     width: 40,

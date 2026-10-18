@@ -55,7 +55,7 @@ class _VoiceNavigationScreenState extends State<VoiceNavigationScreen>
 
       setState(() {
         _listening = false;
-        _recognizedCommand = 'Post a Plumber job in Lahore';
+        _recognizedCommand = 'Post a Plumber job in Islamabad';
       });
 
       ScaffoldMessenger.of(context).showSnackBar(

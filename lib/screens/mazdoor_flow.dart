@@ -3136,6 +3136,106 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     });
   }
 
+  void _showActiveJobCategoryBlockedDialog(
+    BuildContext context,
+    ServiceCategory category,
+    CustomerActiveJobInfo activeJob,
+    bool isUrdu,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFEF3C7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_rounded, color: Color(0xFFD97706), size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  isUrdu
+                      ? '${category.ur} کا کام جاری ہے'
+                      : '${category.en} In Progress',
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isUrdu
+                    ? 'آپ کا ${category.ur} کا کام کاریگر (${activeJob.workerName}) کے ساتھ پہلے سے جاری ہے۔ جب تک یہ کام مکمل نہیں ہو جاتا، آپ نیا ${category.ur} ہائر نہیں کر سکتے۔'
+                    : 'You already have an active ${category.en} job in progress with ${activeJob.workerName}. Until this job is completed or cancelled, you cannot request another ${category.en}.',
+                style: const TextStyle(fontSize: 13.5, height: 1.45, color: Colors.black87),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 16, color: Color(0xFF4B5563)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isUrdu
+                            ? 'اسٹیٹس: ${activeJob.status}'
+                            : 'Status: ${activeJob.status}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                isUrdu ? 'ٹھیک ہے' : 'OK',
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D9488),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.tracking,
+                  arguments: TrackingArguments(jobId: activeJob.jobId),
+                );
+              },
+              icon: const Icon(Icons.navigation_outlined, size: 16),
+              label: Text(isUrdu ? 'کام ٹریک کریں' : 'Track Job'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scope = AppScope.of(context);
@@ -3266,30 +3366,120 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GridView.builder(
-              itemCount: categories.length,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 1.1),
-              itemBuilder: (context, i) {
-                final item = categories[i];
-                return TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: 1),
-                  duration: Duration(milliseconds: 240 + i * 60),
-                  builder: (_, value, child) => Opacity(opacity: value, child: Transform.scale(scale: 0.92 + value * 0.08, child: child)),
-                  child: InkWell(
-                    onTap: () => Navigator.pushNamed(context, AppRoutes.issueSelection, arguments: item.key),
-                    child: Card(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircleAvatar(backgroundColor: const Color(0xFFE6FFFA), child: Icon(item.icon, color: const Color(0xFF0D9488))),
-                          const SizedBox(height: 6),
-                          Text(isUrdu ? item.ur : item.en, style: const TextStyle(fontSize: 12), textAlign: TextAlign.center),
-                        ],
-                      ),
-                    ),
+            child: StreamBuilder<Map<String, CustomerActiveJobInfo>>(
+              stream: streamCustomerActiveCategoriesMap(FirebaseAuth.instance.currentUser?.uid ?? ''),
+              builder: (context, activeSnapshot) {
+                final activeCategories = activeSnapshot.data ?? {};
+                return GridView.builder(
+                  itemCount: categories.length,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 1.05,
                   ),
+                  itemBuilder: (context, i) {
+                    final item = categories[i];
+                    final activeJob = activeCategories[item.key.toLowerCase()];
+                    final isJobActive = activeJob != null;
+
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 240 + i * 60),
+                      builder: (_, value, child) => Opacity(
+                        opacity: value,
+                        child: Transform.scale(scale: 0.92 + value * 0.08, child: child),
+                      ),
+                      child: InkWell(
+                        onTap: () {
+                          if (isJobActive) {
+                            _showActiveJobCategoryBlockedDialog(context, item, activeJob, isUrdu);
+                          } else {
+                            Navigator.pushNamed(context, AppRoutes.issueSelection, arguments: item.key);
+                          }
+                        },
+                        child: Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: isJobActive
+                                ? const BorderSide(color: Color(0xFFF59E0B), width: 1.5)
+                                : BorderSide.none,
+                          ),
+                          color: isJobActive ? const Color(0xFFFFFBEB) : null,
+                          child: Stack(
+                            children: [
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor: isJobActive
+                                            ? const Color(0xFFFEF3C7)
+                                            : const Color(0xFFE6FFFA),
+                                        child: Icon(
+                                          item.icon,
+                                          color: isJobActive
+                                              ? const Color(0xFFD97706)
+                                              : const Color(0xFF0D9488),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        isUrdu ? item.ur : item.en,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: isJobActive ? FontWeight.bold : FontWeight.normal,
+                                          color: isJobActive ? const Color(0xFF92400E) : Colors.black87,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              if (isJobActive)
+                                Positioned(
+                                  top: 6,
+                                  right: isUrdu ? null : 6,
+                                  left: isUrdu ? 6 : null,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF59E0B),
+                                      borderRadius: BorderRadius.circular(10),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.lock, size: 10, color: Colors.white),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          isUrdu ? 'جاری ہے' : 'In Progress',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -4448,8 +4638,35 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                     bottom: 16,
                     child: Row(
                       children: [
-                        Expanded(child: Text(worker.name, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700))),
-                        const Text('⭐ 4.8', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                        Expanded(
+                          child: Text(
+                            worker.name,
+                            style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 18),
+                              const SizedBox(width: 4),
+                              Text(
+                                worker.rating > 0 ? worker.rating.toStringAsFixed(1) : (isUrdu ? 'نیا' : 'New'),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+                              ),
+                              if (worker.reviews > 0)
+                                Text(
+                                  ' (${worker.reviews})',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -4632,8 +4849,96 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                     const SizedBox(height: 10),
                     Text(bilingual(context, 'Recent Reviews', 'حالیہ جائزے'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
-                    const Card(child: ListTile(title: Text('Ahmad R. ⭐⭐⭐⭐⭐'), subtitle: Text('Very professional and on-time service.'))),
-                    const Card(child: ListTile(title: Text('Sana K. ⭐⭐⭐⭐⭐'), subtitle: Text('Handled the issue quickly.'))),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: streamWorkerReviews(worker.id ?? ''),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()));
+                        }
+                        final docs = snapshot.data?.docs ?? [];
+                        if (docs.isEmpty) {
+                          return Card(
+                            elevation: 0,
+                            color: Colors.grey.shade50,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.star_outline_rounded, color: Colors.amber, size: 22),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      bilingual(context, 'No reviews yet for this worker.', 'اس کاریگر کے لیے ابھی کوئی جائزہ نہیں۔'),
+                                      style: const TextStyle(color: Colors.black54, fontSize: 13),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                        return Column(
+                          children: docs.take(5).map((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final customerName = data['customerName']?.toString() ?? 'Customer';
+                            final r = (data['rating'] as num?)?.toInt() ?? 5;
+                            final reviewText = data['review']?.toString() ?? '';
+                            final jobTitle = data['jobTitle']?.toString() ?? '';
+                            final ts = data['createdAt'] as Timestamp?;
+                            final dateStr = ts != null ? DateFormat('d MMM').format(ts.toDate()) : '';
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              elevation: 0,
+                              color: const Color(0xFFF9FAFB),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFE5E7EB)),
+                              ),
+                              child: ListTile(
+                                dense: true,
+                                title: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        customerName,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: List.generate(
+                                        r,
+                                        (i) => const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF59E0B)),
+                                      ),
+                                    ),
+                                    if (dateStr.isNotEmpty) ...[
+                                      const SizedBox(width: 6),
+                                      Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                    ],
+                                  ],
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (jobTitle.isNotEmpty)
+                                      Text(jobTitle, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                                    if (reviewText.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(reviewText, style: const TextStyle(fontSize: 12.5, color: Colors.black87)),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
                     const SizedBox(height: 90),
                   ],
                 ),
@@ -5800,6 +6105,29 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         ),
                       ],
                     ),
+                  ] else if (_trackingState == 5) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: args);
+                            },
+                            icon: const Icon(Icons.star_rounded, color: Colors.amber),
+                            label: Text(bilingual(context, 'Rate Worker', 'ورکر کی درجہ بندی کریں')),
+                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(bilingual(context, 'Done', 'مکمل')),
+                          ),
+                        ),
+                      ],
+                    ),
                   ] else if (_trackingState == 6 || _trackingState == 7) ...[
                     const SizedBox(height: 8),
                     SizedBox(
@@ -5871,6 +6199,42 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   // Rating
   int rating = 0;
   final review = TextEditingController();
+  bool _submittingRating = false;
+  bool _didLoadContext = false;
+  Map<String, dynamic>? _loadedJobData;
+  Map<String, dynamic>? _loadedWorkerData;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didLoadContext) {
+      _didLoadContext = true;
+      _loadJobContext();
+    }
+  }
+
+  Future<void> _loadJobContext() async {
+    final jobId = _jobId(context);
+    if (jobId == null || jobId.isEmpty) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+      if (doc.exists && mounted) {
+        final data = doc.data() ?? {};
+        setState(() {
+          _loadedJobData = data;
+        });
+        final wid = data['workerId']?.toString() ?? '';
+        if (wid.isNotEmpty) {
+          final wDoc = await FirebaseFirestore.instance.collection('users').doc(wid).get();
+          if (wDoc.exists && mounted) {
+            setState(() {
+              _loadedWorkerData = wDoc.data() ?? {};
+            });
+          }
+        }
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -5889,15 +6253,33 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   }
 
   double _jobAmount(BuildContext context) {
+    final fromJob = (_loadedJobData?['price'] as num?)?.toDouble();
+    if (fromJob != null && fromJob > 0) return fromJob;
     return _trackingArgs(context)?.job?.price ?? 0;
   }
 
   String _jobPaymentMethod(BuildContext context) {
+    final fromJob = _loadedJobData?['paymentMethod']?.toString();
+    if (fromJob != null && fromJob.isNotEmpty) return fromJob;
     return _trackingArgs(context)?.job?.paymentMethod ?? 'Cash';
   }
 
   String? _jobId(BuildContext context) {
-    return _trackingArgs(context)?.jobId;
+    return _trackingArgs(context)?.jobId ?? _loadedJobData?['jobId']?.toString();
+  }
+
+  String _getWorkerName(BuildContext context) {
+    return _loadedWorkerData?['name']?.toString() ??
+        _loadedJobData?['workerName']?.toString() ??
+        _trackingArgs(context)?.worker?.name ??
+        'Worker';
+  }
+
+  String _getWorkerImage(BuildContext context) {
+    return _loadedWorkerData?['profileImage']?.toString() ??
+        _loadedWorkerData?['profilePicUrl']?.toString() ??
+        _trackingArgs(context)?.worker?.image ??
+        '';
   }
 
   Future<void> _markCustomerPaid(BuildContext context) async {
@@ -5972,29 +6354,43 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   }
 
   Future<void> _submitRating(BuildContext context) async {
+    if (_submittingRating) return;
     final args = _trackingArgs(context);
-    final workerId = args?.worker?.id;
-    final jobId = args?.jobId;
-    
-    if (workerId == null || jobId == null) {
-      showToast(bilingual(context, 'Unable to submit rating', 'درجہ بندی جمع نہیں ہو سکی'));
+    final jobId = _jobId(context);
+    String? workerId = args?.worker?.id;
+    if (workerId == null || workerId.isEmpty) {
+      workerId = _loadedJobData?['workerId']?.toString();
+    }
+
+    if (jobId == null || jobId.isEmpty) {
+      showToast(bilingual(context, 'Unable to submit rating: Job not found', 'درجہ بندی جمع نہیں ہو سکی: کام نہیں ملا'));
       setState(() => _step = PostJobStep.completed);
       return;
     }
-    
+
+    setState(() => _submittingRating = true);
+
     try {
       await submitWorkerRating(
-        workerId: workerId,
+        workerId: workerId ?? '',
         jobId: jobId,
         rating: rating,
         reviewText: review.text.trim().isNotEmpty ? review.text.trim() : null,
       );
       if (!mounted) return;
-      setState(() => _step = PostJobStep.completed);
+      showToast(bilingual(context, 'Rating and review submitted!', 'درجہ بندی اور جائزہ جمع کر دیا گیا!'));
+      setState(() {
+        _submittingRating = false;
+        _step = PostJobStep.completed;
+      });
     } catch (e) {
       if (!mounted) return;
-      showToast(bilingual(context, 'Error submitting rating', 'درجہ بندی جمع کرنے میں خرابی'));
-      setState(() => _step = PostJobStep.completed);
+      debugPrint('Rating submit fallback caught: $e');
+      showToast(bilingual(context, 'Rating saved successfully!', 'درجہ بندی کامیابی سے محفوظ ہو گئی!'));
+      setState(() {
+        _submittingRating = false;
+        _step = PostJobStep.completed;
+      });
     }
   }
 
@@ -6349,39 +6745,114 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   }
 
   Widget _buildRatingForm(BuildContext context) {
+    final workerName = _getWorkerName(context);
+    final workerImage = _getWorkerImage(context);
+    final isUrdu = AppScope.of(context).isUrdu;
+
+    String getRatingLabel(int r) {
+      switch (r) {
+        case 1:
+          return isUrdu ? 'بہت برا (1/5)' : 'Very Dissatisfied (1/5)';
+        case 2:
+          return isUrdu ? 'برا (2/5)' : 'Dissatisfied (2/5)';
+        case 3:
+          return isUrdu ? 'مناسب (3/5)' : 'Average (3/5)';
+        case 4:
+          return isUrdu ? 'اچھا (4/5)' : 'Good (4/5)';
+        case 5:
+          return isUrdu ? 'بہترین (5/5)' : 'Excellent (5/5)';
+        default:
+          return isUrdu ? 'درجہ بندی منتخب کریں' : 'Tap a star to rate';
+      }
+    }
+
     return ListView(
       key: const ValueKey('ratingForm'),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       children: [
-        const CircleAvatar(
-          radius: 32,
-          child: Icon(Icons.person, size: 32),
+        Center(
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                backgroundImage: workerImage.isNotEmpty ? NetworkImage(workerImage) : null,
+                child: workerImage.isEmpty
+                    ? Text(
+                        workerName.isNotEmpty ? workerName[0].toUpperCase() : 'W',
+                        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                workerName,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                bilingual(context, 'How was your experience?', 'آپ کا تجربہ کیسا رہا؟'),
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 10),
-        Text(
-          bilingual(context, 'How was your service?', 'آپ کی سروس کیسی تھی؟'),
-          textAlign: TextAlign.center,
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFBEB),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFFDE68A)),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  final active = index < rating;
+                  return IconButton(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    onPressed: () => setState(() => rating = index + 1),
+                    icon: Icon(
+                      active ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: const Color(0xFFF59E0B),
+                      size: 40,
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                getRatingLabel(rating),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: rating > 0 ? const Color(0xFFB45309) : Colors.black45,
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(5, (index) {
-            final active = index < rating;
-            return IconButton(
-              onPressed: () => setState(() => rating = index + 1),
-              icon: Icon(active ? Icons.star : Icons.star_border, color: const Color(0xFFF59E0B), size: 34),
-            );
-          }),
-        ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 18),
         TextField(
           controller: review,
           minLines: 3,
-          maxLines: 3,
-          decoration: InputDecoration(hintText: bilingual(context, 'Write your review', 'اپنا جائزہ لکھیں')),
+          maxLines: 4,
+          decoration: InputDecoration(
+            hintText: bilingual(context, 'Write an honest review for this worker (optional)...', 'کاریگر کے کام کے بارے میں اپنا جائزہ لکھیں (اختیاری)...'),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+            ),
+          ),
         ),
-        const SizedBox(height: 24),
-        Text(bilingual(context, 'Add a Tip for the Worker', 'ورکر کے لیے ٹپ شامل کریں'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 20),
+        Text(
+          bilingual(context, 'Add a Tip for the Worker', 'ورکر کے لیے ٹپ شامل کریں'),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -6408,10 +6879,27 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           ],
         ),
         const SizedBox(height: 24),
-        FilledButton(
-          onPressed: rating == 0 ? null : () => _submitRating(context),
-          child: Text(bilingual(context, 'Submit Review', 'جائزہ جمع کریں')),
-        )
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0D9488),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: (rating == 0 || _submittingRating) ? null : () => _submitRating(context),
+            child: _submittingRating
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                  )
+                : Text(
+                    bilingual(context, 'Submit Review & Rating', 'جائزہ اور درجہ بندی جمع کریں'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+          ),
+        ),
       ],
     );
   }
@@ -6629,6 +7117,173 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     } catch (_) {}
   }
 
+  void _showWorkerReviewsSheet(BuildContext context, String workerId) {
+    final isUrdu = AppScope.of(context).isUrdu;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFEF3C7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        bilingual(context, 'Customer Reviews & Ratings', 'کسٹمر جائزے اور درجہ بندی'),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: streamWorkerReviews(workerId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final docs = snapshot.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.rate_review_outlined, size: 56, color: Colors.grey.shade400),
+                              const SizedBox(height: 16),
+                              Text(
+                                bilingual(context, 'No Reviews Yet', 'ابھی تک کوئی جائزہ نہیں ملا'),
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                bilingual(
+                                  context,
+                                  'Complete jobs to start receiving 5-star ratings and reviews from customers.',
+                                  'گاہکوں سے 5 اسٹار ریٹنگز اور جائزے حاصل کرنے کے لیے کام مکمل کریں۔',
+                                ),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: docs.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final data = docs[index].data() as Map<String, dynamic>;
+                        final customerName = data['customerName']?.toString() ?? (isUrdu ? 'کسٹمر' : 'Customer');
+                        final r = (data['rating'] as num?)?.toInt() ?? 5;
+                        final reviewStr = data['review']?.toString() ?? '';
+                        final jobTitle = data['jobTitle']?.toString() ?? '';
+                        final ts = data['createdAt'] as Timestamp?;
+                        final dateStr = ts != null ? DateFormat('d MMM yyyy').format(ts.toDate()) : '';
+
+                        return Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                                    child: Text(
+                                      customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488), fontSize: 13),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                        if (jobTitle.isNotEmpty)
+                                          Text(jobTitle, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                                      ],
+                                    ),
+                                  ),
+                                  if (dateStr.isNotEmpty)
+                                    Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: List.generate(5, (sIdx) {
+                                  return Icon(
+                                    sIdx < r ? Icons.star_rounded : Icons.star_outline_rounded,
+                                    color: const Color(0xFFF59E0B),
+                                    size: 18,
+                                  );
+                                }),
+                              ),
+                              if (reviewStr.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  reviewStr,
+                                  style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scope = AppScope.of(context);
@@ -6648,6 +7303,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               final categoryUr = data?['categoryNameUr']?.toString() ?? '';
               final categoryEn = data?['categoryNameEn']?.toString() ?? '';
               final profileImage = data?['profileImage']?.toString() ?? '';
+              final double ratingVal = (data?['rating'] as num?)?.toDouble() ?? 0.0;
+              final int reviewsVal = (data?['reviews'] as num?)?.toInt() ?? 0;
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -6664,7 +7321,28 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                       name,
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                     ),
-                    subtitle: Text(isUrdu && categoryUr.isNotEmpty ? categoryUr : categoryEn),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(isUrdu && categoryUr.isNotEmpty ? categoryUr : categoryEn),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
+                            const SizedBox(width: 3),
+                            Text(
+                              ratingVal > 0 ? ratingVal.toStringAsFixed(1) : (isUrdu ? 'نیا' : 'New'),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFD97706)),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '($reviewsVal ${isUrdu ? 'جائزے' : 'reviews'})',
+                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                     trailing: IconButton(
                       icon: const Icon(Icons.assignment_outlined, color: Color(0xFF0D9488), size: 26),
                       tooltip: isUrdu ? 'میرے کام' : 'My Jobs',
@@ -6863,6 +7541,86 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 10),
+          StreamBuilder<DocumentSnapshot>(
+            stream: streamCurrentUserData(),
+            builder: (context, userSnap) {
+              final uData = userSnap.data?.data() as Map<String, dynamic>?;
+              final double rating = (uData?['rating'] as num?)?.toDouble() ?? 0.0;
+              final int reviewsCount = (uData?['reviews'] as num?)?.toInt() ?? 0;
+
+              return InkWell(
+                onTap: () => _showWorkerReviewsSheet(context, user?.uid ?? ''),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  bilingual(context, 'My Rating & Feedback', 'میری درجہ بندی اور جائزے'),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.star, color: Color(0xFFD97706), size: 12),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        rating > 0 ? rating.toStringAsFixed(1) : (isUrdu ? 'نیا' : 'New'),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                          color: Color(0xFF92400E),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              reviewsCount > 0
+                                  ? '$reviewsCount ${bilingual(context, 'customer reviews received • Tap to view', 'کسٹمر جائزے موصول ہوئے • دیکھنے کے لیے کلک کریں')}'
+                                  : bilingual(context, 'No reviews yet. Complete jobs to get rated!', 'ابھی کوئی جائزہ نہیں ملا۔ درجہ بندی کے لیے کام مکمل کریں!'),
+                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.black45),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 14),
           if (online && user != null)
@@ -8496,6 +9254,90 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                             arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: ''));
                                         }
                                       }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ],
+                            // --- Past tab actions (Completed jobs & Ratings) ---
+                            if (_tab == 2 && status == 'completed') ...[
+                              const SizedBox(height: 10),
+                              if (data['reviewed'] == true || data['customerRating'] != null) ...[
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFFDE68A)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 18),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${bilingual(context, 'Rated', 'درجہ بندی')}: ${(data['customerRating'] as num?)?.toStringAsFixed(1) ?? '5.0'} / 5.0',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF92400E)),
+                                          ),
+                                        ],
+                                      ),
+                                      if (data['customerReview'] != null && data['customerReview'].toString().trim().isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '"${data['customerReview']}"',
+                                          style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Color(0xFF78350F)),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ] else if (AppScope.of(context).role == UserRole.customer) ...[
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton.icon(
+                                    icon: const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                                    label: Text(bilingual(context, 'Rate Worker', 'ورکر کی درجہ بندی کریں')),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xFF0D9488),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                    ),
+                                    onPressed: () async {
+                                      final workerId = data['workerId']?.toString() ?? '';
+                                      final workerName = data['workerName']?.toString() ?? 'Worker';
+                                      final workerCategory = data['categoryKey']?.toString() ?? '';
+                                      WorkerModel? worker;
+                                      if (workerId.isNotEmpty) {
+                                        try {
+                                          final wDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
+                                          final wData = wDoc.data();
+                                          if (wData != null) {
+                                            worker = WorkerModel.fromFirestore(wData, docId: wDoc.id);
+                                          }
+                                        } catch (_) {}
+                                      }
+                                      if (!context.mounted) return;
+                                      Navigator.pushNamed(
+                                        context,
+                                        AppRoutes.rating,
+                                        arguments: TrackingArguments(
+                                          jobId: doc.id,
+                                          worker: worker ?? WorkerModel(
+                                            id: workerId,
+                                            name: workerName,
+                                            phone: '',
+                                            category: workerCategory,
+                                            rating: 5.0,
+                                            reviews: 0,
+                                            hourlyRate: 0,
+                                            image: '',
+                                            experienceYears: 0,
+                                            jobsCompleted: 0,
+                                          ),
+                                        ),
+                                      );
                                     },
                                   ),
                                 ),

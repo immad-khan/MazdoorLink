@@ -15,13 +15,13 @@ class SmsService {
   static String get _deviceId =>
       dotenv.maybeGet('TEXTBEE_DEVICE_ID') ?? _defaultDeviceId;
 
-  /// Sends a 4-digit OTP via TextBee SMS Gateway
-  static Future<bool> sendOtp(String phoneNumber, String otp) async {
+  /// Generic SMS sender via TextBee or simulated
+  static Future<bool> sendSms({
+    required String phoneNumber,
+    required String message,
+  }) async {
     final formattedNumber = formatPhoneNumber(phoneNumber);
-    final message =
-        'Your MazdoorLink verification code is: $otp. Valid for 10 minutes.';
-
-    debugPrint('[SmsService] Sending SMS OTP to $formattedNumber: $otp');
+    debugPrint('[SmsService] Sending SMS to $formattedNumber: $message');
 
     final apiKey = _apiKey;
 
@@ -60,12 +60,29 @@ class SmsService {
       }
     } else {
       debugPrint(
-        '[SmsService] No TEXTBEE_API_KEY found in .env. Running in simulation mode.',
+        '[SmsService] Running in simulation mode. SMS to $formattedNumber: "$message"',
       );
       // Fallback for simulation / testing when API key is not yet set in .env
       await Future.delayed(const Duration(milliseconds: 600));
       return true;
     }
+  }
+
+  /// Sends a 4-digit OTP via TextBee SMS Gateway
+  static Future<bool> sendOtp(String phoneNumber, String otp) {
+    final message =
+        'Your MazdoorLink verification code is: $otp. Valid for 10 minutes.';
+    return sendSms(phoneNumber: phoneNumber, message: message);
+  }
+
+  /// Sends worker approval notification via SMS
+  static Future<bool> sendWorkerApprovalSms({
+    required String phoneNumber,
+    required String workerName,
+  }) {
+    final message =
+        'Congratulations $workerName! Your MazdoorLink worker account has been approved by admin. You can now login, go online, and accept jobs.';
+    return sendSms(phoneNumber: phoneNumber, message: message);
   }
 
   /// Formats phone number into international E.164 format (e.g. +923038064241)

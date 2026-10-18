@@ -17,11 +17,28 @@ service cloud.firestore {
 
     // Users: directory is readable so users can log in via phone number lookup.
     // Users edit only their own doc (admins may update anyone).
+    // Customers may update rating and reviews on worker profile after job.
     match /users/{uid} {
       allow read: if true;
       allow create: if isSignedIn() && request.auth.uid == uid;
-      allow update: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow update: if isSignedIn() && (
+        request.auth.uid == uid || 
+        isAdmin() || 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviews', 'ratingCount', 'ratingSum'])
+      );
       allow delete: if false;
+
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow update, delete: if isAdmin() || (isSignedIn() && resource.data.customerId == request.auth.uid);
+      }
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
     }
 
     // Jobs: any signed-in user can read/create; updates only by the owning

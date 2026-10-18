@@ -31,6 +31,7 @@ import '../services/workers_service.dart';
 import '../services/smtp_service.dart';
 import '../services/sms_service.dart';
 import '../services/voice_assistant_service.dart';
+import '../services/location_service.dart';
 import 'recommendation_arguments.dart';
 import 'cancel_job_screen.dart';
 import 'customer_support_screen.dart';
@@ -1842,6 +1843,12 @@ final _phone = TextEditingController();
               'categoryNameUr': categoryNameUr,
               'skills': [],
               'setupComplete': false,
+              'latitude': LocationService.instance.currentLocation.latitude,
+              'longitude': LocationService.instance.currentLocation.longitude,
+              'city': LocationService.instance.currentLocation.city,
+              'area': LocationService.instance.currentLocation.area,
+              'locationAddress': LocationService.instance.currentLocation.fullAddress,
+              'isInsideTwinCities': LocationService.instance.currentLocation.isInsideTwinCities,
             };
             if (profilePicUrl != null) userData['profilePicUrl'] = profilePicUrl;
 
@@ -1915,6 +1922,12 @@ final _phone = TextEditingController();
             'roles': ['customer'],
             'otpVerifiedVia': _selectedOtpMethod,
             'createdAt': FieldValue.serverTimestamp(),
+            'latitude': LocationService.instance.currentLocation.latitude,
+            'longitude': LocationService.instance.currentLocation.longitude,
+            'city': LocationService.instance.currentLocation.city,
+            'area': LocationService.instance.currentLocation.area,
+            'locationAddress': LocationService.instance.currentLocation.fullAddress,
+            'isInsideTwinCities': LocationService.instance.currentLocation.isInsideTwinCities,
           };
 
           await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
@@ -3105,8 +3118,23 @@ final _phone = TextEditingController();
   }
 }
 
-class CustomerHomeScreen extends StatelessWidget {
+class CustomerHomeScreen extends StatefulWidget {
   const CustomerHomeScreen({super.key});
+
+  @override
+  State<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
+}
+
+class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        LocationService.instance.ensureLocationReady(context);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3129,13 +3157,58 @@ class CustomerHomeScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.location_on, color: Colors.white),
-                    const SizedBox(width: 6),
-                    Text(
-                      bilingual(context, 'Gulberg III, Lahore', 'گلبرگ 3، لاہور'),
-                      style: const TextStyle(color: Colors.white),
+                    Expanded(
+                      child: ValueListenableBuilder<AppLocation>(
+                        valueListenable: LocationService.instance.currentLocationNotifier,
+                        builder: (context, loc, _) {
+                          return InkWell(
+                            onTap: () => LocationService.instance.showAreaPickerDialog(context),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.location_on, color: Colors.white, size: 20),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      loc.shortDisplayNameBilingual(isUrdu),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 18),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.22),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Text(
+                                      'ISB / RWP',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     CircleAvatar(
                       radius: 14,
                       backgroundColor: Colors.white24,
@@ -3622,7 +3695,7 @@ class ConfirmLocationScreen extends StatefulWidget {
 
 class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
   GoogleMapController? _mapController;
-  LatLng _selectedLocation = const LatLng(31.5204, 74.3587);
+  LatLng _selectedLocation = LocationService.defaultIslamabad;
   bool _loadingLocation = true;
   bool _initialized = false;
   final TextEditingController _searchController = TextEditingController();
@@ -3663,22 +3736,21 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
 
   Future<void> _useCurrentLocation() async {
     setState(() => _loadingLocation = true);
-    final location = await getCurrentLocation();
+    final loc = await LocationService.instance.fetchCurrentGpsLocation(context: context);
     if (!mounted) return;
 
-    if (location == null) {
-      setState(() => _loadingLocation = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(bilingual(context, 'Enable location permission to use current location, or search for a place above.', 'لوکیشن کی اجازت فعال کریں یا اوپر جگہ تلاش کریں۔')),
-          duration: const Duration(seconds: 7),
-        ),
-      );
+    if (loc == null) {
+      final cached = LocationService.instance.currentLocation;
+      setState(() {
+        _selectedLocation = LatLng(cached.latitude, cached.longitude);
+        _loadingLocation = false;
+      });
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation, 16));
       return;
     }
 
     setState(() {
-      _selectedLocation = location;
+      _selectedLocation = LatLng(loc.latitude, loc.longitude);
       _loadingLocation = false;
     });
 
@@ -5118,17 +5190,17 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         _markers = {
           Marker(
             markerId: const MarkerId('customer'),
-            position: _customerLocation ?? const LatLng(31.5204, 74.3587),
+            position: _customerLocation ?? LocationService.defaultIslamabad,
             icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
             infoWindow: InfoWindow(title: bilingual(context, 'You', 'آپ')),
           ),
           Marker(
             markerId: const MarkerId('worker'),
             position: _trackingState >= 1
-                ? (_customerLocation ?? const LatLng(31.5204, 74.3587))
+                ? (_customerLocation ?? LocationService.defaultIslamabad)
                 : LatLng(
-                    (_customerLocation?.latitude ?? 31.5204) + 0.005,
-                    (_customerLocation?.longitude ?? 74.3587) + 0.005,
+                    (_customerLocation?.latitude ?? LocationService.defaultIslamabad.latitude) + 0.005,
+                    (_customerLocation?.longitude ?? LocationService.defaultIslamabad.longitude) + 0.005,
                   ),
             icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
             infoWindow: InfoWindow(title: bilingual(context, 'Worker', 'ورکر')),
@@ -5446,7 +5518,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
             GoogleMap(
               mapType: MapType.normal,
               initialCameraPosition: CameraPosition(
-                target: _customerLocation ?? const LatLng(31.5204, 74.3587),
+                target: _customerLocation ?? LocationService.defaultIslamabad,
                 zoom: 15,
               ),
               markers: _markers,
@@ -6418,6 +6490,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     super.initState();
     online = WorkerPresenceService.instance.isOnline;
     _loadOnlineStatus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        LocationService.instance.ensureLocationReady(context);
+      }
+    });
   }
 
   Future<void> _loadOnlineStatus() async {
@@ -6447,7 +6524,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       }
 
       final isOn = data?['isOnline'] as bool? ?? false;
-      final effectiveOnline = WorkerPresenceService.instance.isOnline || isOn;
+      final hasLocation = await LocationService.instance.isLocationEnabledAndPermitted();
+      final effectiveOnline = (WorkerPresenceService.instance.isOnline || isOn) && hasLocation;
+
+      if (!hasLocation && isOn) {
+        await WorkerPresenceService.instance.setOnline(false);
+      }
+
       WorkerPresenceService.instance.isOnline = effectiveOnline;
       if (effectiveOnline) {
         WorkerPresenceService.instance.startHeartbeat();
@@ -6464,6 +6547,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   }
 
   Future<void> _toggleOnline(bool value) async {
+    if (value) {
+      final allowed = await LocationService.instance.verifyWorkerLocationForOnline(context);
+      if (!allowed || !mounted) {
+        setState(() => online = false);
+        return;
+      }
+    }
     setState(() => online = value);
     await WorkerPresenceService.instance.setOnline(value);
   }
@@ -6559,24 +6649,119 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               final categoryEn = data?['categoryNameEn']?.toString() ?? '';
               final profileImage = data?['profileImage']?.toString() ?? '';
 
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  backgroundImage: profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
-                  child: profileImage.isEmpty
-                      ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'W')
-                      : null,
-                ),
-                title: Text(
-                  name,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(isUrdu && categoryUr.isNotEmpty ? categoryUr : categoryEn),
-                trailing: IconButton(
-                  icon: const Icon(Icons.assignment_outlined, color: Color(0xFF0D9488), size: 26),
-                  tooltip: isUrdu ? 'میرے کام' : 'My Jobs',
-                  onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
-                ),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundImage: profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
+                      child: profileImage.isEmpty
+                          ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'W')
+                          : null,
+                    ),
+                    title: Text(
+                      name,
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(isUrdu && categoryUr.isNotEmpty ? categoryUr : categoryEn),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.assignment_outlined, color: Color(0xFF0D9488), size: 26),
+                      tooltip: isUrdu ? 'میرے کام' : 'My Jobs',
+                      onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
+                    ),
+                  ),
+                  ValueListenableBuilder<AppLocation>(
+                    valueListenable: LocationService.instance.currentLocationNotifier,
+                    builder: (context, loc, _) {
+                      return InkWell(
+                        onTap: () => LocationService.instance.showAreaPickerDialog(context),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12, top: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDFA),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF99F6E4)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.location_on, color: Color(0xFF0D9488), size: 16),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          isUrdu ? 'آپ کا ورکنگ علاقہ' : 'Working Area',
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: Color(0xFF0D9488),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: const Text(
+                                            'ISB / RWP',
+                                            style: TextStyle(
+                                              fontSize: 8.5,
+                                              color: Color(0xFF0D9488),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      loc.shortDisplayNameBilingual(isUrdu),
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0F766E),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  Text(
+                                    isUrdu ? 'تبدیل' : 'Change',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF0D9488),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right, size: 16, color: Color(0xFF0D9488)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               );
             },
           ),
@@ -6590,15 +6775,43 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    online
-                        ? (isUrdu ? 'آپ آن لائن ہیں' : 'You are online')
-                        : (isUrdu ? 'آپ آف لائن ہیں' : 'You are offline'),
-                    style: TextStyle(
-                      color: online ? Colors.white : Colors.black87,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        online
+                            ? (isUrdu ? 'آپ آن لائن ہیں' : 'You are online')
+                            : (isUrdu ? 'آپ آف لائن ہیں' : 'You are offline'),
+                        style: TextStyle(
+                          color: online ? Colors.white : Colors.black87,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            online ? Icons.check_circle : Icons.location_on,
+                            size: 13,
+                            color: online ? Colors.white70 : Colors.black45,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              online
+                                  ? (isUrdu ? 'لوکیشن فعال ہے • جابز موصول ہو رہی ہیں' : 'Location Active • Receiving Jobs')
+                                  : (isUrdu ? 'آن لائن ہونے کے لیے لوکیشن درکار ہے' : 'Location required to go online'),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: online ? Colors.white70 : Colors.black54,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 Switch(

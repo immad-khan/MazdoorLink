@@ -7354,6 +7354,173 @@ class _BillRow extends StatelessWidget {
   }
 }
 
+void showWorkerReviewsSheet(BuildContext context, String workerId) {
+  final isUrdu = AppScope.of(context).isUrdu;
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      return Container(
+        height: MediaQuery.of(ctx).size.height * 0.75,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFEF3C7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      bilingual(context, 'Customer Reviews & Ratings', 'کسٹمر جائزے اور درجہ بندی'),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: streamWorkerReviews(workerId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final docs = snapshot.data?.docs ?? [];
+                  if (docs.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.rate_review_outlined, size: 56, color: Colors.grey.shade400),
+                            const SizedBox(height: 16),
+                            Text(
+                              bilingual(context, 'No Reviews Yet', 'ابھی تک کوئی جائزہ نہیں ملا'),
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              bilingual(
+                                context,
+                                'Complete jobs to start receiving 5-star ratings and reviews from customers.',
+                                'گاہکوں سے 5 اسٹار ریٹنگز اور جائزے حاصل کرنے کے لیے کام مکمل کریں۔',
+                              ),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 13, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: docs.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final data = docs[index].data() as Map<String, dynamic>;
+                      final customerName = data['customerName']?.toString() ?? (isUrdu ? 'کسٹمر' : 'Customer');
+                      final r = (data['rating'] as num?)?.toInt() ?? 5;
+                      final reviewStr = data['review']?.toString() ?? '';
+                      final jobTitle = data['jobTitle']?.toString() ?? '';
+                      final ts = data['createdAt'] as Timestamp?;
+                      final dateStr = ts != null ? DateFormat('d MMM yyyy').format(ts.toDate()) : '';
+
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                                  child: Text(
+                                    customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488), fontSize: 13),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                      if (jobTitle.isNotEmpty)
+                                        Text(jobTitle, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                                    ],
+                                  ),
+                                ),
+                                if (dateStr.isNotEmpty)
+                                  Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: List.generate(5, (sIdx) {
+                                return Icon(
+                                  sIdx < r ? Icons.star_rounded : Icons.star_outline_rounded,
+                                  color: const Color(0xFFF59E0B),
+                                  size: 18,
+                                );
+                              }),
+                            ),
+                            if (reviewStr.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                reviewStr,
+                                style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 // WorkerOnboardingScreen removed (deprecated)
 
 class WorkerDashboardScreen extends StatefulWidget {
@@ -7525,175 +7692,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
         scheduledTime: scheduled,
       );
     } catch (_) {}
-  }
-
-  void _showWorkerReviewsSheet(BuildContext context, String workerId) => showWorkerReviewsSheet(context, workerId);
-
-void showWorkerReviewsSheet(BuildContext context, String workerId) {
-    final isUrdu = AppScope.of(context).isUrdu;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          height: MediaQuery.of(ctx).size.height * 0.75,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFEF3C7),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        bilingual(context, 'Customer Reviews & Ratings', 'کسٹمر جائزے اور درجہ بندی'),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: streamWorkerReviews(workerId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    final docs = snapshot.data?.docs ?? [];
-                    if (docs.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.rate_review_outlined, size: 56, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              Text(
-                                bilingual(context, 'No Reviews Yet', 'ابھی تک کوئی جائزہ نہیں ملا'),
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                bilingual(
-                                  context,
-                                  'Complete jobs to start receiving 5-star ratings and reviews from customers.',
-                                  'گاہکوں سے 5 اسٹار ریٹنگز اور جائزے حاصل کرنے کے لیے کام مکمل کریں۔',
-                                ),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 13, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: docs.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final data = docs[index].data() as Map<String, dynamic>;
-                        final customerName = data['customerName']?.toString() ?? (isUrdu ? 'کسٹمر' : 'Customer');
-                        final r = (data['rating'] as num?)?.toInt() ?? 5;
-                        final reviewStr = data['review']?.toString() ?? '';
-                        final jobTitle = data['jobTitle']?.toString() ?? '';
-                        final ts = data['createdAt'] as Timestamp?;
-                        final dateStr = ts != null ? DateFormat('d MMM yyyy').format(ts.toDate()) : '';
-
-                        return Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9FAFB),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFE5E7EB)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 16,
-                                    backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
-                                    child: Text(
-                                      customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488), fontSize: 13),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                        if (jobTitle.isNotEmpty)
-                                          Text(jobTitle, style: const TextStyle(fontSize: 11, color: Colors.black54)),
-                                      ],
-                                    ),
-                                  ),
-                                  if (dateStr.isNotEmpty)
-                                    Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: List.generate(5, (sIdx) {
-                                  return Icon(
-                                    sIdx < r ? Icons.star_rounded : Icons.star_outline_rounded,
-                                    color: const Color(0xFFF59E0B),
-                                    size: 18,
-                                  );
-                                }),
-                              ),
-                              if (reviewStr.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                Text(
-                                  reviewStr,
-                                  style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
-                                ),
-                              ],
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override

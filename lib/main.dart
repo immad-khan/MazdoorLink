@@ -114,9 +114,19 @@ void main() async {
     print('Failed to initialize LocationService: $e');
   }
 
+  String? savedLocale;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    savedLocale = prefs.getString('app_locale');
+  } catch (_) {}
+
   final authResult = await _resolveAuth();
 
-  runApp(ServiceApp(initialRoute: authResult.route, initialUserRole: authResult.role));
+  runApp(ServiceApp(
+    initialRoute: authResult.route,
+    initialUserRole: authResult.role,
+    initialLocale: savedLocale,
+  ));
 }
 
 void _openConversationFromNotification(Map<String, String> data) {
@@ -159,8 +169,14 @@ void _showForegroundNotification(Map<String, String> data) {
 class ServiceApp extends StatefulWidget {
   final String initialRoute;
   final UserRole? initialUserRole;
+  final String? initialLocale;
 
-  const ServiceApp({super.key, required this.initialRoute, this.initialUserRole});
+  const ServiceApp({
+    super.key,
+    required this.initialRoute,
+    this.initialUserRole,
+    this.initialLocale,
+  });
 
   @override
   _ServiceAppState createState() => _ServiceAppState();
@@ -172,7 +188,7 @@ class _ServiceAppState extends State<ServiceApp> {
   @override
   void initState() {
     super.initState();
-    _controller = AppController();
+    _controller = AppController(initialLocale: widget.initialLocale);
     if (widget.initialUserRole != null) {
       _controller.selectRole(widget.initialUserRole!);
     }

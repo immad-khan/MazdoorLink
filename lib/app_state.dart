@@ -60,10 +60,39 @@ class AppController extends ChangeNotifier {
 
   bool get isUrdu => locale.languageCode == 'ur';
 
-  void selectRole(UserRole value, {bool updateLocale = true}) {
+  AppController({String? initialLocale}) {
+    if (initialLocale != null && (initialLocale == 'en' || initialLocale == 'ur')) {
+      locale = Locale(initialLocale);
+    } else {
+      _loadPersistedLocale();
+    }
+  }
+
+  Future<void> _loadPersistedLocale() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedLocale = prefs.getString('app_locale');
+      if (savedLocale != null && (savedLocale == 'en' || savedLocale == 'ur')) {
+        if (locale.languageCode != savedLocale) {
+          locale = Locale(savedLocale);
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistLocale(String langCode) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('app_locale', langCode);
+    } catch (_) {}
+  }
+
+  void selectRole(UserRole value, {bool updateLocale = false}) {
     role = value;
     if (updateLocale) {
       locale = value == UserRole.worker ? const Locale('ur') : const Locale('en');
+      _persistLocale(locale.languageCode);
     }
     activeRole = value == UserRole.worker ? 'worker' : 'customer';
     chatUnread.start();
@@ -82,13 +111,16 @@ class AppController extends ChangeNotifier {
   }
 
   void setLocale(Locale value) {
+    if (value.languageCode != 'en' && value.languageCode != 'ur') return;
     locale = value;
     notifyListeners();
+    _persistLocale(value.languageCode);
   }
 
   void toggleLanguage() {
     locale = isUrdu ? const Locale('en') : const Locale('ur');
     notifyListeners();
+    _persistLocale(locale.languageCode);
   }
 
   Future<void> logout() async {
@@ -100,7 +132,6 @@ class AppController extends ChangeNotifier {
     } catch (_) {}
     role = null;
     activeRole = 'customer';
-    locale = const Locale('en');
     chatUnread.reset();
     notifyListeners();
     await _persistActiveRole('customer');

@@ -714,8 +714,22 @@ class _ActivityTile extends StatelessWidget {
 // ─────────────────────────────────────────────
 // TAB 1 – Worker Registrations
 // ─────────────────────────────────────────────
-class _WorkerRegistrationsTab extends StatelessWidget {
-  const _WorkerRegistrationsTab();
+class _WorkerRegistrationsTab extends StatefulWidget {
+  const _WorkerRegistrationsTab({super.key});
+
+  @override
+  State<_WorkerRegistrationsTab> createState() => _WorkerRegistrationsTabState();
+}
+
+class _WorkerRegistrationsTabState extends State<_WorkerRegistrationsTab> {
+  String _selectedCategory = 'approved';
+
+  String _getWorkerStatus(Map<String, dynamic> data) {
+    final s = (data['workerStatus'] ?? data['status'] ?? 'pending').toString().toLowerCase().trim();
+    if (s == 'approved') return 'approved';
+    if (s == 'rejected' || s == 'declined') return 'rejected';
+    return 'pending';
+  }
 
   void _showImages(BuildContext context, String front, String back) {
     showDialog(
@@ -902,7 +916,7 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     final email = w['email'] ?? 'No email';
     final phone = w['phone'] ?? 'No phone';
     final cnicNumber = w['cnicNumber'];
-    final status = w['status'] ?? 'pending';
+    final status = _getWorkerStatus(w);
     final idFrontUrl = w['idFrontUrl'];
     final idBackUrl = w['idBackUrl'];
     final policeCertUrl = w['policeCertUrl'];
@@ -1186,6 +1200,199 @@ class _WorkerRegistrationsTab extends StatelessWidget {
     );
   }
 
+  Widget _buildCategoryHeader({
+    required int approvedCount,
+    required int pendingCount,
+    required int rejectedCount,
+  }) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _buildSegmentItem(
+            category: 'approved',
+            label: 'Approved',
+            count: approvedCount,
+            activeColor: const Color(0xFF10B981),
+            icon: Icons.check_circle_outline_rounded,
+          ),
+          _buildSegmentItem(
+            category: 'pending',
+            label: 'Pending',
+            count: pendingCount,
+            activeColor: const Color(0xFFF59E0B),
+            icon: Icons.hourglass_top_rounded,
+          ),
+          _buildSegmentItem(
+            category: 'rejected',
+            label: 'Rejected',
+            count: rejectedCount,
+            activeColor: const Color(0xFFEF4444),
+            icon: Icons.cancel_outlined,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSegmentItem({
+    required String category,
+    required String label,
+    required int count,
+    required Color activeColor,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedCategory == category;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedCategory = category;
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 2),
+          decoration: BoxDecoration(
+            color: isSelected ? activeColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: activeColor.withOpacity(0.32),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: 14,
+                    color: isSelected ? Colors.white : activeColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                        color: isSelected ? Colors.white : const Color(0xFF475569),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Colors.white.withOpacity(0.25)
+                      : activeColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : activeColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    IconData icon;
+    String title;
+    String subtitle;
+    Color color;
+
+    if (_selectedCategory == 'approved') {
+      icon = Icons.verified_outlined;
+      title = 'No approved workers';
+      subtitle = 'Approved workers will appear here';
+      color = const Color(0xFF10B981);
+    } else if (_selectedCategory == 'pending') {
+      icon = Icons.hourglass_empty_rounded;
+      title = 'No pending registrations';
+      subtitle = 'New worker applications will appear here for review';
+      color = const Color(0xFFF59E0B);
+    } else {
+      icon = Icons.cancel_outlined;
+      title = 'No rejected workers';
+      subtitle = 'Rejected worker applications will appear here';
+      color = const Color(0xFFEF4444);
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 48, color: color),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1215,112 +1422,146 @@ class _WorkerRegistrationsTab extends StatelessWidget {
             return role == 'worker' || roles.contains('worker') || workerStatus != null;
           }).toList();
 
-          if (docs.isEmpty) {
-            return const Center(child: Text('No worker registrations found.'));
+          int pendingCount = 0;
+          int approvedCount = 0;
+          int rejectedCount = 0;
+
+          for (final doc in docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final st = _getWorkerStatus(data);
+            if (st == 'pending') {
+              pendingCount++;
+            } else if (st == 'approved') {
+              approvedCount++;
+            } else if (st == 'rejected') {
+              rejectedCount++;
+            }
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, i) {
-              final w = docs[i].data() as Map<String, dynamic>;
-              final docId = docs[i].id;
-              
-              final name = w['name'] ?? 'Unknown';
-              final email = w['email'] ?? 'No email';
-              final status = w['status'] ?? 'pending';
-              final idFrontUrl = w['idFrontUrl'];
-              final idBackUrl = w['idBackUrl'];
-              final profilePicUrl = w['profilePicUrl'] ?? w['profileImage'];
+          final filteredDocs = docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return _getWorkerStatus(data) == _selectedCategory;
+          }).toList();
 
-              Color statusColor = status == 'approved'
-                  ? const Color(0xFF10B981)
-                  : status == 'rejected'
-                      ? const Color(0xFFEF4444)
-                      : const Color(0xFFF59E0B);
-
-              return Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                elevation: 0,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () => _showWorkerDetail(context, w, docId),
-                  child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2)),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: const Color(0xFF006B5E).withOpacity(0.12),
-                            backgroundImage: profilePicUrl != null && profilePicUrl.toString().isNotEmpty
-                                ? NetworkImage(profilePicUrl.toString())
-                                : null,
-                            child: profilePicUrl == null || profilePicUrl.toString().isEmpty
-                                ? Text(
-                                    name.toString().isNotEmpty ? name.toString()[0].toUpperCase() : '?',
-                                    style: const TextStyle(
-                                        color: Color(0xFF006B5E),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18),
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
-                                Text(email, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(status.toString().toUpperCase(),
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: statusColor)),
-                          ),
-                        ],
-                      ),
-                      if (idFrontUrl != null && idBackUrl != null) ...[
-                        const SizedBox(height: 12),
-                        TextButton.icon(
-                          onPressed: () => _showImages(context, idFrontUrl, idBackUrl),
-                          icon: const Icon(Icons.image),
-                          label: const Text('View ID Images'),
-                        ),
-                      ],
-
-                    ],                      // close children list
-                  ),
-                ),
+          return Column(
+            children: [
+              _buildCategoryHeader(
+                approvedCount: approvedCount,
+                pendingCount: pendingCount,
+                rejectedCount: rejectedCount,
               ),
-            ),
-          );
-            },
+              Expanded(
+                child: docs.isEmpty
+                    ? const Center(child: Text('No worker registrations found.'))
+                    : filteredDocs.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+                            itemCount: filteredDocs.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (context, i) {
+                              final w = filteredDocs[i].data() as Map<String, dynamic>;
+                              final docId = filteredDocs[i].id;
+                              
+                              final name = w['name'] ?? 'Unknown';
+                              final email = w['email'] ?? 'No email';
+                              final status = _getWorkerStatus(w);
+                              final idFrontUrl = w['idFrontUrl'];
+                              final idBackUrl = w['idBackUrl'];
+                              final profilePicUrl = w['profilePicUrl'] ?? w['profileImage'];
+
+                              Color statusColor = status == 'approved'
+                                  ? const Color(0xFF10B981)
+                                  : status == 'rejected'
+                                      ? const Color(0xFFEF4444)
+                                      : const Color(0xFFF59E0B);
+
+                              return Material(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                elevation: 0,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: () => _showWorkerDetail(context, w, docId),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.04),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(14),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 22,
+                                                backgroundColor: const Color(0xFF006B5E).withOpacity(0.12),
+                                                backgroundImage: profilePicUrl != null && profilePicUrl.toString().isNotEmpty
+                                                    ? NetworkImage(profilePicUrl.toString())
+                                                    : null,
+                                                child: profilePicUrl == null || profilePicUrl.toString().isEmpty
+                                                    ? Text(
+                                                        name.toString().isNotEmpty ? name.toString()[0].toUpperCase() : '?',
+                                                        style: const TextStyle(
+                                                            color: Color(0xFF006B5E),
+                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 18),
+                                                      )
+                                                    : null,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
+                                                    Text(email, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                                                  ],
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: statusColor.withOpacity(0.12),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  status.toUpperCase(),
+                                                  style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: statusColor),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (idFrontUrl != null && idBackUrl != null) ...[
+                                            const SizedBox(height: 12),
+                                            TextButton.icon(
+                                              onPressed: () => _showImages(context, idFrontUrl, idBackUrl),
+                                              icon: const Icon(Icons.image),
+                                              label: const Text('View ID Images'),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+              ),
+            ],
           );
         },
       ),

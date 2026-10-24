@@ -605,7 +605,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
       child: Scaffold(
         backgroundColor: const Color(0xFFF9FAFB),
         appBar: AppBar(
-          title: Text(isUrdu ? 'Ø®Ø¯Ù…Ø§Øª Ø§ÙˆØ± Ù‚ÛŒÙ…Øª Ú©Ø§ Ø³ÛŒÙ¹ Ø§Ù¾' : 'Services & Rates Setup'),
+          title: Text(isUrdu ? 'خدمات اور قیمت کا سیٹ اپ' : 'Services & Rates Setup'),
           centerTitle: true,
           elevation: 0,
           leading: IconButton(
@@ -618,8 +618,11 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                 controller.toggleLanguage();
                 setState(() {});
               },
-              icon: const Icon(Icons.translate, size: 18),
-              label: Text(controller.isUrdu ? 'EN' : 'Ø§Ø±Ø¯Ùˆ', style: const TextStyle(fontSize: 13)),
+              icon: const Icon(Icons.language, size: 18),
+              label: Text(
+                controller.isUrdu ? 'English' : 'اردو',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -808,42 +811,8 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                             color: _showCustomFields ? const Color(0xFF0D9488) : const Color(0xFFE5E7EB),
                             width: _showCustomFields ? 1.8 : 1,
                           ),
-                        ),
-                        elevation: 0.5,
-                        child: Column(
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                    _showCustomFields = !_showCustomFields;
-                                    if (_showCustomFields) {
-                                      _animationController.forward();
-                                    } else {
-                                      _animationController.reverse();
-                                    }
-                                });
-                              },
-                              borderRadius: BorderRadius.only(
-                                topLeft: const Radius.circular(16),
-                                topRight: const Radius.circular(16),
-                                bottomLeft: Radius.circular(_showCustomFields ? 0 : 16),
-                                bottomRight: Radius.circular(_showCustomFields ? 0 : 16),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      backgroundColor: const Color(0xFF0D9488).withValues(alpha:0.08),
-                                      child: const Icon(Icons.add, color: Color(0xFF0D9488)),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            isUrdu ? 'Ø¯ÛŒÚ¯Ø± Ø³Ø±ÙˆØ³ Ø´Ø§Ù…Ù„ Ú©Ø±ÛŒÚº' : 'Add Custom Service',
+                                           Text(
+                                            isUrdu ? 'دیگر سروس شامل کریں' : 'Add Custom Service',
                                             style: const TextStyle(
                                               fontSize: 15,
                                               fontWeight: FontWeight.bold,
@@ -851,7 +820,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                                             ),
                                           ),
                                           Text(
-                                            isUrdu ? 'Ø§Ù¾Ù†ÛŒ Ù…Ø±Ø¶ÛŒ Ú©ÛŒ Ø®Ø¯Ù…Øª Ø§ÙˆØ± Ø±ÛŒÙ¹ Ù„Ú©Ú¾ÛŒÚº' : 'Define your own task and price',
+                                            isUrdu ? 'اپنی مرضی کی خدمت اور ریٹ لکھیں' : 'Define your own task and price',
                                             style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                                           ),
                                         ],
@@ -863,6 +832,36 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                                     ),
                                   ],
                                 ),
+                              ),
+                            ),
+
+                            SizeTransition(
+                              sizeFactor: _expandAnimation,
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Divider(height: 16),
+                                    Text(
+                                      isUrdu ? 'سروس کا نام کیا ہے؟' : 'Describe the service:',
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextField(
+                                      controller: _customTitleController,
+                                      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+                                      decoration: InputDecoration(
+                                        hintText: isUrdu ? 'مثلاً کچن پائپ کی صفائی' : 'E.g., Kitchen pipe cleaning',
+                                        hintStyle: TextStyle(color: Colors.grey.shade400),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      isUrdu ? 'آپ کی قیمت (روپے میں):' : 'Proposed Price (Rs.):',
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
+                                    ),     ),
                               ),
                             ),
 
@@ -978,7 +977,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                         elevation: 1,
                       ),
                       child: Text(
-                        isUrdu ? 'Ù…Ú©Ù…Ù„ Ú©Ø±ÛŒÚº' : 'Complete Setup',
+                        isUrdu ? 'مکمل کریں' : 'Complete Setup',
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),

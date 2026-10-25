@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'admin_jobs_screen.dart';
+import 'mazdoor_flow.dart';
 import '../services/smtp_service.dart';
 import '../services/sms_service.dart';
 import '../services/workers_service.dart';
@@ -67,14 +69,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF1F5FA),
-      body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: _AdminBottomNav(
-        currentIndex: _currentIndex,
-        onTap: _onNavTap,
-        onMicTap: _openMic,
-        micScale: _micScale,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(result);
+          return;
+        }
+        final shouldExit = await showExitMazdoorlinkDialog(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF1F5FA),
+        body: IndexedStack(index: _currentIndex, children: _pages),
+        bottomNavigationBar: _AdminBottomNav(
+          currentIndex: _currentIndex,
+          onTap: _onNavTap,
+          onMicTap: _openMic,
+          micScale: _micScale,
+        ),
       ),
     );
   }
@@ -256,6 +272,37 @@ class _HomeTab extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.logout, color: Colors.white),
                 onPressed: () async {
+                  final shouldLogout = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: const Row(
+                        children: [
+                          Icon(Icons.logout, color: Colors.red),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Logout?',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      content: const Text('Are you sure you want to log out?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('No'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Yes'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (shouldLogout != true) return;
                   await FirebaseAuth.instance.signOut();
                   if (context.mounted) {
                     Navigator.pushReplacementNamed(context, '/');

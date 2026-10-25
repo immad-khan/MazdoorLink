@@ -968,6 +968,25 @@ class _WorkerRegistrationsTabState extends State<_WorkerRegistrationsTab> {
     final idBackUrl = w['idBackUrl'];
     final policeCertUrl = w['policeCertUrl'];
     final certificationUrl = w['certificationUrl'];
+    final List<String> allCerts = [];
+    final rawCerts = w['certificates'] ?? w['certificateUrls'];
+    if (rawCerts is List) {
+      for (final item in rawCerts) {
+        if (item != null && item.toString().isNotEmpty) {
+          allCerts.add(item.toString());
+        }
+      }
+    }
+    if (allCerts.isEmpty) {
+      if (policeCertUrl != null && policeCertUrl.toString().isNotEmpty) {
+        allCerts.add(policeCertUrl.toString());
+      }
+      if (certificationUrl != null &&
+          certificationUrl.toString().isNotEmpty &&
+          !allCerts.contains(certificationUrl.toString())) {
+        allCerts.add(certificationUrl.toString());
+      }
+    }
     final category = w['category'];
     final categoryNameEn = w['categoryNameEn'];
     final categoryNameUr = w['categoryNameUr'];
@@ -1055,38 +1074,51 @@ class _WorkerRegistrationsTabState extends State<_WorkerRegistrationsTab> {
                   // ID Images
                   if (idFrontUrl != null || idBackUrl != null) ...[
                     const Text('ID Card Images', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                if (policeCertUrl != null) ...[
-                  const Divider(height: 24),
-                  Row(
-                    children: [
-                      const Icon(Icons.policy_outlined, size: 16, color: Color(0xFF0D9488)),
-                      const SizedBox(width: 6),
-                      const Text('Police Certificate:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(policeCertUrl, height: 140, width: double.infinity, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Text('Could not load certificate image')),
-                  ),
-                ],
-                if (certificationUrl != null) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.workspace_premium_outlined, size: 16, color: Color(0xFF0D9488)),
-                      const SizedBox(width: 6),
-                      const Text('Specialization Certificate:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(certificationUrl, height: 140, width: double.infinity, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Text('Could not load certificate image')),
-                  ),
-                ],
+                  if (allCerts.isNotEmpty) ...[
+                    const Divider(height: 24),
+                    Row(
+                      children: [
+                        const Icon(Icons.workspace_premium_outlined, size: 18, color: Color(0xFF0D9488)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Certificates & Documents (${allCerts.length}):',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    ...allCerts.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final certUrl = entry.value;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Certificate #${idx + 1}',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54),
+                            ),
+                            const SizedBox(height: 4),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                certUrl,
+                                height: 160,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  height: 100,
+                                  color: Colors.grey.shade100,
+                                  child: const Center(child: Text('Could not load certificate image')),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
                     const SizedBox(height: 10),
                     if (idFrontUrl != null) ...[
                       const Text('Front:', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),

@@ -45,33 +45,33 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
   ];
 
   final List<String> _skillNamesUr = const [
-    'Ù¾Ù„Ù…Ø¨Ø±',
-    'Ø§Ù„ÛŒÚ©Ù¹Ø±ÛŒØ´Ù†',
+    'پلمبر',
+    'الیکٹریشن',
   ];
 
   final Map<int, List<ServiceItem>> _servicesMap = {
     // Plumber
     0: [
-      ServiceItem(titleEn: 'Water Tap Leakage Fix', titleUr: 'Ù†Ù„Ú©Û’ Ø³Û’ Ù¾Ø§Ù†ÛŒ Ú©Ø§ Ø±Ø³Ø§Ùˆ Ù¹Ú¾ÛŒÚ© Ú©Ø±Ù†Ø§', price: 300, isSelected: true),
-      ServiceItem(titleEn: 'Flush Tank Repair', titleUr: 'ÙÙ„Ø´ Ù¹ÛŒÙ†Ú© Ú©ÛŒ Ù…Ø±Ù…Øª', price: 600, isSelected: true),
-      ServiceItem(titleEn: 'Sink / Wash Basin Installation', titleUr: 'ÙˆØ§Ø´ Ø¨ÛŒØ³Ù† Ù„Ú¯Ø§Ù†Ø§', price: 1200),
-      ServiceItem(titleEn: 'Motor Pump Installation', titleUr: 'Ù¾Ø§Ù†ÛŒ Ú©ÛŒ Ù…ÙˆÙ¹Ø± Ù„Ú¯Ø§Ù†Ø§', price: 2500),
-      ServiceItem(titleEn: 'Geyser Repair & Service', titleUr: 'Ú¯ÛŒØ²Ø± Ú©ÛŒ Ø³Ø±ÙˆØ³ Ø§ÙˆØ± Ù…Ø±Ù…Øª', price: 1800),
-      ServiceItem(titleEn: 'Pipeline Leakage Repair', titleUr: 'Ù¾Ø§Ø¦Ù¾ Ù„Ø§Ø¦Ù† Ù„ÛŒÚ©ÛŒØ¬ Ù…Ø±Ù…Øª', price: 1000),
-      ServiceItem(titleEn: 'Shower Fitting Replacement', titleUr: 'Ø´Ø§ÙˆØ± ÙÙ¹Ù†Ú¯ ØªØ¨Ø¯ÛŒÙ„ Ú©Ø±Ù†Ø§', price: 700),
-      ServiceItem(titleEn: 'Drain Blockage Cleaning', titleUr: 'Ø¨Ù†Ø¯ Ù†Ø§Ù„ÛŒ Ú©ÛŒ ØµÙØ§Ø¦ÛŒ', price: 800),
-      ServiceItem(titleEn: 'Full Washroom Setup', titleUr: 'ÙˆØ§Ø´ Ø±ÙˆÙ… Ú©Ø§ Ù…Ú©Ù…Ù„ Ø³ÛŒÙ¹ Ø§Ù¾', price: 12000),
+      ServiceItem(titleEn: 'Water Tap Leakage Fix', titleUr: 'نلکے سے پانی کا رساو ٹھیک کرنا', price: 300, isSelected: true),
+      ServiceItem(titleEn: 'Flush Tank Repair', titleUr: 'فلش ٹینک کی مرمت', price: 600, isSelected: true),
+      ServiceItem(titleEn: 'Sink / Wash Basin Installation', titleUr: 'واش بیسن لگانا', price: 1200),
+      ServiceItem(titleEn: 'Motor Pump Installation', titleUr: 'پانی کی موٹر لگانا', price: 2500),
+      ServiceItem(titleEn: 'Geyser Repair & Service', titleUr: 'گیزر کی سروس اور مرمت', price: 1800),
+      ServiceItem(titleEn: 'Pipeline Leakage Repair', titleUr: 'پائپ لائن لیکیج مرمت', price: 1000),
+      ServiceItem(titleEn: 'Shower Fitting Replacement', titleUr: 'شاور فٹنگ تبدیل کرنا', price: 700),
+      ServiceItem(titleEn: 'Drain Blockage Cleaning', titleUr: 'بند نالی کی صفائی', price: 800),
+      ServiceItem(titleEn: 'Full Washroom Setup', titleUr: 'واش روم کا مکمل سیٹ اپ', price: 12000),
     ],
     // Electrician
     1: [
-      ServiceItem(titleEn: 'Broken Switch Repair', titleUr: 'Ø®Ø±Ø§Ø¨ Ø³ÙˆØ¦Ú† Ú©ÛŒ Ù…Ø±Ù…Øª', price: 300, isSelected: true),
-      ServiceItem(titleEn: 'Short Circuit Fix', titleUr: 'Ø´Ø§Ø±Ù¹ Ø³Ø±Ú©Ù¹ Ù¹Ú¾ÛŒÚ© Ú©Ø±Ù†Ø§', price: 400, isSelected: true),
-      ServiceItem(titleEn: 'Ceiling Fan Installation', titleUr: 'Ø³ÛŒÙ„Ù†Ú¯ ÙÛŒÙ† Ø§Ù†Ø³Ù¹Ø§Ù„ÛŒØ´Ù†', price: 500),
-      ServiceItem(titleEn: 'Full Home Wiring Repair', titleUr: 'Ù…Ú©Ù…Ù„ Ú¯Ú¾Ø± Ú©ÛŒ ÙˆØ§Ø¦Ø±Ù†Ú¯ Ù…Ø±Ù…Øª', price: 8000),
-      ServiceItem(titleEn: 'AC Switch Installation', titleUr: 'Ø§Û’ Ø³ÛŒ Ø³ÙˆØ¦Ú† Ù„Ú¯Ø§Ù†Ø§', price: 450),
-      ServiceItem(titleEn: 'UPS Setup & Installation', titleUr: 'ÛŒÙˆ Ù¾ÛŒ Ø§ÛŒØ³ Ø³ÛŒÙ¹ Ø§Ù¾', price: 1500),
-      ServiceItem(titleEn: 'Generator Repair', titleUr: 'Ø¬Ù†Ø±ÛŒÙ¹Ø± Ú©ÛŒ Ù…Ø±Ù…Øª', price: 2000),
-      ServiceItem(titleEn: 'Bulb or Holder Replacement', titleUr: 'Ø¨Ù„Ø¨ ÛŒØ§ ÛÙˆÙ„ÚˆØ± ØªØ¨Ø¯ÛŒÙ„ Ú©Ø±Ù†Ø§', price: 150),
+      ServiceItem(titleEn: 'Broken Switch Repair', titleUr: 'خراب سوئچ کی مرمت', price: 300, isSelected: true),
+      ServiceItem(titleEn: 'Short Circuit Fix', titleUr: 'شارٹ سرکٹ ٹھیک کرنا', price: 400, isSelected: true),
+      ServiceItem(titleEn: 'Ceiling Fan Installation', titleUr: 'سیلنگ فین انسٹالیشن', price: 500),
+      ServiceItem(titleEn: 'Full Home Wiring Repair', titleUr: 'مکمل گھر کی وائرنگ مرمت', price: 8000),
+      ServiceItem(titleEn: 'AC Switch Installation', titleUr: 'اے سی سوئچ لگانا', price: 450),
+      ServiceItem(titleEn: 'UPS Setup & Installation', titleUr: 'یو پی ایس سیٹ اپ', price: 1500),
+      ServiceItem(titleEn: 'Generator Repair', titleUr: 'جنریٹر کی مرمت', price: 2000),
+      ServiceItem(titleEn: 'Bulb or Holder Replacement', titleUr: 'بلب یا ہولڈر تبدیل کرنا', price: 150),
     ],
   };
 
@@ -115,13 +115,6 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
   }
 
   Future<void> _loadFromFirestoreOrInit() async {
-    // Helper to determine category index from stored category name
-    int getCategoryIndex(String? categoryNameEn) {
-      if (categoryNameEn == null || categoryNameEn.isEmpty) return -1;
-      final idx = _skillNamesEn.indexWhere((e) => e.toLowerCase() == categoryNameEn.toLowerCase());
-      return idx >= 0 ? idx : -1;
-    }
-
     if (_signupData != null) {
       // Signup mode - init with defaults, no Firestore to load from yet
       if (mounted) {
@@ -141,78 +134,52 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
       }
       return;
     }
-    
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
         final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
         if (doc.exists) {
           final data = doc.data()!;
-          
-          // Determine category from stored profile data
-          final storedCategoryName = data['categoryNameEn']?.toString();
-          final categoryIdx = getCategoryIndex(storedCategoryName);
-          if (categoryIdx >= 0) {
-            _categoryIndex = categoryIdx;
-          }
-          
           final savedSkills = data['skills'] as List<dynamic>?;
-          
-          // Parse saved skills (if any)
-          final List<ServiceItem> saved = [];
-          if (savedSkills != null) {
-            for (final s in savedSkills) {
-              if (s is Map<String, dynamic>) {
-                saved.add(ServiceItem(
-                  titleEn: s['titleEn']?.toString() ?? '',
-                  titleUr: s['titleUr']?.toString() ?? '',
-                  price: (s['price'] as num?)?.toDouble() ?? 0,
-                  isSelected: true,
-                ));
-              } else if (s is Map) {
-                final m = Map<String, dynamic>.from(s);
-                saved.add(ServiceItem(
-                  titleEn: m['titleEn']?.toString() ?? '',
-                  titleUr: m['titleUr']?.toString() ?? '',
-                  price: (m['price'] as num?)?.toDouble() ?? 0,
-                  isSelected: true,
-                ));
-              }
+          if (savedSkills != null && savedSkills.isNotEmpty) {
+            final saved = savedSkills.map((s) {
+              final m = s as Map<String, dynamic>;
+              return ServiceItem(
+                titleEn: m['titleEn']?.toString() ?? '',
+                titleUr: m['titleUr']?.toString() ?? '',
+                price: (m['price'] as num?)?.toDouble() ?? 0,
+                isSelected: true,
+              );
+            }).toList();
+
+            final defaults = _servicesMap[_categoryIndex] ?? [];
+            final merged = defaults.map((d) {
+              final existing = saved.where((s) => s.titleEn == d.titleEn).firstOrNull;
+              return ServiceItem(
+                titleEn: d.titleEn,
+                titleUr: d.titleUr,
+                price: existing?.price ?? d.price,
+                isSelected: existing != null || d.isSelected,
+              );
+            }).toList();
+
+            final custom = saved.where((s) => !defaults.any((d) => d.titleEn == s.titleEn)).toList();
+
+            if (mounted) {
+              setState(() {
+                _currentServices = [...merged, ...custom];
+                for (int i = 0; i < _currentServices.length; i++) {
+                  _priceControllers[i] = TextEditingController(text: _currentServices[i].price.toStringAsFixed(0));
+                }
+                _loadedFromFirestore = true;
+              });
             }
+            return;
           }
-          
-          // Get predefined skills for the worker's category
-          final defaults = _servicesMap[_categoryIndex] ?? [];
-          
-          // Merge: predefined skills are selected ONLY if they exist in saved skills
-          final merged = defaults.map((d) {
-            final existing = saved.where((s) => s.titleEn == d.titleEn).firstOrNull;
-            return ServiceItem(
-              titleEn: d.titleEn,
-              titleUr: d.titleUr,
-              price: existing?.price ?? d.price,
-              isSelected: existing != null, // Only selected if worker saved it
-            );
-          }).toList();
-          
-          // Add any custom skills the worker added (not in predefined list)
-          final custom = saved.where((s) => !defaults.any((d) => d.titleEn == s.titleEn)).toList();
-          
-          if (mounted) {
-            setState(() {
-              _currentServices = [...merged, ...custom];
-              for (int i = 0; i < _currentServices.length; i++) {
-                _priceControllers[i] = TextEditingController(text: _currentServices[i].price.toStringAsFixed(0));
-              }
-              _loadedFromFirestore = true;
-            });
-          }
-          return;
         }
       } catch (_) {}
     }
 
-    // Fallback: no saved data - show all predefined skills as unselected
     if (mounted) {
       setState(() {
         final list = _servicesMap[_categoryIndex] ?? [];
@@ -220,7 +187,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
           titleEn: item.titleEn,
           titleUr: item.titleUr,
           price: item.price,
-          isSelected: false, // Empty slate - nothing selected
+          isSelected: item.isSelected,
         )).toList();
         for (int i = 0; i < _currentServices.length; i++) {
           _priceControllers[i] = TextEditingController(text: _currentServices[i].price.toStringAsFixed(0));
@@ -250,7 +217,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isUrdu ? 'Ø¨Ø±Ø§Û Ú©Ø±Ù… Ø³Ø±ÙˆØ³ Ú©Ø§ Ù†Ø§Ù… Ø¯Ø±Ø¬ Ú©Ø±ÛŒÚº' : 'Please enter service name'),
+          content: Text(isUrdu ? 'براہ کرم سروس کا نام درج کریں' : 'Please enter service name'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -261,14 +228,14 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
     if (price == null || price <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isUrdu ? 'Ø¨Ø±Ø§Û Ú©Ø±Ù… Ø¯Ø±Ø³Øª Ø±Ù‚Ù… Ø¯Ø±Ø¬ Ú©Ø±ÛŒÚº' : 'Please enter a valid amount'),
+          content: Text(isUrdu ? 'براہ کرم درست رقم درج کریں' : 'Please enter a valid amount'),
           backgroundColor: Colors.redAccent,
         ),
       );
       return;
     }
 
-    // â”€â”€ Semantic deduplication via Groq â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Semantic deduplication via Groq ───────────────────────────────────
     setState(() => _checkingDuplicate = true);
     final allTitles = _currentServices.map((s) => s.titleEn).toList();
     final duplicate = await SkillDeduplicator.findDuplicate(
@@ -290,7 +257,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  isUrdu ? 'Ù…Ù„ØªÛŒ Ø¬Ù„ØªÛŒ Ø®Ø¯Ù…Øª Ù…ÙˆØ¬ÙˆØ¯ ÛÛ’' : 'Similar Service Exists',
+                  isUrdu ? 'ملتی جلتی خدمت موجود ہے' : 'Similar Service Exists',
                   style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -298,21 +265,21 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
           ),
           content: Text(
             isUrdu
-                ? '"$title" Ù¾ÛÙ„Û’ Ø³Û’ Ù…ÙˆØ¬ÙˆØ¯ Ø®Ø¯Ù…Øª "$duplicate" Ú©Û’ Ù…ØªØ±Ø§Ø¯Ù ÛÛ’Û”\nØ¨Ø±Ø§Û Ú©Ø±Ù… Ø§Ø³Û’ ÙÛØ±Ø³Øª Ø³Û’ Ù…Ù†ØªØ®Ø¨ Ú©Ø±ÛŒÚºÛ”'
+                ? '"$title" پہلے سے موجود خدمت "$duplicate" کے مترادف ہے۔\nبراہ کرم اسے فہرست سے منتخب کریں۔'
                 : '"$title" is equivalent to the existing service:\n\n"$duplicate"\n\nPlease select it from the list instead.',
             style: const TextStyle(fontSize: 14, height: 1.5),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(isUrdu ? 'Ù¹Ú¾ÛŒÚ© ÛÛ’' : 'Got it'),
+              child: Text(isUrdu ? 'ٹھیک ہے' : 'Got it'),
             ),
           ],
         ),
       );
       return; // Do NOT add the duplicate
     }
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────────────────────────────
 
     setState(() {
       final newItem = ServiceItem(
@@ -338,7 +305,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
           children: [
             const Icon(Icons.check_circle, color: Colors.white, size: 20),
             const SizedBox(width: 8),
-            Text(isUrdu ? 'Ù†Ø¦ÛŒ Ø³Ø±ÙˆØ³ Ú©Ø§Ù…ÛŒØ§Ø¨ÛŒ Ø³Û’ Ø´Ø§Ù…Ù„ Ú©Ø± Ø¯ÛŒ Ú¯Ø¦ÛŒ' : 'New service added successfully'),
+            Text(isUrdu ? 'نئی سروس کامیابی سے شامل کر دی گئی' : 'New service added successfully'),
           ],
         ),
         backgroundColor: const Color(0xFF0D9488),
@@ -352,7 +319,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
     if (selectedCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isUrdu ? 'Ø¨Ø±Ø§Û Ú©Ø±Ù… Ú©Ù… Ø§Ø² Ú©Ù… Ø§ÛŒÚ© Ø³Ø±ÙˆØ³ Ù…Ù†ØªØ®Ø¨ Ú©Ø±ÛŒÚº' : 'Please select at least one service'),
+          content: Text(isUrdu ? 'براہ کرم کم از کم ایک سروس منتخب کریں' : 'Please select at least one service'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -406,12 +373,6 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
           'categoryNameEn': _skillNamesEn[_categoryIndex],
           'categoryNameUr': _skillNamesUr[_categoryIndex],
           'setupComplete': true,
-          'latitude': LocationService.instance.currentLocation.latitude,
-          'longitude': LocationService.instance.currentLocation.longitude,
-          'city': LocationService.instance.currentLocation.city,
-          'area': LocationService.instance.currentLocation.area,
-          'locationAddress': LocationService.instance.currentLocation.fullAddress,
-          'isInsideTwinCities': LocationService.instance.currentLocation.isInsideTwinCities,
         };
         if (_signupData!.cnicNumber != null && _signupData!.cnicNumber!.isNotEmpty) {
           userData['cnicNumber'] = _signupData!.cnicNumber;
@@ -493,7 +454,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isUrdu ? 'Ù…Ø­ÙÙˆØ¸ Ú©Ø±Ù†Û’ Ù…ÛŒÚº Ø®Ø±Ø§Ø¨ÛŒ: $e' : 'Error saving: $e'),
+            content: Text(isUrdu ? 'محفوظ کرنے میں خرابی: $e' : 'Error saving: $e'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -542,7 +503,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
               ),
               const SizedBox(height: 24),
               Text(
-                isUrdu ? 'Ù…Ø­ÙÙˆØ¸ ÛÙˆ Ú¯ÛŒØ§!' : 'Saved!',
+                isUrdu ? 'محفوظ ہو گیا!' : 'Saved!',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -552,7 +513,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
               const SizedBox(height: 12),
               Text(
                 isUrdu
-                    ? 'Ø¢Ù¾ Ú©ÛŒ Ø³Ø±ÙˆØ³Ø² Ø§ÙˆØ± Ø±ÛŒÙ¹Ø³ Ú©Ø§Ù…ÛŒØ§Ø¨ÛŒ Ø³Û’ Ù…Ø­ÙÙˆØ¸ Ú©Ø± Ø¯ÛŒÛ’ Ú¯Ø¦Û’ ÛÛŒÚºÛ”'
+                    ? 'آپ کی سروسز اور ریٹس کامیابی سے محفوظ کر دیے گئے ہیں۔'
                     : 'Your services and rates have been saved successfully.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
@@ -579,7 +540,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                     elevation: 2,
                   ),
                   child: Text(
-                    isUrdu ? 'Ù…Ø­ÙÙˆØ¸ Ú©Ø±ÛŒÚº' : 'Save & Go Back',
+                    isUrdu ? 'محفوظ کریں' : 'Save & Go Back',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
@@ -618,11 +579,8 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                 controller.toggleLanguage();
                 setState(() {});
               },
-              icon: const Icon(Icons.language, size: 18),
-              label: Text(
-                controller.isUrdu ? 'English' : 'اردو',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-              ),
+              icon: const Icon(Icons.translate, size: 18),
+              label: Text(controller.isUrdu ? 'EN' : 'اردو', style: const TextStyle(fontSize: 13)),
             ),
           ],
         ),
@@ -669,7 +627,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isUrdu ? 'Ø¢Ù¾ Ú©Ø§ Ù¾ÛŒØ´Û' : 'Your Profession',
+                                isUrdu ? 'آپ کا پیشہ' : 'Your Profession',
                                 style: TextStyle(color: Colors.white.withValues(alpha:0.75), fontSize: 12),
                               ),
                               Text(
@@ -683,7 +641,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                       const SizedBox(height: 14),
                       Text(
                         isUrdu
-                            ? 'Ø§Ù¾Ù†ÛŒ Ù¾ÛŒØ´ Ú©Ø±Ø¯Û Ø³Ø±ÙˆØ³Ø² Ú©Ùˆ Ù†Ø´Ø§Ù† Ø²Ø¯ Ú©Ø±ÛŒÚº Ø§ÙˆØ± Ø§Ù¾Ù†ÛŒ Ù‚ÛŒÙ…Øª Ø¯Ø±Ø¬ Ú©Ø±ÛŒÚºÛ” Ú©Ø³Ù¹Ù…Ø±Ø² Ú©Ùˆ ÛŒÛ Ø±ÛŒÙ¹Ø³ Ø¨Ø±Ø§Û Ø±Ø§Ø³Øª Ù†Ø¸Ø± Ø¢Ø¦ÛŒÚº Ú¯Û’Û”'
+                            ? 'اپنی پیش کردہ سروسز کو نشان زد کریں اور اپنی قیمت درج کریں۔ کسٹمرز کو یہ ریٹس براہ راست نظر آئیں گے۔'
                             : 'Check the services you perform and define your custom rates. Customers will see these rates directly.',
                         style: TextStyle(color: Colors.white.withValues(alpha:0.9), fontSize: 13, height: 1.4),
                       ),
@@ -763,7 +721,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                                       Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 6),
                                         child: Text(
-                                          isUrdu ? 'Ø±ÙˆÙ¾Û’' : 'Rs.',
+                                          isUrdu ? 'روپے' : 'Rs.',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
@@ -811,7 +769,41 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                             color: _showCustomFields ? const Color(0xFF0D9488) : const Color(0xFFE5E7EB),
                             width: _showCustomFields ? 1.8 : 1,
                           ),
-                                           Text(
+                        ),
+                        elevation: 0.5,
+                        child: Column(
+                          children: [
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                    _showCustomFields = !_showCustomFields;
+                                    if (_showCustomFields) {
+                                      _animationController.forward();
+                                    } else {
+                                      _animationController.reverse();
+                                    }
+                                });
+                              },
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(16),
+                                topRight: const Radius.circular(16),
+                                bottomLeft: Radius.circular(_showCustomFields ? 0 : 16),
+                                bottomRight: Radius.circular(_showCustomFields ? 0 : 16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: const Color(0xFF0D9488).withValues(alpha:0.08),
+                                      child: const Icon(Icons.add, color: Color(0xFF0D9488)),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
                                             isUrdu ? 'دیگر سروس شامل کریں' : 'Add Custom Service',
                                             style: const TextStyle(
                                               fontSize: 15,
@@ -861,36 +853,6 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                                     Text(
                                       isUrdu ? 'آپ کی قیمت (روپے میں):' : 'Proposed Price (Rs.):',
                                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
-                                    ),     ),
-                              ),
-                            ),
-
-                            SizeTransition(
-                              sizeFactor: _expandAnimation,
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Divider(height: 16),
-                                    Text(
-                                      isUrdu ? 'Ø³Ø±ÙˆØ³ Ú©Ø§ Ù†Ø§Ù… Ú©ÛŒØ§ ÛÛ’ØŸ' : 'Describe the service:',
-                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    TextField(
-                                      controller: _customTitleController,
-                                      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
-                                      decoration: InputDecoration(
-                                        hintText: isUrdu ? 'Ù…Ø«Ù„Ø§Ù‹ Ú©Ú†Ù† Ù¾Ø§Ø¦Ù¾ Ú©ÛŒ ØµÙØ§Ø¦ÛŒ' : 'E.g., Kitchen pipe cleaning',
-                                        hintStyle: TextStyle(color: Colors.grey.shade400),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    Text(
-                                      isUrdu ? 'Ø¢Ù¾ Ú©ÛŒ Ù‚ÛŒÙ…Øª (Ø±ÙˆÙ¾Û’ Ù…ÛŒÚº):' : 'Proposed Price (Rs.):',
-                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
                                     ),
                                     const SizedBox(height: 8),
                                     TextField(
@@ -928,13 +890,13 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                                                   ),
                                                   const SizedBox(width: 10),
                                                   Text(
-                                                    isUrdu ? 'Ø¬Ø§Ù†Ú† Ú©ÛŒ Ø¬Ø§ Ø±ÛÛŒ ÛÛ’...' : 'Checking...',
+                                                    isUrdu ? 'جانچ کی جا رہی ہے...' : 'Checking...',
                                                     style: const TextStyle(fontWeight: FontWeight.bold),
                                                   ),
                                                 ],
                                               )
                                             : Text(
-                                                isUrdu ? 'Ø³Ø±ÙˆØ³ Ø´Ø§Ù…Ù„ Ú©Ø±ÛŒÚº' : 'Add Service',
+                                                isUrdu ? 'سروس شامل کریں' : 'Add Service',
                                                 style: const TextStyle(fontWeight: FontWeight.bold),
                                               ),
                                       ),

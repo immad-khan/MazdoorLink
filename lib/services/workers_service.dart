@@ -34,30 +34,80 @@ Future<List<WorkerModel>> getWorkersByCategory(String categoryKey) async {
   }).toList();
 }
 
+/// Maximum allowed radius in kilometers for worker matching and job offers
+const double kMaxWorkerDistanceKm = 5.0;
+
+/// Calculates distance in kilometers between two GPS coordinates using the Haversine formula
+double calculateDistanceKm(double lat1, double lon1, double lat2, double lon2) {
+  const p = 0.017453292519943295; // pi / 180
+  final a = 0.5 -
+      cos((lat2 - lat1) * p) / 2 +
+      cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
+  return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
+}
+
 /// Returns workers in [categoryKey] who have at least one skill matching
-/// any of the [selectedSkillTitles]. Filtering is done client-side because
-/// Firestore cannot query on nested array-of-map fields.
-/// If [selectedSkillTitles] is empty, all workers in the category are returned.
+/// any of the [selectedSkillTitles] AND are within [maxDistanceKm] (default 5.0 km) of customer.
 Future<List<WorkerModel>> getWorkersByCategoryAndSkills(
   String categoryKey,
-  List<String> selectedSkillTitles,
-) async {
+  List<String> selectedSkillTitles, {
+  double? customerLatitude,
+  double? customerLongitude,
+  double maxDistanceKm = kMaxWorkerDistanceKm,
+}) async {
   // Fetch all approved workers in the right category first.
   final allInCategory = await getWorkersByCategory(categoryKey);
 
-  if (selectedSkillTitles.isEmpty) return allInCategory;
+  List<WorkerModel> matched = allInCategory;
 
-  final normalised = selectedSkillTitles
-      .map((t) => t.trim().toLowerCase())
-      .toSet();
-
-  // Keep only workers whose skills list contains at least one match.
-  return allInCategory.where((worker) {
-    final workerSkills = worker.skillsEn
-        .map((s) => s.trim().toLowerCase())
+  if (selectedSkillTitles.isNotEmpty) {
+    final normalised = selectedSkillTitles
+        .map((t) => t.trim().toLowerCase())
         .toSet();
-    return workerSkills.intersection(normalised).isNotEmpty;
-  }).toList();
+
+    matched = matched.where((worker) {
+      final workerSkills = worker.skillsEn
+          .map((s) => s.trim().toLowerCase())
+          .toSet();
+      return workerSkills.intersection(normalised).isNotEmpty;
+    }).toList();
+  }
+
+  // 5 km Distance Filtering (when customer coordinates are provided)
+  if (customerLatitude != null && customerLongitude != null) {
+    final List<WorkerModel> nearbyWorkers = [];
+
+    for (final worker in matched) {
+      if (worker.latitude != null && worker.longitude != null) {
+        final dist = calculateDistanceKm(
+          customerLatitude,
+          customerLongitude,
+          worker.latitude!,
+          worker.longitude!,
+        );
+
+        // Filter: Keep strictly workers within the 5 km radius
+        if (dist <= maxDistanceKm) {
+          nearbyWorkers.add(
+            worker.copyWith(
+              distanceKm: double.parse(dist.toStringAsFixed(1)),
+            ),
+          );
+        }
+      } else {
+        // Fallback for workers whose GPS coordinates are not yet set
+        if (worker.distanceKm <= maxDistanceKm) {
+          nearbyWorkers.add(worker);
+        }
+      }
+    }
+
+    // Sort by closest worker first
+    nearbyWorkers.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+    return nearbyWorkers;
+  }
+
+  return matched;
 }
 
 String _categoryKeyToName(String key) {
@@ -166,9 +216,39 @@ Future<String?> createJobOffer({
   double? customerLatitude,
   double? customerLongitude,
   int visibilityDurationMinutes = 10,
+  double maxDistanceKm = kMaxWorkerDistanceKm,
 }) async {
   final customer = FirebaseAuth.instance.currentUser;
   if (customer == null || workerId == null) return null;
+
+  // 5 km Range Verification: enforce request is sent ONLY to worker within 5 km
+  double? distanceKm;
+  if (customerLatitude != null && customerLongitude != null) {
+    try {
+      final workerDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
+      final workerData = workerDoc.data();
+      final workerLat = (workerData?['latitude'] as num?)?.toDouble();
+      final workerLng = (workerData?['longitude'] as num?)?.toDouble();
+
+      if (workerLat != null && workerLng != null) {
+        final calculatedDist = calculateDistanceKm(
+          customerLatitude,
+          customerLongitude,
+          workerLat,
+          workerLng,
+        );
+        distanceKm = double.parse(calculatedDist.toStringAsFixed(1));
+
+        if (calculatedDist > maxDistanceKm) {
+          throw Exception(
+            'Worker is outside the ${maxDistanceKm.toStringAsFixed(0)} km service range (${calculatedDist.toStringAsFixed(1)} km away).',
+          );
+        }
+      }
+    } catch (e) {
+      if (e.toString().contains('service range')) rethrow;
+    }
+  }
 
   final customerDoc = await FirebaseFirestore.instance.collection('users').doc(customer.uid).get();
   final customerName = customerDoc.data()?['name']?.toString() ?? customer.displayName ?? 'Customer';
@@ -190,6 +270,8 @@ Future<String?> createJobOffer({
     'pin': pin,
     if (customerLatitude != null) 'customerLatitude': customerLatitude,
     if (customerLongitude != null) 'customerLongitude': customerLongitude,
+    if (distanceKm != null) 'distanceKm': distanceKm,
+    'maxDistanceRadiusKm': maxDistanceKm,
     'createdAt': FieldValue.serverTimestamp(),
     'expiresAt': expiresAt.toIso8601String(),
     'visibilityDurationMinutes': visibilityDurationMinutes,

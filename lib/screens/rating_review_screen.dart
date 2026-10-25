@@ -153,8 +153,20 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
 
   Future<void> _markCustomerPaid(BuildContext context) async {
     final jobId = _jobId(context);
+    final amount = _jobAmount(context);
     if (jobId != null) {
       await updateJobCompleted(jobId);
+      await FirebaseFirestore.instance.collection('jobs').doc(jobId).set({
+        'paymentStatus': 'paid',
+        'paymentMethod': 'Cash',
+        'customerMarkedPaidAt': FieldValue.serverTimestamp(),
+        'paidAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      await deductPlatformCommission(
+        jobId: jobId,
+        amount: amount > 0 ? amount : null,
+        paymentMethod: 'Cash',
+      );
     }
     if (!mounted) return;
     // Independent completion: cash payment confirmed directly opens rating
@@ -163,8 +175,20 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
 
   Future<void> _completeOnlinePayment(BuildContext context) async {
     final jobId = _jobId(context);
+    final amount = _jobAmount(context);
+    final method = _jobPaymentMethod(context);
     if (jobId != null) {
       await updateJobCompleted(jobId);
+      await FirebaseFirestore.instance.collection('jobs').doc(jobId).set({
+        'paymentStatus': 'paid',
+        'paymentMethod': method.isNotEmpty ? method : 'Safepay',
+        'paidAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      await deductPlatformCommission(
+        jobId: jobId,
+        amount: amount > 0 ? amount : null,
+        paymentMethod: method.isNotEmpty ? method : 'Safepay',
+      );
     }
     if (!mounted) return;
     setState(() => _step = PostJobStep.paymentSuccessTick);
@@ -189,6 +213,11 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
             'paymentMethod': 'Safepay',
             'paidAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
+          await deductPlatformCommission(
+            jobId: jId,
+            amount: amount > 0 ? amount : null,
+            paymentMethod: 'Safepay',
+          );
         }
         if (mounted) {
           setState(() => _step = PostJobStep.paymentSuccessTick);

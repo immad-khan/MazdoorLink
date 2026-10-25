@@ -5846,7 +5846,22 @@ class _WorkerRecommendationsScreenState
     }
 
     final skillTitles = selectedIssues.map((i) => i.titleEn).toList();
-    _workersFuture = getWorkersByCategoryAndSkills(categoryKey, skillTitles);
+    final effectiveLat = customerLatitude ??
+        (LocationService.instance.currentLocation.latitude != 0
+            ? LocationService.instance.currentLocation.latitude
+            : null);
+    final effectiveLng = customerLongitude ??
+        (LocationService.instance.currentLocation.longitude != 0
+            ? LocationService.instance.currentLocation.longitude
+            : null);
+
+    _workersFuture = getWorkersByCategoryAndSkills(
+      categoryKey,
+      skillTitles,
+      customerLatitude: effectiveLat,
+      customerLongitude: effectiveLng,
+      maxDistanceKm: 5.0,
+    );
   }
 
   @override
@@ -5879,14 +5894,58 @@ class _WorkerRecommendationsScreenState
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
-                child: Text(
-                  bilingual(
-                    context,
-                    'No workers found for this category. Check back later.',
-                    'اس زمرے میں کوئی ورکر نہیں ملا۔ بعد میں دوبارہ چیک کریں۔',
-                  ),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16, color: Colors.black54),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDFA),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF99F6E4), width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.radar,
+                        size: 48,
+                        color: Color(0xFF0D9488),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      bilingual(
+                        context,
+                        'No workers found within 5 km',
+                        '5 کلومیٹر کے دائرے میں کوئی ورکر نہیں ملا',
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      bilingual(
+                        context,
+                        'There are currently no active workers for this category within 5 km of your location. Try picking another area or check back in a few minutes.',
+                        'اس زمرے کے لیے آپ کے مقام سے 5 کلومیٹر کے اندر کوئی فعال ورکر دستیاب نہیں ہے۔ براہ کرم مقام تبدیل کریں یا کچھ دیر بعد چیک کریں۔',
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 13, color: Colors.black54, height: 1.4),
+                    ),
+                    const SizedBox(height: 20),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0D9488),
+                        side: const BorderSide(color: Color(0xFF0D9488)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.location_on_outlined, size: 18),
+                      label: Text(bilingual(context, 'Change Location', 'مقام تبدیل کریں')),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -5913,15 +5972,31 @@ class _WorkerRecommendationsScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            isUrdu
-                                ? '${matchedWorkers.length} ورکرز دستیاب ہیں'
-                                : '${matchedWorkers.length} workers available',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              fontSize: 15,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                isUrdu
+                                    ? '${matchedWorkers.length} ورکرز دستیاب ہیں'
+                                    : '${matchedWorkers.length} workers available',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  isUrdu ? '5 کلومیٹر دائرہ' : 'Within 5 km',
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -6035,13 +6110,51 @@ class _WorkerRecommendationsScreenState
                                         color: AppTheme.darkerText,
                                       ),
                                     ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      matchedWorkers[i].category,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          matchedWorkers[i].category,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF0FDF4),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: const Color(0xFFBBF7D0),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.near_me,
+                                                size: 10,
+                                                color: Color(0xFF16A34A),
+                                              ),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                isUrdu
+                                                    ? '${matchedWorkers[i].distanceKm.toStringAsFixed(1)} کلومیٹر دور'
+                                                    : '${matchedWorkers[i].distanceKm.toStringAsFixed(1)} km away',
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF15803D),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     if (matchedWorkers[i].price.isNotEmpty) ...[
                                       const SizedBox(height: 2),
@@ -7031,28 +7144,46 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                               return;
                             }
                           }
-                          final jobId = await createJobOffer(
-                            workerId: worker.id,
-                            workerName: worker.name,
-                            descriptionEn: jobDesc.descriptionEn,
-                            descriptionUr: jobDesc.descriptionUr,
-                            price: offerPrice,
-                            categoryKey: categoryKeyToUse,
-                            paymentMethod: jobDesc.paymentMethod,
-                            customerLatitude: latitude,
-                            customerLongitude: longitude,
-                            visibilityDurationMinutes: _visibilityMinutes,
-                          );
-                          if (context.mounted) {
-                            Navigator.pushReplacementNamed(
-                              context,
-                              AppRoutes.tracking,
-                              arguments: TrackingArguments(
-                                worker: worker,
-                                job: jobDesc,
-                                jobId: jobId,
-                              ),
+                          try {
+                            final jobId = await createJobOffer(
+                              workerId: worker.id,
+                              workerName: worker.name,
+                              descriptionEn: jobDesc.descriptionEn,
+                              descriptionUr: jobDesc.descriptionUr,
+                              price: offerPrice,
+                              categoryKey: categoryKeyToUse,
+                              paymentMethod: jobDesc.paymentMethod,
+                              customerLatitude: latitude,
+                              customerLongitude: longitude,
+                              visibilityDurationMinutes: _visibilityMinutes,
                             );
+                            if (context.mounted) {
+                              Navigator.pushReplacementNamed(
+                                context,
+                                AppRoutes.tracking,
+                                arguments: TrackingArguments(
+                                  worker: worker,
+                                  job: jobDesc,
+                                  jobId: jobId,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    bilingual(
+                                      context,
+                                      e.toString().replaceAll('Exception: ', ''),
+                                      'ورکر آپ کے مقام سے 5 کلومیٹر کی حدود سے باہر ہے۔',
+                                    ),
+                                  ),
+                                  backgroundColor: Colors.redAccent,
+                                  duration: const Duration(seconds: 4),
+                                ),
+                              );
+                            }
                           }
                         }
                       }
@@ -7132,28 +7263,46 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                           return;
                         }
                       }
-                      final jobId = await createJobOffer(
-                        workerId: worker.id,
-                        workerName: worker.name,
-                        descriptionEn: jobDesc.descriptionEn,
-                        descriptionUr: jobDesc.descriptionUr,
-                        price: offerPrice,
-                        categoryKey: categoryKeyToUse,
-                        paymentMethod: jobDesc.paymentMethod,
-                        customerLatitude: latitude,
-                        customerLongitude: longitude,
-                        visibilityDurationMinutes: _visibilityMinutes,
-                      );
-                      if (context.mounted) {
-                        Navigator.pushReplacementNamed(
-                          context,
-                          AppRoutes.tracking,
-                          arguments: TrackingArguments(
-                            worker: worker,
-                            job: jobDesc,
-                            jobId: jobId,
-                          ),
+                      try {
+                        final jobId = await createJobOffer(
+                          workerId: worker.id,
+                          workerName: worker.name,
+                          descriptionEn: jobDesc.descriptionEn,
+                          descriptionUr: jobDesc.descriptionUr,
+                          price: offerPrice,
+                          categoryKey: categoryKeyToUse,
+                          paymentMethod: jobDesc.paymentMethod,
+                          customerLatitude: latitude,
+                          customerLongitude: longitude,
+                          visibilityDurationMinutes: _visibilityMinutes,
                         );
+                        if (context.mounted) {
+                          Navigator.pushReplacementNamed(
+                            context,
+                            AppRoutes.tracking,
+                            arguments: TrackingArguments(
+                              worker: worker,
+                              job: jobDesc,
+                              jobId: jobId,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                bilingual(
+                                  context,
+                                  e.toString().replaceAll('Exception: ', ''),
+                                  'ورکر آپ کے مقام سے 5 کلومیٹر کی حدود سے باہر ہے۔',
+                                ),
+                              ),
+                              backgroundColor: Colors.redAccent,
+                              duration: const Duration(seconds: 4),
+                            ),
+                          );
+                        }
                       }
                     },
                     style: FilledButton.styleFrom(

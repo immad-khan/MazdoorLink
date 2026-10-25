@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -54,6 +55,70 @@ void showToast(String message) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
   );
+}
+
+/// Displays a confirmation dialog asking the user if they want to exit Mazdoorlink.
+/// Buttons: Yes in green (#16A34A), No in red (#DC2626).
+Future<bool> showExitMazdoorlinkDialog(BuildContext context) async {
+  final result = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          const Icon(Icons.exit_to_app_rounded, color: Color(0xFF0D9488), size: 28),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              bilingual(context, 'Exit Mazdoorlink?', 'Mazdoorlink بند کریں؟'),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        bilingual(
+          context,
+          'Are you sure you want to exit Mazdoorlink?',
+          'کیا آپ واقعی Mazdoorlink سے باہر نکلنا چاہتے ہیں؟',
+        ),
+        style: const TextStyle(fontSize: 15),
+      ),
+      actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      actions: [
+        // "no in red"
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFDC2626), // Red color
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          ),
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(
+            bilingual(context, 'No', 'نہیں'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+        ),
+        // "yes in green color"
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF16A34A), // Green color
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          ),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(
+            bilingual(context, 'Yes', 'ہاں'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
 }
 
 Future<LatLng?> getCurrentLocation() async {
@@ -248,6 +313,7 @@ class MzScaffold extends StatelessWidget {
     this.showBack = false,
     this.showBottomNav = true,
     this.background,
+    this.enableExitPopScope = true,
   });
 
   final Widget child;
@@ -256,11 +322,12 @@ class MzScaffold extends StatelessWidget {
   final bool showBack;
   final bool showBottomNav;
   final Color? background;
+  final bool enableExitPopScope;
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
-    return Directionality(
+    final scaffold = Directionality(
       textDirection: controller.isUrdu ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: background ?? const Color(0xFFF9FAFB),
@@ -271,7 +338,16 @@ class MzScaffold extends StatelessWidget {
                 centerTitle: true,
                 leading: showBack
                     ? IconButton(
-                        onPressed: () => Navigator.maybePop(context),
+                        onPressed: () async {
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          } else {
+                            final shouldExit = await showExitMazdoorlinkDialog(context);
+                            if (shouldExit) {
+                              SystemNavigator.pop();
+                            }
+                          }
+                        },
                         icon: Transform.rotate(
                           angle: controller.isUrdu ? math.pi : 0,
                           child: const Icon(Icons.arrow_back),
@@ -287,6 +363,26 @@ class MzScaffold extends StatelessWidget {
         ),
         bottomNavigationBar: showBottomNav ? const RoleBottomNav() : null,
       ),
+    );
+
+    if (!enableExitPopScope) {
+      return scaffold;
+    }
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(result);
+          return;
+        }
+        final shouldExit = await showExitMazdoorlinkDialog(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: scaffold,
     );
   }
 }
@@ -2300,6 +2396,7 @@ final _phone = TextEditingController();
         }
       },
       child: MzScaffold(
+        enableExitPopScope: false,
         showBottomNav: false,
         showBack: true,
         title: (_isForgotPassword)
@@ -9883,6 +9980,53 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  /// Displays confirmation dialog asking "Want to switch to [Customer/Mazdoor] account, yes or no?"
+  Future<bool> _showSwitchRoleDialog(BuildContext context, {required bool toWorker}) async {
+    final targetAccount = toWorker ? 'Mazdoor' : 'Customer';
+    final targetAccountUrdu = toWorker ? 'مزدور' : 'کسٹمر';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.swap_horiz_rounded, color: Color(0xFF0D9488), size: 26),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                bilingual(context, 'Switch Account', 'اکاؤنٹ سوئچ کریں'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          bilingual(
+            context,
+            'Want to switch to $targetAccount account?',
+            'کیا آپ $targetAccountUrdu اکاؤنٹ پر سوئچ کرنا چاہتے ہیں؟',
+          ),
+          style: const TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(bilingual(context, 'No', 'نہیں')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0D9488),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(bilingual(context, 'Yes', 'ہاں')),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
   /// Called when user in Customer mode taps "Switch to Worker Mode"
   Future<void> _switchToWorkerMode(BuildContext context, Map<String, dynamic> userData) async {
     final c = AppScope.of(context);
@@ -10284,11 +10428,17 @@ class SettingsScreen extends StatelessWidget {
                                     ? bilingual(context, 'Switch to Customer Mode', 'کسٹمر موڈ پر جائیں')
                                     : bilingual(context, 'Switch to Worker Mode', 'ورکر موڈ پر جائیں'),
                               ),
-                              onPressed: () {
+                              onPressed: () async {
                                 if (isWorker) {
-                                  _switchToCustomerMode(context);
+                                  final confirmed = await _showSwitchRoleDialog(context, toWorker: false);
+                                  if (confirmed && context.mounted) {
+                                    _switchToCustomerMode(context);
+                                  }
                                 } else {
-                                  _switchToWorkerMode(context, data);
+                                  final confirmed = await _showSwitchRoleDialog(context, toWorker: true);
+                                  if (confirmed && context.mounted) {
+                                    _switchToWorkerMode(context, data);
+                                  }
                                 }
                               },
                             ),
@@ -10452,13 +10602,68 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () async {
-              await c.logout();
-              if (context.mounted) {
-                Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (route) => false);
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  title: Row(
+                    children: [
+                      const Icon(Icons.logout, color: Colors.red),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          bilingual(context, 'Logout?', 'لاگ آؤٹ؟'),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  content: Text(
+                    bilingual(
+                      context,
+                      'Are you sure you want to log out?',
+                      'کیا آپ واقعی لاگ آؤٹ کرنا چاہتے ہیں؟',
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text(bilingual(context, 'No', 'نہیں')),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text(bilingual(context, 'Yes', 'ہاں')),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true) {
+                await c.logout();
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (route) => false);
+                }
               }
             },
             icon: const Icon(Icons.logout, color: Colors.red),
             label: Text(bilingual(context, 'Log Out', 'لاگ آؤٹ'), style: const TextStyle(color: Colors.red)),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final shouldExit = await showExitMazdoorlinkDialog(context);
+              if (shouldExit) {
+                SystemNavigator.pop();
+              }
+            },
+            icon: const Icon(Icons.exit_to_app, color: Color(0xFF64748B)),
+            label: Text(
+              bilingual(context, 'Exit Mazdoorlink', 'Mazdoorlink بند کریں'),
+              style: const TextStyle(color: Color(0xFF64748B)),
+            ),
           )
         ],
       ),

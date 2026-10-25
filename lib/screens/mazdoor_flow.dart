@@ -40,6 +40,7 @@ import 'worker_support_screen.dart';
 import 'worker_verification_screen.dart';
 
 import 'worker_tracking_screen.dart';
+import '../services/safepay_service.dart';
 
 void showToast(String message) {
   rootScaffoldMessengerKey.currentState?.showSnackBar(
@@ -67,7 +68,11 @@ Future<bool> showExitMazdoorlinkDialog(BuildContext context) async {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
-          const Icon(Icons.exit_to_app_rounded, color: Color(0xFF0D9488), size: 28),
+          const Icon(
+            Icons.exit_to_app_rounded,
+            color: Color(0xFF0D9488),
+            size: 28,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -92,7 +97,9 @@ Future<bool> showExitMazdoorlinkDialog(BuildContext context) async {
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFFDC2626), // Red color
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           ),
           onPressed: () => Navigator.pop(ctx, false),
@@ -106,7 +113,9 @@ Future<bool> showExitMazdoorlinkDialog(BuildContext context) async {
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF16A34A), // Green color
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           ),
           onPressed: () => Navigator.pop(ctx, true),
@@ -166,7 +175,11 @@ class ConversationArguments {
   final String otherName;
   final String? otherImage;
 
-  ConversationArguments({required this.conversationId, required this.otherName, this.otherImage});
+  ConversationArguments({
+    required this.conversationId,
+    required this.otherName,
+    this.otherImage,
+  });
 }
 
 class AppRoutes {
@@ -185,12 +198,12 @@ class AppRoutes {
   static const rating = '/customer/rating';
   static const workerOnboarding = '/worker/onboarding';
   static const workerVerification = '/worker/verification';
-    static const workerDashboard = '/worker/dashboard';
+  static const workerDashboard = '/worker/dashboard';
   static const workerServicesSetup = '/worker/services-setup';
   static const workerEarnings = '/worker/earnings';
   static const priceEstimation = '/shared/price-estimation';
   static const documentUpload = '/worker/document-upload';
-    static const biometricVerification = '/worker/biometric-verification';
+  static const biometricVerification = '/worker/biometric-verification';
   static const voiceNavigation = '/worker/voice-navigation';
   static const notificationPreferences = '/shared/notification-preferences';
   static const profileManagement = '/shared/profile-management';
@@ -288,11 +301,17 @@ PageRoute<dynamic> _page(Widget child, RouteSettings settings) {
     transitionDuration: const Duration(milliseconds: 280),
     pageBuilder: (_, __, ___) => child,
     transitionsBuilder: (_, animation, __, c) {
-      final curve = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      final curve = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
       return FadeTransition(
         opacity: curve,
         child: SlideTransition(
-          position: Tween(begin: const Offset(0.04, 0), end: Offset.zero).animate(curve),
+          position: Tween(
+            begin: const Offset(0.04, 0),
+            end: Offset.zero,
+          ).animate(curve),
           child: c,
         ),
       );
@@ -342,7 +361,9 @@ class MzScaffold extends StatelessWidget {
                           if (Navigator.of(context).canPop()) {
                             Navigator.of(context).pop();
                           } else {
-                            final shouldExit = await showExitMazdoorlinkDialog(context);
+                            final shouldExit = await showExitMazdoorlinkDialog(
+                              context,
+                            );
                             if (shouldExit) {
                               SystemNavigator.pop();
                             }
@@ -398,17 +419,65 @@ class RoleBottomNav extends StatelessWidget {
     final current = ModalRoute.of(context)?.settings.name ?? '';
     final items = role == UserRole.worker
         ? const [
-            _NavItem('/worker/dashboard', Icons.work_outline, Icons.work, 'Dashboard', 'ڈیش بورڈ'),
-            _NavItem('/worker/earnings', Icons.account_balance_wallet_outlined, Icons.account_balance_wallet, 'Earnings', 'آمدنی'),
-            _NavItem('/shared/chat', Icons.chat_bubble_outline, Icons.chat_bubble, 'Chat', 'چیٹ'),
-            _NavItem('/shared/settings', Icons.settings_outlined, Icons.settings, 'Settings', 'ترتیبات'),
+            _NavItem(
+              '/worker/dashboard',
+              Icons.work_outline,
+              Icons.work,
+              'Dashboard',
+              'ڈیش بورڈ',
+            ),
+            _NavItem(
+              '/worker/earnings',
+              Icons.account_balance_wallet_outlined,
+              Icons.account_balance_wallet,
+              'Earnings',
+              'آمدنی',
+            ),
+            _NavItem(
+              '/shared/chat',
+              Icons.chat_bubble_outline,
+              Icons.chat_bubble,
+              'Chat',
+              'چیٹ',
+            ),
+            _NavItem(
+              '/shared/settings',
+              Icons.settings_outlined,
+              Icons.settings,
+              'Settings',
+              'ترتیبات',
+            ),
           ]
         : const [
-            _NavItem('/customer/home', Icons.home_outlined, Icons.home, 'Home', 'ہوم'),
-            _NavItem('/shared/history', Icons.history, Icons.history_toggle_off, 'Bookings', 'بکنگز'),
-            _NavItem('/shared/chat', Icons.chat_bubble_outline, Icons.chat_bubble, 'Chat', 'چیٹ'),
-            _NavItem('/shared/settings', Icons.settings_outlined, Icons.settings, 'Settings', 'ترتیبات'),
-          ];  
+            _NavItem(
+              '/customer/home',
+              Icons.home_outlined,
+              Icons.home,
+              'Home',
+              'ہوم',
+            ),
+            _NavItem(
+              '/shared/history',
+              Icons.history,
+              Icons.history_toggle_off,
+              'Bookings',
+              'بکنگز',
+            ),
+            _NavItem(
+              '/shared/chat',
+              Icons.chat_bubble_outline,
+              Icons.chat_bubble,
+              'Chat',
+              'چیٹ',
+            ),
+            _NavItem(
+              '/shared/settings',
+              Icons.settings_outlined,
+              Icons.settings,
+              'Settings',
+              'ترتیبات',
+            ),
+          ];
 
     int selected = -1;
     for (var i = 0; i < items.length; i++) {
@@ -455,8 +524,13 @@ class RoleBottomNav extends StatelessWidget {
                                   right: -10,
                                   top: -6,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                    constraints: const BoxConstraints(minWidth: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 1,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFEF4444),
                                       borderRadius: BorderRadius.circular(8),
@@ -573,7 +647,8 @@ class VoiceOverlaySheet extends StatefulWidget {
   State<VoiceOverlaySheet> createState() => _VoiceOverlaySheetState();
 }
 
-class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProviderStateMixin {
+class _VoiceOverlaySheetState extends State<VoiceOverlaySheet>
+    with TickerProviderStateMixin {
   // idle -> listening -> processing -> responded -> (navigating or idle)
   String _phase = 'idle';
   String _recognizedText = '';
@@ -704,7 +779,9 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
           ),
           backgroundColor: const Color(0xFF0D9488),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -757,7 +834,9 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: isError ? const Color(0xFFEF4444) : const Color(0xFF0D9488),
+              color: isError
+                  ? const Color(0xFFEF4444)
+                  : const Color(0xFF0D9488),
             ),
           ),
           const SizedBox(height: 8),
@@ -818,7 +897,9 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
               }
             },
             child: ScaleTransition(
-              scale: isListening ? _pulseAnim : const AlwaysStoppedAnimation(1.0),
+              scale: isListening
+                  ? _pulseAnim
+                  : const AlwaysStoppedAnimation(1.0),
               child: Container(
                 width: 84,
                 height: 84,
@@ -827,20 +908,21 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
                   color: isListening
                       ? const Color(0xFF0D9488)
                       : isProcessing
-                          ? const Color(0xFFF59E0B)
-                          : isResponded
-                              ? const Color(0xFF10B981)
-                              : isError
-                                  ? const Color(0xFFEF4444)
-                                  : Colors.grey.shade300,
+                      ? const Color(0xFFF59E0B)
+                      : isResponded
+                      ? const Color(0xFF10B981)
+                      : isError
+                      ? const Color(0xFFEF4444)
+                      : Colors.grey.shade300,
                   boxShadow: [
                     BoxShadow(
-                      color: (isListening
-                              ? const Color(0xFF0D9488)
-                              : isProcessing
+                      color:
+                          (isListening
+                                  ? const Color(0xFF0D9488)
+                                  : isProcessing
                                   ? const Color(0xFFF59E0B)
                                   : const Color(0xFF10B981))
-                          .withOpacity(0.35),
+                              .withOpacity(0.35),
                       blurRadius: 18,
                       spreadRadius: 2,
                     ),
@@ -858,10 +940,10 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
                         isListening
                             ? Icons.mic
                             : isResponded
-                                ? Icons.check
-                                : isError
-                                    ? Icons.mic_off
-                                    : Icons.mic_none,
+                            ? Icons.check
+                            : isError
+                            ? Icons.mic_off
+                            : Icons.mic_none,
                         color: Colors.white,
                         size: 36,
                       ),
@@ -882,7 +964,11 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.format_quote, color: Color(0xFF94A3B8), size: 18),
+                  const Icon(
+                    Icons.format_quote,
+                    color: Color(0xFF94A3B8),
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -915,7 +1001,11 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
                   if (_recognizedText.isNotEmpty) ...[
                     Row(
                       children: [
-                        const Icon(Icons.record_voice_over, color: Color(0xFF0D9488), size: 16),
+                        const Icon(
+                          Icons.record_voice_over,
+                          color: Color(0xFF0D9488),
+                          size: 16,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -934,7 +1024,11 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.smart_toy, color: Color(0xFF0D9488), size: 18),
+                      const Icon(
+                        Icons.smart_toy,
+                        color: Color(0xFF0D9488),
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -1028,15 +1122,6 @@ class _VoiceOverlaySheetState extends State<VoiceOverlaySheet> with TickerProvid
   }
 }
 
-
-
-
-
-
-
-
-
-
 class _NavItem {
   const _NavItem(this.route, this.outline, this.filled, this.en, this.ur);
 
@@ -1066,17 +1151,30 @@ class WelcomeScreen extends StatelessWidget {
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.8, end: 1),
                   duration: const Duration(milliseconds: 500),
-                  builder: (_, value, child) => Transform.scale(scale: value, child: child),
+                  builder: (_, value, child) =>
+                      Transform.scale(scale: value, child: child),
                   child: CircleAvatar(
                     radius: 36,
-                    backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.14),
-                    child: const Icon(Icons.hardware, size: 34, color: Color(0xFF0D9488)),
+                    backgroundColor: const Color(
+                      0xFF0D9488,
+                    ).withValues(alpha: 0.14),
+                    child: const Icon(
+                      Icons.hardware,
+                      size: 34,
+                      color: Color(0xFF0D9488),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 18),
-                    const Text('MazdoorLink', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
+                const Text(
+                  'MazdoorLink',
+                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 10),
-                const Text('Connecting verified workers and customers', textAlign: TextAlign.center),
+                const Text(
+                  'Connecting verified workers and customers',
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 28),
                 // Customer - English
                 _RoleCard(
@@ -1167,9 +1265,17 @@ class _RoleCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Column(
-                crossAxisAlignment: isUrdu ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                crossAxisAlignment: isUrdu
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(fontSize: isUrdu ? 22 : 18, fontWeight: FontWeight.w600)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: isUrdu ? 22 : 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   Text(subtitle),
                 ],
               ),
@@ -1302,7 +1408,6 @@ class _AuthScreenState extends State<AuthScreen> {
     return emails.toList();
   }
 
-
   void _validatePassword(String val) {
     setState(() {
       _pwHasMinLength = val.length >= 8;
@@ -1318,17 +1423,24 @@ class _AuthScreenState extends State<AuthScreen> {
       _pwHasMinLength = _password.text.length >= 8;
       _pwHasUppercase = _password.text.contains(RegExp(r'[A-Z]'));
       _pwHasDigit = _password.text.contains(RegExp(r'[0-9]'));
-      _pwHasSpecial = _password.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}<>]'));
+      _pwHasSpecial = _password.text.contains(
+        RegExp(r'[!@#\$%^&*(),.?":{}<>]'),
+      );
       if (_password.text.isEmpty) {
         _passwordError = 'Password is required';
-      } else if (!_pwHasMinLength || !_pwHasUppercase || !_pwHasDigit || !_pwHasSpecial) {
+      } else if (!_pwHasMinLength ||
+          !_pwHasUppercase ||
+          !_pwHasDigit ||
+          !_pwHasSpecial) {
         _passwordError = 'Password does not meet requirements';
       } else {
         _passwordError = null;
       }
       _confirmPasswordError = _confirmPassword.text.isEmpty
           ? 'Please confirm your password'
-          : (_password.text != _confirmPassword.text ? 'Passwords must match' : null);
+          : (_password.text != _confirmPassword.text
+                ? 'Passwords must match'
+                : null);
     });
     return _passwordError == null && _confirmPasswordError == null;
   }
@@ -1336,7 +1448,9 @@ class _AuthScreenState extends State<AuthScreen> {
   void _validateSignupFields() {
     final role = AppScope.of(context).role;
     setState(() {
-      _nameError = _fullNameController.text.trim().isEmpty ? 'Full name is required' : null;
+      _nameError = _fullNameController.text.trim().isEmpty
+          ? 'Full name is required'
+          : null;
       _emailError = _emailValidationMessage(_emailController.text.trim());
       final rawPhone = _phone.text.trim();
       final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
@@ -1346,17 +1460,22 @@ class _AuthScreenState extends State<AuthScreen> {
       _phoneError = rawPhone.isEmpty
           ? 'Mobile number is required'
           : (national.length == 10
-              ? null
-              : 'Enter a valid 10-digit mobile number');
+                ? null
+                : 'Enter a valid 10-digit mobile number');
       if (_password.text.isEmpty) {
         _passwordError = 'Password is required';
       } else {
         _pwHasMinLength = _password.text.length >= 8;
         _pwHasUppercase = _password.text.contains(RegExp(r'[A-Z]'));
         _pwHasDigit = _password.text.contains(RegExp(r'[0-9]'));
-        _pwHasSpecial = _password.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}<>]'));
-        
-        if (!_pwHasMinLength || !_pwHasUppercase || !_pwHasDigit || !_pwHasSpecial) {
+        _pwHasSpecial = _password.text.contains(
+          RegExp(r'[!@#\$%^&*(),.?":{}<>]'),
+        );
+
+        if (!_pwHasMinLength ||
+            !_pwHasUppercase ||
+            !_pwHasDigit ||
+            !_pwHasSpecial) {
           _passwordError = 'Password does not meet requirements';
         } else {
           _passwordError = null;
@@ -1364,23 +1483,33 @@ class _AuthScreenState extends State<AuthScreen> {
       }
       _confirmPasswordError = _confirmPassword.text.isEmpty
           ? 'Please confirm your password'
-          : (_password.text != _confirmPassword.text ? 'Passwords must match' : null);
+          : (_password.text != _confirmPassword.text
+                ? 'Passwords must match'
+                : null);
       final cnic = _cnicController.text.trim();
-      _cnicError = !RegExp(r'^\d{13}$').hasMatch(cnic) ? 'Enter a valid 13-digit CNIC' : null;
+      _cnicError = !RegExp(r'^\d{13}$').hasMatch(cnic)
+          ? 'Enter a valid 13-digit CNIC'
+          : null;
       if (role == UserRole.worker) {
         _categoryError = _selectedCategory == 'Select a category'
             ? 'Please select a worker category'
             : null;
-        _profilePicError = _profilePicFile == null ? 'Profile picture is required' : null;
-        _idFrontError = _idFrontImage == null ? 'Front CNIC image is required' : null;
-        _idBackError = _idBackImage == null ? 'Back CNIC image is required' : null;
+        _profilePicError = _profilePicFile == null
+            ? 'Profile picture is required'
+            : null;
+        _idFrontError = _idFrontImage == null
+            ? 'Front CNIC image is required'
+            : null;
+        _idBackError = _idBackImage == null
+            ? 'Back CNIC image is required'
+            : null;
       } else {
         _categoryError = null;
       }
     });
   }
 
-final _phone = TextEditingController();
+  final _phone = TextEditingController();
   final _emailController = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
@@ -1462,7 +1591,9 @@ final _phone = TextEditingController();
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isUrdu ? 'او ٹی پی تصدیق کا طریقہ' : 'Verify Your Account',
+                              isUrdu
+                                  ? 'او ٹی پی تصدیق کا طریقہ'
+                                  : 'Verify Your Account',
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -1499,7 +1630,9 @@ final _phone = TextEditingController();
                   const SizedBox(height: 12),
                   // Option 2: Mobile Number
                   _buildOtpOptionCard(
-                    title: isUrdu ? 'موبائل نمبر (ایس ایم ایس)' : 'Send to Mobile Number (SMS)',
+                    title: isUrdu
+                        ? 'موبائل نمبر (ایس ایم ایس)'
+                        : 'Send to Mobile Number (SMS)',
                     subtitle: formattedPhone,
                     note: isUrdu
                         ? 'آپ کے نمبر پر 4 ہندسوں کا ایس ایم ایس آئے گا'
@@ -1522,7 +1655,10 @@ final _phone = TextEditingController();
                       ),
                       child: Text(
                         isUrdu ? 'او ٹی پی بھیجیں' : 'Send Verification OTP',
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -1564,7 +1700,9 @@ final _phone = TextEditingController();
           color: isSelected ? const Color(0xFFF0FDFA) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? const Color(0xFF0D9488) : const Color(0xFFE2E8F0),
+            color: isSelected
+                ? const Color(0xFF0D9488)
+                : const Color(0xFFE2E8F0),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -1573,7 +1711,9 @@ final _phone = TextEditingController();
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF0D9488) : Colors.grey.shade200,
+                color: isSelected
+                    ? const Color(0xFF0D9488)
+                    : Colors.grey.shade200,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -1592,7 +1732,9 @@ final _phone = TextEditingController();
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? const Color(0xFF0F766E) : const Color(0xFF1E293B),
+                      color: isSelected
+                          ? const Color(0xFF0F766E)
+                          : const Color(0xFF1E293B),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1623,7 +1765,7 @@ final _phone = TextEditingController();
       ),
     );
   }
-  
+
   void _showErrorPopup(String title, String message) {
     if (!mounted) return;
     showDialog(
@@ -1637,20 +1779,29 @@ final _phone = TextEditingController();
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
         ),
         content: Text(
           message,
-          style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
+          style: const TextStyle(
+            fontSize: 14,
+            height: 1.4,
+            color: Colors.black87,
+          ),
         ),
         actions: [
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF0D9488),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () => Navigator.pop(ctx),
             child: const Text('OK'),
@@ -1662,7 +1813,7 @@ final _phone = TextEditingController();
 
   XFile? _idFrontImage;
   XFile? _idBackImage;
-  XFile? _profilePicFile;      // Optional for worker
+  XFile? _profilePicFile; // Optional for worker
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
   bool _rememberMe = false;
@@ -1695,7 +1846,8 @@ final _phone = TextEditingController();
       final sizeInKb = bytes.length / 1024;
       if (sizeInKb > 100) {
         setState(() {
-          _imageSizeError = 'Image size must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)';
+          _imageSizeError =
+              'Image size must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)';
         });
         return;
       }
@@ -1718,7 +1870,10 @@ final _phone = TextEditingController();
       final bytes = await image.readAsBytes();
       final sizeInKb = bytes.length / 1024;
       if (sizeInKb > 100) {
-        setState(() => _imageSizeError = 'Profile picture must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)');
+        setState(
+          () => _imageSizeError =
+              'Profile picture must be less than 100KB (current: ${sizeInKb.toStringAsFixed(0)}KB)',
+        );
         return;
       }
       setState(() {
@@ -1799,14 +1954,22 @@ final _phone = TextEditingController();
           _generatedOtp = (1000 + random.nextInt(9000)).toString();
           final bool sent;
           if (_selectedOtpMethod == 'email') {
-            sent = await SmtpService.sendPasswordResetOTP(_emailController.text.trim(), _generatedOtp!);
+            sent = await SmtpService.sendPasswordResetOTP(
+              _emailController.text.trim(),
+              _generatedOtp!,
+            );
           } else {
-            sent = await SmsService.sendOtp('+92${_phone.text.trim()}', _generatedOtp!);
+            sent = await SmsService.sendOtp(
+              '+92${_phone.text.trim()}',
+              _generatedOtp!,
+            );
           }
           if (!sent) {
-            showToast(_selectedOtpMethod == 'email'
-                ? 'Failed to send reset code via email. Try again.'
-                : 'Failed to send reset code via SMS. Try again.');
+            showToast(
+              _selectedOtpMethod == 'email'
+                  ? 'Failed to send reset code via email. Try again.'
+                  : 'Failed to send reset code via SMS. Try again.',
+            );
             return;
           }
           setState(() {
@@ -1815,9 +1978,11 @@ final _phone = TextEditingController();
               c.clear();
             }
           });
-          showToast(_selectedOtpMethod == 'email'
-              ? 'Password reset code sent to your email!'
-              : 'Password reset code sent via SMS!');
+          showToast(
+            _selectedOtpMethod == 'email'
+                ? 'Password reset code sent to your email!'
+                : 'Password reset code sent via SMS!',
+          );
         } catch (e) {
           showToast(e.toString());
         }
@@ -1850,7 +2015,9 @@ final _phone = TextEditingController();
             showToast('Password reset successfully. Please log in again.');
           } else {
             await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-            showToast('OTP verified. Check your email to finish resetting your Firebase password.');
+            showToast(
+              'OTP verified. Check your email to finish resetting your Firebase password.',
+            );
           }
           setState(() {
             _isForgotPassword = false;
@@ -1874,11 +2041,20 @@ final _phone = TextEditingController();
       if (step == 0) {
         _validateSignupFields();
         final role = AppScope.of(context).role;
-        if (_nameError != null || _emailError != null || _phoneError != null || _passwordError != null || _confirmPasswordError != null || _cnicError != null) {
+        if (_nameError != null ||
+            _emailError != null ||
+            _phoneError != null ||
+            _passwordError != null ||
+            _confirmPasswordError != null ||
+            _cnicError != null) {
           showToast('Please fill all required fields correctly');
           return;
         }
-        if (role == UserRole.worker && (_categoryError != null || _profilePicError != null || _idFrontError != null || _idBackError != null)) {
+        if (role == UserRole.worker &&
+            (_categoryError != null ||
+                _profilePicError != null ||
+                _idFrontError != null ||
+                _idBackError != null)) {
           showToast('Please fill all worker required fields');
           return;
         }
@@ -1894,14 +2070,16 @@ final _phone = TextEditingController();
         setState(() => _isUploading = true);
 
         final sent = await _dispatchOtp(_selectedOtpMethod);
-        
+
         setState(() => _isUploading = false);
 
         if (!sent) {
           if (mounted) {
-            showToast(_selectedOtpMethod == 'email'
-                ? 'Failed to send verification email. Try again.'
-                : 'Failed to send SMS OTP. Please try again or choose email.');
+            showToast(
+              _selectedOtpMethod == 'email'
+                  ? 'Failed to send verification email. Try again.'
+                  : 'Failed to send SMS OTP. Please try again or choose email.',
+            );
           }
           return;
         }
@@ -1911,9 +2089,13 @@ final _phone = TextEditingController();
             c.clear();
           }
           if (_selectedOtpMethod == 'email') {
-            showToast('Verification code sent to ${_emailController.text.trim()}');
+            showToast(
+              'Verification code sent to ${_emailController.text.trim()}',
+            );
           } else {
-            showToast('Verification code sent via SMS to +92 ${_phone.text.trim()}');
+            showToast(
+              'Verification code sent via SMS to +92 ${_phone.text.trim()}',
+            );
           }
           setState(() {
             step = 1;
@@ -1922,7 +2104,7 @@ final _phone = TextEditingController();
         return;
       } else if (step == 1) {
         setState(() => _isUploading = true);
-        
+
         final enteredOtp = _otpControllers.map((c) => c.text).join();
         if (enteredOtp != _generatedOtp) {
           setState(() => _isUploading = false);
@@ -1935,13 +2117,14 @@ final _phone = TextEditingController();
           String? backUrl;
           String? profilePicUrl;
           final role = AppScope.of(context).role;
-          
+
           if (role == UserRole.worker) {
             frontUrl = await _uploadToCloudinary(_idFrontImage!);
             backUrl = await _uploadToCloudinary(_idBackImage!);
             if (frontUrl == null || backUrl == null) {
               setState(() => _isUploading = false);
-              if (mounted) showToast('Failed to upload CNIC images. Try again.');
+              if (mounted)
+                showToast('Failed to upload CNIC images. Try again.');
               return;
             }
             if (_profilePicFile != null) {
@@ -1949,13 +2132,16 @@ final _phone = TextEditingController();
             }
             setState(() => _isUploading = false);
 
-            final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-              email: _emailController.text.trim(),
-              password: _password.text,
-            );
-            
+            final userCredential = await FirebaseAuth.instance
+                .createUserWithEmailAndPassword(
+                  email: _emailController.text.trim(),
+                  password: _password.text,
+                );
+
             final categoryKey = _selectedCategory.toLowerCase();
-            final categoryNameUr = categoryKey == 'plumber' ? 'پلمبر' : 'الیکٹریشن';
+            final categoryNameUr = categoryKey == 'plumber'
+                ? 'پلمبر'
+                : 'الیکٹریشن';
 
             final userData = <String, dynamic>{
               'name': _fullNameController.text.trim(),
@@ -1979,42 +2165,65 @@ final _phone = TextEditingController();
               'longitude': LocationService.instance.currentLocation.longitude,
               'city': LocationService.instance.currentLocation.city,
               'area': LocationService.instance.currentLocation.area,
-              'locationAddress': LocationService.instance.currentLocation.fullAddress,
-              'isInsideTwinCities': LocationService.instance.currentLocation.isInsideTwinCities,
+              'locationAddress':
+                  LocationService.instance.currentLocation.fullAddress,
+              'isInsideTwinCities':
+                  LocationService.instance.currentLocation.isInsideTwinCities,
             };
-            if (profilePicUrl != null) userData['profilePicUrl'] = profilePicUrl;
+            if (profilePicUrl != null)
+              userData['profilePicUrl'] = profilePicUrl;
 
-            await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
-            
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userCredential.user!.uid)
+                .set(userData);
+
             await FirebaseAuth.instance.signOut();
-            
+
             if (mounted) {
               showDialog(
                 context: context,
                 barrierDismissible: false,
                 builder: (ctx) => Dialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(28),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 80, height: 80,
+                          width: 80,
+                          height: 80,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
                             color: Color(0xFFDCFCE7),
                           ),
-                          child: const Icon(Icons.mark_email_read_outlined, color: Color(0xFF059669), size: 44),
+                          child: const Icon(
+                            Icons.mark_email_read_outlined,
+                            color: Color(0xFF059669),
+                            size: 44,
+                          ),
                         ),
                         const SizedBox(height: 20),
-                        const Text('Registration Submitted!',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                        const Text(
+                          'Registration Submitted!',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         const Text(
                           'Your profile is under admin review. You can log in once your account is approved.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                            height: 1.5,
+                          ),
                         ),
                         const SizedBox(height: 24),
                         SizedBox(
@@ -2022,11 +2231,16 @@ final _phone = TextEditingController();
                           child: FilledButton(
                             onPressed: () {
                               Navigator.of(ctx).pop();
-                              Navigator.pushReplacementNamed(context, AppRoutes.login);
+                              Navigator.pushReplacementNamed(
+                                context,
+                                AppRoutes.login,
+                              );
                             },
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFF0D9488),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             child: const Text('Go to Login'),
                           ),
@@ -2040,11 +2254,12 @@ final _phone = TextEditingController();
             return;
           }
 
-          final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _password.text,
-          );
-          
+          final userCredential = await FirebaseAuth.instance
+              .createUserWithEmailAndPassword(
+                email: _emailController.text.trim(),
+                password: _password.text,
+              );
+
           final userData = <String, dynamic>{
             'name': _fullNameController.text.trim(),
             'email': _emailController.text.trim(),
@@ -2058,12 +2273,17 @@ final _phone = TextEditingController();
             'longitude': LocationService.instance.currentLocation.longitude,
             'city': LocationService.instance.currentLocation.city,
             'area': LocationService.instance.currentLocation.area,
-            'locationAddress': LocationService.instance.currentLocation.fullAddress,
-            'isInsideTwinCities': LocationService.instance.currentLocation.isInsideTwinCities,
+            'locationAddress':
+                LocationService.instance.currentLocation.fullAddress,
+            'isInsideTwinCities':
+                LocationService.instance.currentLocation.isInsideTwinCities,
           };
 
-          await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
-          
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .set(userData);
+
           setState(() => _isUploading = false);
 
           await FirebaseAuth.instance.signOut();
@@ -2073,28 +2293,45 @@ final _phone = TextEditingController();
               context: context,
               barrierDismissible: false,
               builder: (ctx) => Dialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(28),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 80, height: 80,
+                        width: 80,
+                        height: 80,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           color: Color(0xFFDCFCE7),
                         ),
-                        child: const Icon(Icons.mark_email_read_outlined, color: Color(0xFF059669), size: 44),
+                        child: const Icon(
+                          Icons.mark_email_read_outlined,
+                          color: Color(0xFF059669),
+                          size: 44,
+                        ),
                       ),
                       const SizedBox(height: 20),
-                      const Text('Registration Submitted!',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                      const Text(
+                        'Registration Submitted!',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       const Text(
                         'Your account has been created successfully. You can now log in.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                          height: 1.5,
+                        ),
                       ),
                       const SizedBox(height: 24),
                       SizedBox(
@@ -2102,11 +2339,16 @@ final _phone = TextEditingController();
                         child: FilledButton(
                           onPressed: () {
                             Navigator.of(ctx).pop();
-                            Navigator.pushReplacementNamed(context, AppRoutes.login);
+                            Navigator.pushReplacementNamed(
+                              context,
+                              AppRoutes.login,
+                            );
                           },
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF0D9488),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Text('Go to Login'),
                         ),
@@ -2125,7 +2367,7 @@ final _phone = TextEditingController();
           }
           return;
         }
-      } 
+      }
     } else {
       // Login flow
       final loginId = _emailController.text.trim();
@@ -2137,7 +2379,11 @@ final _phone = TextEditingController();
       if (_emailError != null || _passwordError != null) {
         _showErrorPopup(
           bilingual(context, 'Missing Credentials', 'معلومات درکار ہے'),
-          bilingual(context, 'Please enter your email or mobile number and password.', 'براہ کرم اپنا ای میل یا موبائل نمبر اور پاس ورڈ درج کریں۔'),
+          bilingual(
+            context,
+            'Please enter your email or mobile number and password.',
+            'براہ کرم اپنا ای میل یا موبائل نمبر اور پاس ورڈ درج کریں۔',
+          ),
         );
         return;
       }
@@ -2153,7 +2399,11 @@ final _phone = TextEditingController();
           if (mounted) {
             _showErrorPopup(
               bilingual(context, 'Account Not Found', 'اکاؤنٹ نہیں ملا'),
-              bilingual(context, 'No account was found with this mobile number. Please check the number or sign up.', 'اس موبائل نمبر سے کوئی اکاؤنٹ نہیں ملا۔ نمبر درست کریں یا نیا اکاؤنٹ بنائیں۔'),
+              bilingual(
+                context,
+                'No account was found with this mobile number. Please check the number or sign up.',
+                'اس موبائل نمبر سے کوئی اکاؤنٹ نہیں ملا۔ نمبر درست کریں یا نیا اکاؤنٹ بنائیں۔',
+              ),
             );
           }
           return;
@@ -2166,10 +2416,8 @@ final _phone = TextEditingController();
 
       for (final email in targetEmails) {
         try {
-          userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-            email: email,
-            password: password,
-          );
+          userCredential = await FirebaseAuth.instance
+              .signInWithEmailAndPassword(email: email, password: password);
           if (userCredential.user != null) {
             break;
           }
@@ -2191,15 +2439,31 @@ final _phone = TextEditingController();
               msg.contains('password is invalid') ||
               msg.contains('user-not-found') ||
               msg.contains('no user record')) {
-            friendlyMsg = bilingual(context, 'Invalid email/mobile number or password. Please check your credentials and try again.', 'غلط ای میل / موبائل نمبر یا پاس ورڈ۔ براہ کرم دوبارہ کوشش کریں۔');
+            friendlyMsg = bilingual(
+              context,
+              'Invalid email/mobile number or password. Please check your credentials and try again.',
+              'غلط ای میل / موبائل نمبر یا پاس ورڈ۔ براہ کرم دوبارہ کوشش کریں۔',
+            );
           } else if (msg.contains('too-many-requests')) {
             title = bilingual(context, 'Too Many Attempts', 'بہت زیادہ کوششیں');
-            friendlyMsg = bilingual(context, 'Too many failed login attempts. Please wait a few minutes and try again.', 'لاگ ان کی ناکام کوششیں زیادہ ہو گئیں۔ براہ کرم چند منٹ بعد کوشش کریں۔');
+            friendlyMsg = bilingual(
+              context,
+              'Too many failed login attempts. Please wait a few minutes and try again.',
+              'لاگ ان کی ناکام کوششیں زیادہ ہو گئیں۔ براہ کرم چند منٹ بعد کوشش کریں۔',
+            );
           } else if (msg.contains('network-request-failed')) {
             title = bilingual(context, 'Network Error', 'انٹرنیٹ مسئلہ');
-            friendlyMsg = bilingual(context, 'Unable to connect to the server. Please check your internet connection.', 'سرور سے رابطہ ممکن نہیں۔ انٹرنیٹ کنکشن چیک کریں۔');
+            friendlyMsg = bilingual(
+              context,
+              'Unable to connect to the server. Please check your internet connection.',
+              'سرور سے رابطہ ممکن نہیں۔ انٹرنیٹ کنکشن چیک کریں۔',
+            );
           } else {
-            friendlyMsg = bilingual(context, 'Login failed: ${lastAuthError?.toString() ?? "Check your credentials"}', 'لاگ ان ناکام: اپنی معلومات چیک کریں۔');
+            friendlyMsg = bilingual(
+              context,
+              'Login failed: ${lastAuthError?.toString() ?? "Check your credentials"}',
+              'لاگ ان ناکام: اپنی معلومات چیک کریں۔',
+            );
           }
           _showErrorPopup(title, friendlyMsg);
         }
@@ -2208,18 +2472,27 @@ final _phone = TextEditingController();
 
       try {
         // Fetch user data from Firestore
-        final doc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .get();
         if (doc.exists && mounted) {
           if (_rememberMe) {
             final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('remembered_email', _emailController.text.trim());
+            await prefs.setString(
+              'remembered_email',
+              _emailController.text.trim(),
+            );
             await prefs.setString('remembered_password', password);
           }
           final data = doc.data()!;
           final firestoreRole = data['role']?.toString() ?? 'customer';
-          final roles = (data['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
-          final hasWorkerAccess = firestoreRole == 'worker' || roles.contains('worker');
-          final workerStatus = data['workerStatus']?.toString() ?? data['status']?.toString();
+          final roles =
+              (data['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
+          final hasWorkerAccess =
+              firestoreRole == 'worker' || roles.contains('worker');
+          final workerStatus =
+              data['workerStatus']?.toString() ?? data['status']?.toString();
           final targetRole = AppScope.of(context).role ?? UserRole.customer;
 
           // ── Case 1: Logging in as Customer ──────────────────────────────
@@ -2238,32 +2511,58 @@ final _phone = TextEditingController();
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     title: Row(
                       children: [
-                        const Icon(Icons.verified_user_outlined, color: Color(0xFF0D9488)),
+                        const Icon(
+                          Icons.verified_user_outlined,
+                          color: Color(0xFF0D9488),
+                        ),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(bilingual(context, 'Worker Verification Required', 'ورکر تصدیق درکار ہے'))),
+                        Expanded(
+                          child: Text(
+                            bilingual(
+                              context,
+                              'Worker Verification Required',
+                              'ورکر تصدیق درکار ہے',
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    content: Text(bilingual(
-                      context,
-                      'You are registered as a Customer. To login as a Worker, you must complete worker verification (CNIC, police certificate, and skills) and be approved by admin.\\n\\nYou can continue as a Customer or submit worker registration.',
-                      'آپ کسٹمر کے طور پر رجسٹرڈ ہیں۔ ورکر لاگ ان کے لیے شناختی کارڈ، پولیس سرٹیفکیٹ اور مہارت کی ایڈمن منظوری لازمی ہے۔\\n\\nآپ کسٹمر کے طور پر جاری رکھ سکتے ہیں۔',
-                    )),
+                    content: Text(
+                      bilingual(
+                        context,
+                        'You are registered as a Customer. To login as a Worker, you must complete worker verification (CNIC, police certificate, and skills) and be approved by admin.\\n\\nYou can continue as a Customer or submit worker registration.',
+                        'آپ کسٹمر کے طور پر رجسٹرڈ ہیں۔ ورکر لاگ ان کے لیے شناختی کارڈ، پولیس سرٹیفکیٹ اور مہارت کی ایڈمن منظوری لازمی ہے۔\\n\\nآپ کسٹمر کے طور پر جاری رکھ سکتے ہیں۔',
+                      ),
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
                         child: Text(bilingual(context, 'Cancel', 'منسوخ')),
                       ),
                       FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9488),
+                        ),
                         onPressed: () {
                           Navigator.pop(ctx);
                           AppScope.of(context).selectRole(UserRole.customer);
-                          Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+                          Navigator.pushReplacementNamed(
+                            context,
+                            AppRoutes.customerHome,
+                          );
                         },
-                        child: Text(bilingual(context, 'Continue as Customer', 'گاہک کے طور پر جاری رکھیں')),
+                        child: Text(
+                          bilingual(
+                            context,
+                            'Continue as Customer',
+                            'گاہک کے طور پر جاری رکھیں',
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -2277,19 +2576,34 @@ final _phone = TextEditingController();
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     title: Row(
                       children: [
-                        const Icon(Icons.pending_actions, color: Color(0xFFF59E0B)),
+                        const Icon(
+                          Icons.pending_actions,
+                          color: Color(0xFFF59E0B),
+                        ),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(bilingual(context, 'Application Pending', 'درخواست زیر جائزہ'))),
+                        Expanded(
+                          child: Text(
+                            bilingual(
+                              context,
+                              'Application Pending',
+                              'درخواست زیر جائزہ',
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    content: Text(bilingual(
-                      context,
-                      'Your worker verification request is under admin review. You can log in as a Worker once approved.\\n\\nIn the meantime, you can continue using MazdoorLink as a Customer.',
-                      'آپ کی ورکر تصدیقی درخواست ایڈمن کے جائزے میں ہے۔ منظوری پر آپ ورکر لاگ ان کر سکیں گے۔\\n\\nاس دوران آپ کسٹمر کے طور پر ایپ استعمال کر سکتے ہیں۔',
-                    )),
+                    content: Text(
+                      bilingual(
+                        context,
+                        'Your worker verification request is under admin review. You can log in as a Worker once approved.\\n\\nIn the meantime, you can continue using MazdoorLink as a Customer.',
+                        'آپ کی ورکر تصدیقی درخواست ایڈمن کے جائزے میں ہے۔ منظوری پر آپ ورکر لاگ ان کر سکیں گے۔\\n\\nاس دوران آپ کسٹمر کے طور پر ایپ استعمال کر سکتے ہیں۔',
+                      ),
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () async {
@@ -2299,13 +2613,24 @@ final _phone = TextEditingController();
                         child: Text(bilingual(context, 'OK', 'ٹھیک ہے')),
                       ),
                       FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9488),
+                        ),
                         onPressed: () {
                           Navigator.pop(ctx);
                           AppScope.of(context).selectRole(UserRole.customer);
-                          Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+                          Navigator.pushReplacementNamed(
+                            context,
+                            AppRoutes.customerHome,
+                          );
                         },
-                        child: Text(bilingual(context, 'Continue as Customer', 'گاہک کے طور پر جاری رکھیں')),
+                        child: Text(
+                          bilingual(
+                            context,
+                            'Continue as Customer',
+                            'گاہک کے طور پر جاری رکھیں',
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -2318,19 +2643,34 @@ final _phone = TextEditingController();
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     title: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: Color(0xFFEF4444)),
+                        const Icon(
+                          Icons.error_outline,
+                          color: Color(0xFFEF4444),
+                        ),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(bilingual(context, 'Worker Application Rejected', 'ورکر درخواست مسترد'))),
+                        Expanded(
+                          child: Text(
+                            bilingual(
+                              context,
+                              'Worker Application Rejected',
+                              'ورکر درخواست مسترد',
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    content: Text(bilingual(
-                      context,
-                      'Your worker application was rejected by admin.\nReason: $reason\n\nYou can continue as a Customer or update your verification documents.',
-                      'ایڈمن کی جانب سے آپ کی ورکر درخواست مسترد ہو گئی ہے۔\nوجہ: $reason\n\nآپ کسٹمر کے طور پر جاری رکھ سکتے ہیں یا دستاویزات درست کریں۔',
-                    )),
+                    content: Text(
+                      bilingual(
+                        context,
+                        'Your worker application was rejected by admin.\nReason: $reason\n\nYou can continue as a Customer or update your verification documents.',
+                        'ایڈمن کی جانب سے آپ کی ورکر درخواست مسترد ہو گئی ہے۔\nوجہ: $reason\n\nآپ کسٹمر کے طور پر جاری رکھ سکتے ہیں یا دستاویزات درست کریں۔',
+                      ),
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () async {
@@ -2340,13 +2680,24 @@ final _phone = TextEditingController();
                         child: Text(bilingual(context, 'OK', 'ٹھیک ہے')),
                       ),
                       FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9488),
+                        ),
                         onPressed: () {
                           Navigator.pop(ctx);
                           AppScope.of(context).selectRole(UserRole.customer);
-                          Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+                          Navigator.pushReplacementNamed(
+                            context,
+                            AppRoutes.customerHome,
+                          );
                         },
-                        child: Text(bilingual(context, 'Continue as Customer', 'گاہک کے طور پر جاری رکھیں')),
+                        child: Text(
+                          bilingual(
+                            context,
+                            'Continue as Customer',
+                            'گاہک کے طور پر جاری رکھیں',
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -2359,9 +2710,15 @@ final _phone = TextEditingController();
             final setupComplete = data['setupComplete'] as bool? ?? false;
             AppScope.of(context).selectRole(UserRole.worker);
             if (!setupComplete) {
-              Navigator.pushReplacementNamed(context, AppRoutes.workerServicesSetup);
+              Navigator.pushReplacementNamed(
+                context,
+                AppRoutes.workerServicesSetup,
+              );
             } else {
-              Navigator.pushReplacementNamed(context, AppRoutes.workerDashboard);
+              Navigator.pushReplacementNamed(
+                context,
+                AppRoutes.workerDashboard,
+              );
             }
             return;
           }
@@ -2375,7 +2732,11 @@ final _phone = TextEditingController();
         if (mounted) {
           _showErrorPopup(
             bilingual(context, 'Profile Error', 'پروفائل خرابی'),
-            bilingual(context, 'Error loading user profile: ${e.toString()}', 'پروفائل لوڈ کرنے میں خرابی: ${e.toString()}'),
+            bilingual(
+              context,
+              'Error loading user profile: ${e.toString()}',
+              'پروفائل لوڈ کرنے میں خرابی: ${e.toString()}',
+            ),
           );
         }
         return;
@@ -2386,7 +2747,8 @@ final _phone = TextEditingController();
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !(_isForgotPassword && step > 0) && !(widget.isSignup && step > 0),
+      canPop:
+          !(_isForgotPassword && step > 0) && !(widget.isSignup && step > 0),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (_isForgotPassword && step > 0) {
@@ -2402,14 +2764,15 @@ final _phone = TextEditingController();
         title: (_isForgotPassword)
             ? 'Reset Password'
             : (widget.isSignup
-                ? (step == 0 ? 'Sign up' : 'Verification')
-                : 'Login'),
+                  ? (step == 0 ? 'Sign up' : 'Verification')
+                  : 'Login'),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: SingleChildScrollView(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 260),
-              transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
               child: (_isForgotPassword)
                   ? _forgotPasswordFlow()
                   : (widget.isSignup ? _signupFlow() : _loginScreen()),
@@ -2424,18 +2787,18 @@ final _phone = TextEditingController();
     final title = step == 0
         ? 'Reset password'
         : step == 1
-            ? 'Enter OTP'
-            : 'Create new password';
+        ? 'Enter OTP'
+        : 'Create new password';
     final otpTarget = _selectedOtpMethod == 'email'
         ? _emailController.text.trim()
         : '+92 ${_phone.text.trim()}';
     final subtitle = step == 0
         ? 'Choose how you want to receive your reset code'
         : step == 1
-            ? (_selectedOtpMethod == 'email'
-                ? 'We sent a 4-digit code to $otpTarget'
-                : 'We sent a 4-digit code via SMS to $otpTarget')
-            : 'Enter and confirm your new password';
+        ? (_selectedOtpMethod == 'email'
+              ? 'We sent a 4-digit code to $otpTarget'
+              : 'We sent a 4-digit code via SMS to $otpTarget')
+        : 'Enter and confirm your new password';
 
     return Column(
       key: ValueKey('forgotPasswordStep$step'),
@@ -2443,7 +2806,11 @@ final _phone = TextEditingController();
       children: [
         Text(
           title,
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1E293B),
+          ),
         ),
         const SizedBox(height: 8),
         Text(
@@ -2460,27 +2827,42 @@ final _phone = TextEditingController();
                   onTap: () => setState(() => _selectedOtpMethod = 'email'),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 12,
+                    ),
                     decoration: BoxDecoration(
-                      color: _selectedOtpMethod == 'email' ? const Color(0xFFCCFBF1) : const Color(0xFFF8FAFC),
+                      color: _selectedOtpMethod == 'email'
+                          ? const Color(0xFFCCFBF1)
+                          : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: _selectedOtpMethod == 'email' ? const Color(0xFF0D9488) : const Color(0xFFE2E8F0),
+                        color: _selectedOtpMethod == 'email'
+                            ? const Color(0xFF0D9488)
+                            : const Color(0xFFE2E8F0),
                         width: 2,
                       ),
                     ),
                     child: Column(
                       children: [
-                        Icon(Icons.email_outlined,
-                            color: _selectedOtpMethod == 'email' ? const Color(0xFF0D9488) : const Color(0xFF94A3B8),
-                            size: 28),
+                        Icon(
+                          Icons.email_outlined,
+                          color: _selectedOtpMethod == 'email'
+                              ? const Color(0xFF0D9488)
+                              : const Color(0xFF94A3B8),
+                          size: 28,
+                        ),
                         const SizedBox(height: 6),
-                        Text('Email',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: _selectedOtpMethod == 'email' ? const Color(0xFF0D9488) : const Color(0xFF64748B),
-                            )),
+                        Text(
+                          'Email',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: _selectedOtpMethod == 'email'
+                                ? const Color(0xFF0D9488)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -2492,27 +2874,42 @@ final _phone = TextEditingController();
                   onTap: () => setState(() => _selectedOtpMethod = 'phone'),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 12,
+                    ),
                     decoration: BoxDecoration(
-                      color: _selectedOtpMethod == 'phone' ? const Color(0xFFCCFBF1) : const Color(0xFFF8FAFC),
+                      color: _selectedOtpMethod == 'phone'
+                          ? const Color(0xFFCCFBF1)
+                          : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: _selectedOtpMethod == 'phone' ? const Color(0xFF0D9488) : const Color(0xFFE2E8F0),
+                        color: _selectedOtpMethod == 'phone'
+                            ? const Color(0xFF0D9488)
+                            : const Color(0xFFE2E8F0),
                         width: 2,
                       ),
                     ),
                     child: Column(
                       children: [
-                        Icon(Icons.sms_outlined,
-                            color: _selectedOtpMethod == 'phone' ? const Color(0xFF0D9488) : const Color(0xFF94A3B8),
-                            size: 28),
+                        Icon(
+                          Icons.sms_outlined,
+                          color: _selectedOtpMethod == 'phone'
+                              ? const Color(0xFF0D9488)
+                              : const Color(0xFF94A3B8),
+                          size: 28,
+                        ),
                         const SizedBox(height: 6),
-                        Text('SMS',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: _selectedOtpMethod == 'phone' ? const Color(0xFF0D9488) : const Color(0xFF64748B),
-                            )),
+                        Text(
+                          'SMS',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: _selectedOtpMethod == 'phone'
+                                ? const Color(0xFF0D9488)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -2525,7 +2922,11 @@ final _phone = TextEditingController();
           if (_selectedOtpMethod == 'email') ...[
             const Text(
               'Email Address',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF475569),
+              ),
             ),
             const SizedBox(height: 8),
             Directionality(
@@ -2544,7 +2945,11 @@ final _phone = TextEditingController();
           ] else ...[
             const Text(
               'Mobile Number',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF475569),
+              ),
             ),
             const SizedBox(height: 8),
             Directionality(
@@ -2586,7 +2991,10 @@ final _phone = TextEditingController();
                     textAlign: TextAlign.center,
                     keyboardType: TextInputType.number,
                     maxLength: 1,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                     decoration: const InputDecoration(counterText: ''),
                     onChanged: (value) {
                       if (value.isNotEmpty && index < 3) {
@@ -2612,20 +3020,28 @@ final _phone = TextEditingController();
                     _generatedOtp!,
                   );
                 } else {
-                  sent = await SmsService.sendOtp('+92${_phone.text.trim()}', _generatedOtp!);
+                  sent = await SmsService.sendOtp(
+                    '+92${_phone.text.trim()}',
+                    _generatedOtp!,
+                  );
                 }
                 if (sent) {
                   for (final c in _otpControllers) {
                     c.clear();
                   }
-                  showToast(_selectedOtpMethod == 'email'
-                      ? 'Reset code resent to your email'
-                      : 'Reset code resent via SMS to +92${_phone.text.trim()}');
+                  showToast(
+                    _selectedOtpMethod == 'email'
+                        ? 'Reset code resent to your email'
+                        : 'Reset code resent via SMS to +92${_phone.text.trim()}',
+                  );
                 } else {
                   showToast('Failed to resend code');
                 }
               },
-              child: const Text('Resend code', style: TextStyle(color: Color(0xFF0D9488))),
+              child: const Text(
+                'Resend code',
+                style: TextStyle(color: Color(0xFF0D9488)),
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -2637,7 +3053,14 @@ final _phone = TextEditingController();
             ),
           ),
         ] else ...[
-          const Text('New password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const Text(
+            'New password',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _password,
@@ -2648,27 +3071,46 @@ final _phone = TextEditingController();
               hintText: 'Enter new password',
               errorText: _passwordError,
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          const Text('Confirm password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const Text(
+            'Confirm password',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _confirmPassword,
             obscureText: _obscureConfirmPassword,
             onChanged: (_) {
-              if (_confirmPasswordError != null) setState(() => _confirmPasswordError = null);
+              if (_confirmPasswordError != null)
+                setState(() => _confirmPasswordError = null);
             },
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.lock_outline),
               hintText: 'Confirm new password',
               errorText: _confirmPasswordError,
               suffixIcon: IconButton(
-                icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                icon: Icon(
+                  _obscureConfirmPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                ),
+                onPressed: () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                ),
               ),
             ),
           ),
@@ -2684,12 +3126,25 @@ final _phone = TextEditingController();
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Password requirements:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                  const Text(
+                    'Password requirements:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   _pwRequirementRow('At least 8 characters', _pwHasMinLength),
-                  _pwRequirementRow('At least 1 uppercase letter', _pwHasUppercase),
+                  _pwRequirementRow(
+                    'At least 1 uppercase letter',
+                    _pwHasUppercase,
+                  ),
                   _pwRequirementRow('At least 1 number', _pwHasDigit),
-                  _pwRequirementRow('At least 1 special character (!@#\$...)', _pwHasSpecial),
+                  _pwRequirementRow(
+                    'At least 1 special character (!@#\$...)',
+                    _pwHasSpecial,
+                  ),
                 ],
               ),
             ),
@@ -2723,7 +3178,13 @@ final _phone = TextEditingController();
                   }
                 });
               },
-              child: const Text('Back to Login', style: TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Back to Login',
+                style: TextStyle(
+                  color: Color(0xFF0D9488),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
@@ -2741,19 +3202,35 @@ final _phone = TextEditingController();
       children: [
         Text(
           bilingual(context, 'Welcome back', 'خوش آمدید'),
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1E293B),
+          ),
         ),
         const SizedBox(height: 6),
         Text(
           isWorker
-              ? bilingual(context, 'Login to your Worker account', 'اپنے ورکر اکاؤنٹ میں لاگ ان کریں')
-              : bilingual(context, 'Login to your Customer account', 'اپنے کسٹمر اکاؤنٹ میں لاگ ان کریں'),
+              ? bilingual(
+                  context,
+                  'Login to your Worker account',
+                  'اپنے ورکر اکاؤنٹ میں لاگ ان کریں',
+                )
+              : bilingual(
+                  context,
+                  'Login to your Customer account',
+                  'اپنے کسٹمر اکاؤنٹ میں لاگ ان کریں',
+                ),
           style: const TextStyle(fontSize: 14, color: Colors.black54),
         ),
         const SizedBox(height: 20),
         const Text(
           'Email or Mobile Number',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF475569),
+          ),
         ),
         const SizedBox(height: 8),
         Directionality(
@@ -2772,19 +3249,30 @@ final _phone = TextEditingController();
         const SizedBox(height: 20),
         const Text(
           'Password',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF475569),
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _password,
           obscureText: _obscurePassword,
-          onChanged: (_) { if (_passwordError != null) setState(() => _passwordError = null); },
+          onChanged: (_) {
+            if (_passwordError != null) setState(() => _passwordError = null);
+          },
           decoration: InputDecoration(
             hintText: 'Enter your password',
             errorText: _passwordError,
             suffixIcon: IconButton(
-              icon: Icon((_obscurePassword) ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-              onPressed: () => setState(() => _obscurePassword = !(_obscurePassword)),
+              icon: Icon(
+                (_obscurePassword)
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+              ),
+              onPressed: () =>
+                  setState(() => _obscurePassword = !(_obscurePassword)),
             ),
           ),
         ),
@@ -2804,16 +3292,16 @@ final _phone = TextEditingController();
                 _phoneError = null;
               });
             },
-            child: const Text('Forgot password?', style: TextStyle(color: Color(0xFF0D9488))),
+            child: const Text(
+              'Forgot password?',
+              style: TextStyle(color: Color(0xFF0D9488)),
+            ),
           ),
         ),
         const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
-          child: FilledButton(
-            onPressed: _next,
-            child: const Text('Continue'),
-          ),
+          child: FilledButton(onPressed: _next, child: const Text('Continue')),
         ),
         const SizedBox(height: 20),
         Row(
@@ -2824,7 +3312,13 @@ final _phone = TextEditingController();
               onPressed: () {
                 Navigator.pushReplacementNamed(context, AppRoutes.signup);
               },
-              child: const Text('Sign up', style: TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Sign up',
+                style: TextStyle(
+                  color: Color(0xFF0D9488),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
@@ -2839,7 +3333,8 @@ final _phone = TextEditingController();
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            width: 16, height: 16,
+            width: 16,
+            height: 16,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: met ? const Color(0xFF059669) : Colors.grey.shade300,
@@ -2865,7 +3360,7 @@ final _phone = TextEditingController();
 
   Widget _signupFlow() {
     final role = AppScope.of(context).role;
-    
+
     if (step == 0) {
       return Column(
         key: const ValueKey('signupStep0'),
@@ -2873,7 +3368,11 @@ final _phone = TextEditingController();
         children: [
           const Text(
             'Create account',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -2881,20 +3380,38 @@ final _phone = TextEditingController();
             style: TextStyle(fontSize: 15, color: Colors.black54),
           ),
           const SizedBox(height: 24),
-          const Text('Full name', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const Text(
+            'Full name',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _fullNameController,
-            onChanged: (_) { if (_nameError != null) setState(() => _nameError = null); },
+            onChanged: (_) {
+              if (_nameError != null) setState(() => _nameError = null);
+            },
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.person_outline),
               hintText: 'Enter your full name',
               errorText: _nameError,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           const SizedBox(height: 16),
-          const Text('Email', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const Text(
+            'Email',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _emailController,
@@ -2904,11 +3421,20 @@ final _phone = TextEditingController();
               prefixIcon: const Icon(Icons.mail_outline),
               hintText: 'Enter your email address',
               errorText: _emailError,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           const SizedBox(height: 16),
-          const Text('Mobile number', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const Text(
+            'Mobile number',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
           const SizedBox(height: 8),
           Directionality(
             textDirection: TextDirection.ltr,
@@ -2916,26 +3442,46 @@ final _phone = TextEditingController();
               controller: _phone,
               keyboardType: TextInputType.phone,
               maxLength: 11,
-              onChanged: (_) { if (_phoneError != null) setState(() => _phoneError = null); },
+              onChanged: (_) {
+                if (_phoneError != null) setState(() => _phoneError = null);
+              },
               decoration: InputDecoration(
                 counterText: '',
                 prefixIcon: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  child: Text('+92', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  child: Text(
+                    '+92',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
                 ),
-                prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 0,
+                  minHeight: 0,
+                ),
                 hintText: '3000000000',
                 errorText: _phoneError,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF0D9488),
+                    width: 2,
+                  ),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          const Text('CNIC Number', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const Text(
+            'CNIC Number',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _cnicController,
@@ -2949,15 +3495,27 @@ final _phone = TextEditingController();
               prefixIcon: const Icon(Icons.credit_card_outlined),
               hintText: '4220112345671',
               errorText: _cnicError,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+                borderSide: const BorderSide(
+                  color: Color(0xFF0D9488),
+                  width: 2,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          const Text('Password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const Text(
+            'Password',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _password,
@@ -2967,36 +3525,60 @@ final _phone = TextEditingController();
               prefixIcon: const Icon(Icons.lock_outline),
               hintText: 'Enter your password',
               errorText: _passwordError,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          const Text('Confirm password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+          const Text(
+            'Confirm password',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _confirmPassword,
             obscureText: _obscureConfirmPassword,
             onChanged: (_) {
-              if (_confirmPasswordError != null) setState(() => _confirmPasswordError = null);
+              if (_confirmPasswordError != null)
+                setState(() => _confirmPasswordError = null);
             },
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.lock_outline),
               hintText: 'Confirm your password',
               errorText: _confirmPasswordError,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               suffixIcon: IconButton(
-                icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                icon: Icon(
+                  _obscureConfirmPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                ),
+                onPressed: () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 10),
           // Dynamic password strength indicator
-          if (_password.text.isNotEmpty || _confirmPassword.text.isNotEmpty) ...[
+          if (_password.text.isNotEmpty ||
+              _confirmPassword.text.isNotEmpty) ...[
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -3007,12 +3589,25 @@ final _phone = TextEditingController();
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Password requirements:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                  const Text(
+                    'Password requirements:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   _pwRequirementRow('At least 8 characters', _pwHasMinLength),
-                  _pwRequirementRow('At least 1 uppercase letter', _pwHasUppercase),
+                  _pwRequirementRow(
+                    'At least 1 uppercase letter',
+                    _pwHasUppercase,
+                  ),
                   _pwRequirementRow('At least 1 number', _pwHasDigit),
-                  _pwRequirementRow('At least 1 special character (!@#\$...)', _pwHasSpecial),
+                  _pwRequirementRow(
+                    'At least 1 special character (!@#\$...)',
+                    _pwHasSpecial,
+                  ),
                 ],
               ),
             ),
@@ -3021,7 +3616,14 @@ final _phone = TextEditingController();
 
           if (role == UserRole.worker) ...[
             const SizedBox(height: 16),
-            const Text('Category', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+            const Text(
+              'Category',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF475569),
+              ),
+            ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -3033,7 +3635,9 @@ final _phone = TextEditingController();
                 child: DropdownButton<String>(
                   value: _selectedCategory,
                   isExpanded: true,
-                  items: ['Select a category', 'Plumber', 'Electrician'].map((String value) {
+                  items: ['Select a category', 'Plumber', 'Electrician'].map((
+                    String value,
+                  ) {
                     return DropdownMenuItem<String>(
                       value: value,
                       child: Text(value),
@@ -3053,29 +3657,59 @@ final _phone = TextEditingController();
             if (_categoryError != null)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text(_categoryError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                child: Text(
+                  _categoryError!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
               ),
           ],
-          
+
           if (role == UserRole.worker) ...[
             // Profile Picture (Required)
             const Divider(),
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(Icons.person_outline, size: 18, color: Color(0xFF0D9488)),
+                const Icon(
+                  Icons.person_outline,
+                  size: 18,
+                  color: Color(0xFF0D9488),
+                ),
                 const SizedBox(width: 8),
-                const Text('Profile Picture', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                const Text(
+                  'Profile Picture',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF475569),
+                  ),
+                ),
                 const SizedBox(width: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(4)),
-                  child: const Text('Required', style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'Required',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFFDC2626),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            Text('Upload your profile picture (max 100KB)', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            Text(
+              'Upload your profile picture (max 100KB)',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            ),
             const SizedBox(height: 10),
             InkWell(
               onTap: _pickProfilePic,
@@ -3084,24 +3718,41 @@ final _phone = TextEditingController();
                 height: 120,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: _profilePicFile != null ? const Color(0xFFF0FDFA) : Colors.grey.shade50,
+                  color: _profilePicFile != null
+                      ? const Color(0xFFF0FDFA)
+                      : Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: _profilePicFile != null ? const Color(0xFF0D9488) : Colors.grey.shade300,
+                    color: _profilePicFile != null
+                        ? const Color(0xFF0D9488)
+                        : Colors.grey.shade300,
                     width: _profilePicFile != null ? 1.5 : 1,
                   ),
                 ),
                 child: _profilePicFile != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                        child: Image.network(_profilePicFile!.path, fit: BoxFit.cover),
+                        child: Image.network(
+                          _profilePicFile!.path,
+                          fit: BoxFit.cover,
+                        ),
                       )
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
+                          const Icon(
+                            Icons.add_a_photo,
+                            color: Colors.grey,
+                            size: 32,
+                          ),
                           const SizedBox(height: 6),
-                          Text('Tap to upload', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                          Text(
+                            'Tap to upload',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ),
               ),
@@ -3111,10 +3762,17 @@ final _phone = TextEditingController();
                 padding: const EdgeInsets.only(top: 6),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber, color: Colors.red, size: 14),
+                    const Icon(
+                      Icons.warning_amber,
+                      color: Colors.red,
+                      size: 14,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: Text(_profilePicError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                      child: Text(
+                        _profilePicError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
@@ -3122,9 +3780,19 @@ final _phone = TextEditingController();
             const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 16),
-            const Text('CNIC Images (Front & Back)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+            const Text(
+              'CNIC Images (Front & Back)',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF475569),
+              ),
+            ),
             const SizedBox(height: 2),
-            Text('Max 5MB per image', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            Text(
+              'Max 5MB per image',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -3139,17 +3807,34 @@ final _phone = TextEditingController();
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: _idFrontError != null ? Colors.red : Colors.grey.shade300)
+                            border: Border.all(
+                              color: _idFrontError != null
+                                  ? Colors.red
+                                  : Colors.grey.shade300,
+                            ),
                           ),
-                          child: _idFrontImage != null 
-                              ? Image.network(_idFrontImage!.path, fit: BoxFit.cover)
-                              : const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
+                          child: _idFrontImage != null
+                              ? Image.network(
+                                  _idFrontImage!.path,
+                                  fit: BoxFit.cover,
+                                )
+                              : const Icon(
+                                  Icons.add_a_photo,
+                                  color: Colors.grey,
+                                  size: 32,
+                                ),
                         ),
                       ),
                       if (_idFrontError != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: Text(_idFrontError!, style: const TextStyle(color: Colors.red, fontSize: 11)),
+                          child: Text(
+                            _idFrontError!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 11,
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -3166,17 +3851,34 @@ final _phone = TextEditingController();
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: _idBackError != null ? Colors.red : Colors.grey.shade300)
+                            border: Border.all(
+                              color: _idBackError != null
+                                  ? Colors.red
+                                  : Colors.grey.shade300,
+                            ),
                           ),
                           child: _idBackImage != null
-                              ? Image.network(_idBackImage!.path, fit: BoxFit.cover)
-                              : const Icon(Icons.add_a_photo, color: Colors.grey, size: 32),
+                              ? Image.network(
+                                  _idBackImage!.path,
+                                  fit: BoxFit.cover,
+                                )
+                              : const Icon(
+                                  Icons.add_a_photo,
+                                  color: Colors.grey,
+                                  size: 32,
+                                ),
                         ),
                       ),
                       if (_idBackError != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: Text(_idBackError!, style: const TextStyle(color: Colors.red, fontSize: 11)),
+                          child: Text(
+                            _idBackError!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 11,
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -3188,10 +3890,17 @@ final _phone = TextEditingController();
                 padding: const EdgeInsets.only(top: 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber, color: Colors.red, size: 14),
+                    const Icon(
+                      Icons.warning_amber,
+                      color: Colors.red,
+                      size: 14,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: Text(_imageSizeError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                      child: Text(
+                        _imageSizeError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
@@ -3205,9 +3914,21 @@ final _phone = TextEditingController();
             height: 48,
             child: FilledButton(
               onPressed: _isUploading ? null : _next,
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-              child: _isUploading 
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0D9488),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              child: _isUploading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
                   : const Text('Sign up'),
             ),
           ),
@@ -3220,7 +3941,13 @@ final _phone = TextEditingController();
                 onPressed: () {
                   Navigator.pushReplacementNamed(context, AppRoutes.login);
                 },
-                child: const Text('Login', style: TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Login',
+                  style: TextStyle(
+                    color: Color(0xFF0D9488),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -3238,7 +3965,11 @@ final _phone = TextEditingController();
         children: [
           Text(
             isUrdu ? 'تصدیقی کوڈ درج کریں' : 'Enter verification code',
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
           ),
           const SizedBox(height: 8),
           Row(
@@ -3252,7 +3983,9 @@ final _phone = TextEditingController();
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _selectedOtpMethod == 'email' ? Icons.email_outlined : Icons.sms_outlined,
+                  _selectedOtpMethod == 'email'
+                      ? Icons.email_outlined
+                      : Icons.sms_outlined,
                   size: 14,
                   color: const Color(0xFF0D9488),
                 ),
@@ -3261,8 +3994,12 @@ final _phone = TextEditingController();
               Expanded(
                 child: Text(
                   _selectedOtpMethod == 'email'
-                      ? (isUrdu ? 'ہم نے $target پر 4 ہندسوں کا کوڈ بھیجا ہے' : 'We sent a 4-digit code to $target')
-                      : (isUrdu ? 'ہم نے $target پر 4 ہندسوں کا ایس ایم ایس بھیجا ہے' : 'We sent a 4-digit SMS code to $target'),
+                      ? (isUrdu
+                            ? 'ہم نے $target پر 4 ہندسوں کا کوڈ بھیجا ہے'
+                            : 'We sent a 4-digit code to $target')
+                      : (isUrdu
+                            ? 'ہم نے $target پر 4 ہندسوں کا ایس ایم ایس بھیجا ہے'
+                            : 'We sent a 4-digit SMS code to $target'),
                   style: const TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ),
@@ -3280,7 +4017,10 @@ final _phone = TextEditingController();
                     textAlign: TextAlign.center,
                     keyboardType: TextInputType.number,
                     maxLength: 1,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                     decoration: const InputDecoration(counterText: ''),
                     onChanged: (value) {
                       if (value.isNotEmpty && index < 3) {
@@ -3302,10 +4042,17 @@ final _phone = TextEditingController();
               runSpacing: 4,
               children: [
                 TextButton.icon(
-                  icon: const Icon(Icons.refresh, size: 16, color: Color(0xFF0D9488)),
+                  icon: const Icon(
+                    Icons.refresh,
+                    size: 16,
+                    color: Color(0xFF0D9488),
+                  ),
                   label: Text(
                     isUrdu ? 'دوبارہ کوڈ بھیجیں' : 'Resend code',
-                    style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: Color(0xFF0D9488),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   onPressed: () async {
                     setState(() => _isUploading = true);
@@ -3316,9 +4063,13 @@ final _phone = TextEditingController();
                         c.clear();
                       }
                       if (_selectedOtpMethod == 'email') {
-                        showToast('Verification code resent to ${_emailController.text.trim()}');
+                        showToast(
+                          'Verification code resent to ${_emailController.text.trim()}',
+                        );
                       } else {
-                        showToast('Verification code resent via SMS to +92 ${_phone.text.trim()}');
+                        showToast(
+                          'Verification code resent via SMS to +92 ${_phone.text.trim()}',
+                        );
                       }
                     } else {
                       showToast('Failed to resend verification code');
@@ -3328,18 +4079,29 @@ final _phone = TextEditingController();
                 const Text('|', style: TextStyle(color: Colors.grey)),
                 TextButton.icon(
                   icon: Icon(
-                    _selectedOtpMethod == 'email' ? Icons.sms_outlined : Icons.email_outlined,
+                    _selectedOtpMethod == 'email'
+                        ? Icons.sms_outlined
+                        : Icons.email_outlined,
                     size: 16,
                     color: const Color(0xFF0D9488),
                   ),
                   label: Text(
                     _selectedOtpMethod == 'email'
-                        ? (isUrdu ? 'نمبر پر ایس ایم ایس بھیجیں' : 'Send via SMS instead')
-                        : (isUrdu ? 'ای میل پر بھیجیں' : 'Send via Email instead'),
-                    style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w600),
+                        ? (isUrdu
+                              ? 'نمبر پر ایس ایم ایس بھیجیں'
+                              : 'Send via SMS instead')
+                        : (isUrdu
+                              ? 'ای میل پر بھیجیں'
+                              : 'Send via Email instead'),
+                    style: const TextStyle(
+                      color: Color(0xFF0D9488),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   onPressed: () async {
-                    final newMethod = _selectedOtpMethod == 'email' ? 'phone' : 'email';
+                    final newMethod = _selectedOtpMethod == 'email'
+                        ? 'phone'
+                        : 'email';
                     setState(() {
                       _isUploading = true;
                       _selectedOtpMethod = newMethod;
@@ -3351,12 +4113,18 @@ final _phone = TextEditingController();
                         c.clear();
                       }
                       if (newMethod == 'email') {
-                        showToast('Verification code sent to ${_emailController.text.trim()}');
+                        showToast(
+                          'Verification code sent to ${_emailController.text.trim()}',
+                        );
                       } else {
-                        showToast('Verification code sent via SMS to +92 ${_phone.text.trim()}');
+                        showToast(
+                          'Verification code sent via SMS to +92 ${_phone.text.trim()}',
+                        );
                       }
                     } else {
-                      showToast('Failed to send code via ${newMethod == 'email' ? 'Email' : 'SMS'}');
+                      showToast(
+                        'Failed to send code via ${newMethod == 'email' ? 'Email' : 'SMS'}',
+                      );
                     }
                   },
                 ),
@@ -3372,7 +4140,9 @@ final _phone = TextEditingController();
                 });
               },
               child: Text(
-                isUrdu ? 'معلومات تبدیل کریں (واپس جائیں)' : 'Edit registration details (Go back)',
+                isUrdu
+                    ? 'معلومات تبدیل کریں (واپس جائیں)'
+                    : 'Edit registration details (Go back)',
                 style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
               ),
             ),
@@ -3385,10 +4155,19 @@ final _phone = TextEditingController();
               onPressed: _isUploading ? null : _next,
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF0D9488),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
               ),
               child: _isUploading
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
                   : Text(isUrdu ? 'سائن اپ مکمل کریں' : 'Complete Sign up'),
             ),
           ),
@@ -3426,7 +4205,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
           contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
           title: Row(
@@ -3437,7 +4218,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   color: Color(0xFFFEF3C7),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.lock_rounded, color: Color(0xFFD97706), size: 24),
+                child: const Icon(
+                  Icons.lock_rounded,
+                  color: Color(0xFFD97706),
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -3445,7 +4230,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   isUrdu
                       ? '${category.ur} کا کام جاری ہے'
                       : '${category.en} In Progress',
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -3458,25 +4246,40 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 isUrdu
                     ? 'آپ کا ${category.ur} کا کام کاریگر (${activeJob.workerName}) کے ساتھ پہلے سے جاری ہے۔ جب تک یہ کام مکمل نہیں ہو جاتا، آپ نیا ${category.ur} ہائر نہیں کر سکتے۔'
                     : 'You already have an active ${category.en} job in progress with ${activeJob.workerName}. Until this job is completed or cancelled, you cannot request another ${category.en}.',
-                style: const TextStyle(fontSize: 13.5, height: 1.45, color: Colors.black87),
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  height: 1.45,
+                  color: Colors.black87,
+                ),
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline, size: 16, color: Color(0xFF4B5563)),
+                    const Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Color(0xFF4B5563),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         isUrdu
                             ? 'اسٹیٹس: ${activeJob.status}'
                             : 'Status: ${activeJob.status}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151),
+                        ),
                       ),
                     ),
                   ],
@@ -3497,7 +4300,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0D9488),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () {
                 Navigator.pop(ctx);
@@ -3529,8 +4334,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           Container(
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 26),
             decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [Color(0xFF0D9488), Color(0xFF14B8A6)]),
-              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
+              gradient: LinearGradient(
+                colors: [Color(0xFF0D9488), Color(0xFF14B8A6)],
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(24),
+                bottomRight: Radius.circular(24),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3539,17 +4349,23 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   children: [
                     Expanded(
                       child: ValueListenableBuilder<AppLocation>(
-                        valueListenable: LocationService.instance.currentLocationNotifier,
+                        valueListenable:
+                            LocationService.instance.currentLocationNotifier,
                         builder: (context, loc, _) {
                           return InkWell(
-                            onTap: () => LocationService.instance.showAreaPickerDialog(context),
+                            onTap: () => LocationService.instance
+                                .showAreaPickerDialog(context),
                             borderRadius: BorderRadius.circular(8),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 4),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.location_on, color: Colors.white, size: 20),
+                                  const Icon(
+                                    Icons.location_on,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: 6),
                                   Flexible(
                                     child: Text(
@@ -3563,12 +4379,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 4),
-                                  const Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 18),
+                                  const Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: Colors.white70,
+                                    size: 18,
+                                  ),
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.22),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.22,
+                                      ),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: const Text(
@@ -3592,30 +4417,51 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     CircleAvatar(
                       radius: 14,
                       backgroundColor: Colors.white24,
-                      child: Text(isUrdu ? 'AR' : 'EN', style: const TextStyle(fontSize: 10, color: Colors.white)),
-                    )
+                      child: Text(
+                        isUrdu ? 'AR' : 'EN',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   decoration: InputDecoration(
-                    hintText: bilingual(context, 'What service do you need?', 'آپ کو کون سی سروس چاہیے؟'),
+                    hintText: bilingual(
+                      context,
+                      'What service do you need?',
+                      'آپ کو کون سی سروس چاہیے؟',
+                    ),
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                )
+                ),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: InkWell(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoriteWorkersScreen())),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const FavoriteWorkersScreen(),
+                ),
+              ),
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0FDFA),
                   borderRadius: BorderRadius.circular(12),
@@ -3629,12 +4475,36 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(bilingual(context, 'Favorite Workers', 'پسندیدہ ورکرز'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(bilingual(context, 'Hire your preferred providers directly.', 'اپنے پسندیدہ کاریگروں کو تیزی سے ہائر کریں۔'), style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                          Text(
+                            bilingual(
+                              context,
+                              'Favorite Workers',
+                              'پسندیدہ ورکرز',
+                            ),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            bilingual(
+                              context,
+                              'Hire your preferred providers directly.',
+                              'اپنے پسندیدہ کاریگروں کو تیزی سے ہائر کریں۔',
+                            ),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF0D9488)),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: Color(0xFF0D9488),
+                    ),
                   ],
                 ),
               ),
@@ -3642,12 +4512,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(bilingual(context, 'Categories', 'زمرہ جات'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            child: Text(
+              bilingual(context, 'Categories', 'زمرہ جات'),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: StreamBuilder<Map<String, CustomerActiveJobInfo>>(
-              stream: streamCustomerActiveCategoriesMap(FirebaseAuth.instance.currentUser?.uid ?? ''),
+              stream: streamCustomerActiveCategoriesMap(
+                FirebaseAuth.instance.currentUser?.uid ?? '',
+              ),
               builder: (context, activeSnapshot) {
                 final activeCategories = activeSnapshot.data ?? {};
                 return GridView.builder(
@@ -3668,21 +4543,36 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       duration: Duration(milliseconds: 240 + i * 60),
                       builder: (_, value, child) => Opacity(
                         opacity: value,
-                        child: Transform.scale(scale: 0.92 + value * 0.08, child: child),
+                        child: Transform.scale(
+                          scale: 0.92 + value * 0.08,
+                          child: child,
+                        ),
                       ),
                       child: InkWell(
                         onTap: () {
                           if (isJobActive) {
-                            _showActiveJobCategoryBlockedDialog(context, item, activeJob, isUrdu);
+                            _showActiveJobCategoryBlockedDialog(
+                              context,
+                              item,
+                              activeJob,
+                              isUrdu,
+                            );
                           } else {
-                            Navigator.pushNamed(context, AppRoutes.issueSelection, arguments: item.key);
+                            Navigator.pushNamed(
+                              context,
+                              AppRoutes.issueSelection,
+                              arguments: item.key,
+                            );
                           }
                         },
                         child: Card(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                             side: isJobActive
-                                ? const BorderSide(color: Color(0xFFF59E0B), width: 1.5)
+                                ? const BorderSide(
+                                    color: Color(0xFFF59E0B),
+                                    width: 1.5,
+                                  )
                                 : BorderSide.none,
                           ),
                           color: isJobActive ? const Color(0xFFFFFBEB) : null,
@@ -3710,8 +4600,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                         isUrdu ? item.ur : item.en,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          fontWeight: isJobActive ? FontWeight.bold : FontWeight.normal,
-                                          color: isJobActive ? const Color(0xFF92400E) : Colors.black87,
+                                          fontWeight: isJobActive
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          color: isJobActive
+                                              ? const Color(0xFF92400E)
+                                              : Colors.black87,
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
@@ -3725,13 +4619,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                   right: isUrdu ? null : 6,
                                   left: isUrdu ? 6 : null,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF59E0B),
                                       borderRadius: BorderRadius.circular(10),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                                          color: const Color(
+                                            0xFFF59E0B,
+                                          ).withValues(alpha: 0.3),
                                           blurRadius: 4,
                                           offset: const Offset(0, 1),
                                         ),
@@ -3740,7 +4639,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.lock, size: 10, color: Colors.white),
+                                        const Icon(
+                                          Icons.lock,
+                                          size: 10,
+                                          color: Colors.white,
+                                        ),
                                         const SizedBox(width: 3),
                                         Text(
                                           isUrdu ? 'جاری ہے' : 'In Progress',
@@ -3768,9 +4671,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
             child: Row(
               children: [
-                Text(bilingual(context, 'Top Rated Workers', 'بہترین ورکرز'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                Text(
+                  bilingual(context, 'Top Rated Workers', 'بہترین ورکرز'),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const Spacer(),
-                Text(bilingual(context, 'See all', 'سب دیکھیں'), style: const TextStyle(color: Color(0xFF0D9488))),
+                Text(
+                  bilingual(context, 'See all', 'سب دیکھیں'),
+                  style: const TextStyle(color: Color(0xFF0D9488)),
+                ),
               ],
             ),
           ),
@@ -3780,7 +4692,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               if (snapshot.hasError) {
                 return Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(bilingual(context, 'Failed to load workers', 'ورکرز لوڈ کرنے میں ناکامی')),
+                  child: Text(
+                    bilingual(
+                      context,
+                      'Failed to load workers',
+                      'ورکرز لوڈ کرنے میں ناکامی',
+                    ),
+                  ),
                 );
               }
               if (!snapshot.hasData) {
@@ -3793,7 +4711,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               if (realWorkers.isEmpty) {
                 return Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(bilingual(context, 'No workers available yet', 'ابھی کوئی ورکر دستیاب نہیں')),
+                  child: Text(
+                    bilingual(
+                      context,
+                      'No workers available yet',
+                      'ابھی کوئی ورکر دستیاب نہیں',
+                    ),
+                  ),
                 );
               }
               return Column(
@@ -3801,18 +4725,33 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   for (final w in realWorkers)
                     ListTile(
                       leading: CircleAvatar(
-                        backgroundImage: w.image.isNotEmpty ? NetworkImage(w.image) : null,
-                        child: w.image.isEmpty ? Text(w.name.isNotEmpty ? w.name[0].toUpperCase() : '?') : null,
+                        backgroundImage: w.image.isNotEmpty
+                            ? NetworkImage(w.image)
+                            : null,
+                        child: w.image.isEmpty
+                            ? Text(
+                                w.name.isNotEmpty
+                                    ? w.name[0].toUpperCase()
+                                    : '?',
+                              )
+                            : null,
                       ),
                       title: Text(w.name),
-                      subtitle: Text('${w.category}${w.price.isNotEmpty ? '  •  ${w.price}' : ''}'),
+                      subtitle: Text(
+                        '${w.category}${w.price.isNotEmpty ? '  •  ${w.price}' : ''}',
+                      ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => Navigator.pushNamed(
                         context,
                         AppRoutes.workerProfile,
                         arguments: ProfileArguments(
                           worker: w,
-                          job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
+                          job: JobPostingArguments(
+                            descriptionEn: '',
+                            descriptionUr: '',
+                            price: 0,
+                            categoryKey: '',
+                          ),
                         ),
                       ),
                     ),
@@ -3857,12 +4796,33 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
       _initialized = true;
     }
   }
+
   static const List<_JobPhotoAsset> _photoOptions = [
-    _JobPhotoAsset('Tap to capture', 'assets/images/userImage.png', Icons.camera_alt_outlined),
-    _JobPhotoAsset('Gallery pick', 'assets/images/helpImage.png', Icons.photo_library_outlined),
-    _JobPhotoAsset('Recent upload', 'assets/images/inviteImage.png', Icons.image_outlined),
-    _JobPhotoAsset('Service issue', 'assets/images/feedbackImage.png', Icons.broken_image_outlined),
-    _JobPhotoAsset('Workspace', 'assets/images/supportIcon.png', Icons.work_outline),
+    _JobPhotoAsset(
+      'Tap to capture',
+      'assets/images/userImage.png',
+      Icons.camera_alt_outlined,
+    ),
+    _JobPhotoAsset(
+      'Gallery pick',
+      'assets/images/helpImage.png',
+      Icons.photo_library_outlined,
+    ),
+    _JobPhotoAsset(
+      'Recent upload',
+      'assets/images/inviteImage.png',
+      Icons.image_outlined,
+    ),
+    _JobPhotoAsset(
+      'Service issue',
+      'assets/images/feedbackImage.png',
+      Icons.broken_image_outlined,
+    ),
+    _JobPhotoAsset(
+      'Workspace',
+      'assets/images/supportIcon.png',
+      Icons.work_outline,
+    ),
   ];
 
   @override
@@ -3870,6 +4830,7 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
     desc.dispose();
     super.dispose();
   }
+
   Future<void> _pickPhoto() async {
     final choice = await showModalBottomSheet<_JobPhotoAsset>(
       context: context,
@@ -3902,12 +4863,23 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    bilingual(context, 'Add job photos', 'کام کی تصاویر شامل کریں'),
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                    bilingual(
+                      context,
+                      'Add job photos',
+                      'کام کی تصاویر شامل کریں',
+                    ),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    bilingual(context, 'Pick a recent photo or capture one for this request', 'حالیہ تصویر منتخب کریں یا نیا فوٹو شامل کریں'),
+                    bilingual(
+                      context,
+                      'Pick a recent photo or capture one for this request',
+                      'حالیہ تصویر منتخب کریں یا نیا فوٹو شامل کریں',
+                    ),
                     style: const TextStyle(color: Colors.black54),
                   ),
                   const SizedBox(height: 18),
@@ -3916,17 +4888,34 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
                       Expanded(
                         child: _PhotoActionCard(
                           icon: Icons.photo_camera_outlined,
-                          title: bilingual(context, 'Open camera', 'کیمرہ کھولیں'),
-                          subtitle: bilingual(context, 'Capture a new photo', 'نئی تصویر لیں'),
-                          onTap: () => Navigator.pop(context, _photoOptions.first),
+                          title: bilingual(
+                            context,
+                            'Open camera',
+                            'کیمرہ کھولیں',
+                          ),
+                          subtitle: bilingual(
+                            context,
+                            'Capture a new photo',
+                            'نئی تصویر لیں',
+                          ),
+                          onTap: () =>
+                              Navigator.pop(context, _photoOptions.first),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _PhotoActionCard(
                           icon: Icons.photo_library_outlined,
-                          title: bilingual(context, 'Choose from gallery', 'گیلری سے منتخب کریں'),
-                          subtitle: bilingual(context, 'Pick from saved images', 'محفوظ تصاویر میں سے'),
+                          title: bilingual(
+                            context,
+                            'Choose from gallery',
+                            'گیلری سے منتخب کریں',
+                          ),
+                          subtitle: bilingual(
+                            context,
+                            'Pick from saved images',
+                            'محفوظ تصاویر میں سے',
+                          ),
                           onTap: () => Navigator.pop(context, _photoOptions[1]),
                         ),
                       ),
@@ -3935,19 +4924,23 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
                   const SizedBox(height: 20),
                   Text(
                     bilingual(context, 'Recent options', 'حالیہ تصاویر'),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _photoOptions.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 1,
+                        ),
                     itemBuilder: (_, index) {
                       final item = _photoOptions[index];
                       return InkWell(
@@ -3973,13 +4966,19 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
                                     children: [
                                       CircleAvatar(
                                         backgroundColor: Colors.white,
-                                        child: Icon(item.icon, color: const Color(0xFF0D9488)),
+                                        child: Icon(
+                                          item.icon,
+                                          color: const Color(0xFF0D9488),
+                                        ),
                                       ),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
                                           item.label,
-                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -4014,7 +5013,9 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(bilingual(context, 'Step ${step + 1} of 2', '${step + 1} از 2')),
+            Text(
+              bilingual(context, 'Step ${step + 1} of 2', '${step + 1} از 2'),
+            ),
             const SizedBox(height: 10),
             Expanded(
               child: AnimatedSwitcher(
@@ -4037,14 +5038,20 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
                         descriptionEn: desc.text,
                         descriptionUr: desc.text,
                         price: _selectedPrice > 0 ? _selectedPrice : 1000.0,
-                        categoryKey: _categoryKey.isNotEmpty ? _categoryKey : 'electrician',
+                        categoryKey: _categoryKey.isNotEmpty
+                            ? _categoryKey
+                            : 'electrician',
                       ),
                     );
                   }
                 },
-                child: Text(step == 0 ? bilingual(context, 'Continue', 'جاری رکھیں') : bilingual(context, 'Find Workers', 'ورکر تلاش کریں')),
+                child: Text(
+                  step == 0
+                      ? bilingual(context, 'Continue', 'جاری رکھیں')
+                      : bilingual(context, 'Find Workers', 'ورکر تلاش کریں'),
+                ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -4055,19 +5062,30 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
     return ListView(
       key: const ValueKey('step1'),
       children: [
-        Text(bilingual(context, 'What needs to be done?', 'کیا کام کرنا ہے؟'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        Text(
+          bilingual(context, 'What needs to be done?', 'کیا کام کرنا ہے؟'),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: desc,
           minLines: 4,
           maxLines: 4,
-          decoration: InputDecoration(hintText: bilingual(context, 'E.g., My kitchen sink is leaking', 'مثلاً کچن سنک لیک ہو رہا ہے')),
+          decoration: InputDecoration(
+            hintText: bilingual(
+              context,
+              'E.g., My kitchen sink is leaking',
+              'مثلاً کچن سنک لیک ہو رہا ہے',
+            ),
+          ),
         ),
         const SizedBox(height: 14),
         OutlinedButton.icon(
           onPressed: _pickPhoto,
           icon: const Icon(Icons.photo_camera_outlined),
-          label: Text(bilingual(context, 'Add Photos (Optional)', 'تصاویر شامل کریں')),
+          label: Text(
+            bilingual(context, 'Add Photos (Optional)', 'تصاویر شامل کریں'),
+          ),
         ),
         if (_selectedPhotos.isNotEmpty) ...[
           const SizedBox(height: 14),
@@ -4103,7 +5121,10 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
                           bottom: 10,
                           child: Text(
                             item.label,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ],
@@ -4127,34 +5148,51 @@ class _JobPostingScreenState extends State<FlowJobPostingScreen> {
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.location_on),
           title: Text(bilingual(context, 'Service Location', 'سروس لوکیشن')),
-          subtitle: Text(bilingual(context, 'House 42, Street 7, Sector F-8/4', 'گھر 42، سٹریٹ 7، سیکٹر ایف-8/4')),
+          subtitle: Text(
+            bilingual(
+              context,
+              'House 42, Street 7, Sector F-8/4',
+              'گھر 42، سٹریٹ 7، سیکٹر ایف-8/4',
+            ),
+          ),
           trailing: TextButton(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Location picker opened')),
               );
-            }, 
-            child: Text(bilingual(context, 'Change', 'تبدیل'))
+            },
+            child: Text(bilingual(context, 'Change', 'تبدیل')),
           ),
         ),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: const Color(0xFFECFEFF), borderRadius: BorderRadius.circular(14)),
+          decoration: BoxDecoration(
+            color: const Color(0xFFECFEFF),
+            borderRadius: BorderRadius.circular(14),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(bilingual(context, 'Location', 'مقام'), style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text(
+                bilingual(context, 'Location', 'مقام'),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 8),
-              Text(bilingual(context, 'Workers will be matched to your location.', 'ورکرز آپ کے مقام کے مطابق تلاش کیے جائیں گے۔')),
+              Text(
+                bilingual(
+                  context,
+                  'Workers will be matched to your location.',
+                  'ورکرز آپ کے مقام کے مطابق تلاش کیے جائیں گے۔',
+                ),
+              ),
             ],
           ),
-        )
+        ),
       ],
     );
   }
 }
-
 
 class ConfirmLocationScreen extends StatefulWidget {
   const ConfirmLocationScreen({super.key});
@@ -4181,13 +5219,13 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
     final lat = args is JobPostingArguments
         ? args.customerLatitude
         : args is RecommendationArguments
-            ? args.customerLatitude
-            : null;
+        ? args.customerLatitude
+        : null;
     final lng = args is JobPostingArguments
         ? args.customerLongitude
         : args is RecommendationArguments
-            ? args.customerLongitude
-            : null;
+        ? args.customerLongitude
+        : null;
 
     if (lat != null && lng != null) {
       _selectedLocation = LatLng(lat, lng);
@@ -4206,7 +5244,9 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
 
   Future<void> _useCurrentLocation() async {
     setState(() => _loadingLocation = true);
-    final loc = await LocationService.instance.fetchCurrentGpsLocation(context: context);
+    final loc = await LocationService.instance.fetchCurrentGpsLocation(
+      context: context,
+    );
     if (!mounted) return;
 
     if (loc == null) {
@@ -4215,7 +5255,9 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
         _selectedLocation = LatLng(cached.latitude, cached.longitude);
         _loadingLocation = false;
       });
-      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation, 16));
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(_selectedLocation, 16),
+      );
       return;
     }
 
@@ -4224,7 +5266,9 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
       _loadingLocation = false;
     });
 
-    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation, 16));
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(_selectedLocation, 16),
+    );
   }
 
   Future<void> _searchLocation(String query) async {
@@ -4232,7 +5276,9 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
     setState(() => _searching = true);
     try {
       final key = 'AIzaSyCGHY7A6zdFd-t27sflz0-AQTgulg_s_II';
-      final uri = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?address=${Uri.encodeComponent(query)}&key=$key');
+      final uri = Uri.parse(
+        'https://maps.googleapis.com/maps/api/geocode/json?address=${Uri.encodeComponent(query)}&key=$key',
+      );
       final res = await http.get(uri);
       if (!mounted) return;
       final data = json.decode(res.body);
@@ -4247,14 +5293,30 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
       } else {
         setState(() => _searching = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(bilingual(context, 'Location not found. Try a different search.', 'مقام نہیں ملا۔ مختلف تلاش کریں۔'))),
+          SnackBar(
+            content: Text(
+              bilingual(
+                context,
+                'Location not found. Try a different search.',
+                'مقام نہیں ملا۔ مختلف تلاش کریں۔',
+              ),
+            ),
+          ),
         );
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _searching = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(bilingual(context, 'Search failed. Try again.', 'تلاش ناکام۔ دوبارہ کوشش کریں۔'))),
+        SnackBar(
+          content: Text(
+            bilingual(
+              context,
+              'Search failed. Try again.',
+              'تلاش ناکام۔ دوبارہ کوشش کریں۔',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -4314,21 +5376,31 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
         children: [
           GoogleMap(
             mapType: MapType.normal,
-            initialCameraPosition: CameraPosition(target: _selectedLocation, zoom: 16),
+            initialCameraPosition: CameraPosition(
+              target: _selectedLocation,
+              zoom: 16,
+            ),
             markers: {
               Marker(
                 markerId: const MarkerId('customer_location'),
                 position: _selectedLocation,
                 draggable: true,
-                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-                infoWindow: InfoWindow(title: bilingual(context, 'Service location', 'سروس لوکیشن')),
-                onDragEnd: (position) => setState(() => _selectedLocation = position),
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueBlue,
+                ),
+                infoWindow: InfoWindow(
+                  title: bilingual(context, 'Service location', 'سروس لوکیشن'),
+                ),
+                onDragEnd: (position) =>
+                    setState(() => _selectedLocation = position),
               ),
             },
             onTap: (position) => setState(() => _selectedLocation = position),
             onMapCreated: (controller) {
               _mapController = controller;
-              controller.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation, 16));
+              controller.animateCamera(
+                CameraUpdate.newLatLngZoom(_selectedLocation, 16),
+              );
             },
             myLocationButtonEnabled: false,
             myLocationEnabled: false,
@@ -4347,19 +5419,33 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2))],
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
               child: TextField(
                 controller: _searchController,
                 textInputAction: TextInputAction.search,
                 textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
                 decoration: InputDecoration(
-                  hintText: bilingual(context, 'Search place…', 'مقام تلاش کریں…'),
+                  hintText: bilingual(
+                    context,
+                    'Search place…',
+                    'مقام تلاش کریں…',
+                  ),
                   prefixIcon: _searching
-                      ? const SizedBox(width: 24, height: 24, child: Padding(
-                          padding: EdgeInsets.all(12),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ))
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
                       : const Icon(Icons.search),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
@@ -4371,7 +5457,10 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
                         )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                 ),
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (value) => _searchLocation(value),
@@ -4387,30 +5476,55 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 18, offset: Offset(0, 8))],
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 18,
+                    offset: Offset(0, 8),
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    bilingual(context, 'Set exact service point', 'درست سروس پوائنٹ منتخب کریں'),
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    bilingual(
+                      context,
+                      'Set exact service point',
+                      'درست سروس پوائنٹ منتخب کریں',
+                    ),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    bilingual(context, 'Drag the pin or tap the map. The worker will navigate to this exact point.', 'پن کو منتقل کریں یا نقشے پر ٹیپ کریں۔ ورکر اسی مقام پر آئے گا۔'),
+                    bilingual(
+                      context,
+                      'Drag the pin or tap the map. The worker will navigate to this exact point.',
+                      'پن کو منتقل کریں یا نقشے پر ٹیپ کریں۔ ورکر اسی مقام پر آئے گا۔',
+                    ),
                     style: const TextStyle(color: Colors.black54),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, color: Color(0xFF0D9488), size: 18),
+                      const Icon(
+                        Icons.location_on,
+                        color: Color(0xFF0D9488),
+                        size: 18,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           '${_selectedLocation.latitude.toStringAsFixed(5)}, ${_selectedLocation.longitude.toStringAsFixed(5)}',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0D9488)),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0D9488),
+                          ),
                         ),
                       ),
                     ],
@@ -4420,7 +5534,9 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: _loadingLocation ? null : () => _useCurrentLocation(),
+                          onPressed: _loadingLocation
+                              ? null
+                              : () => _useCurrentLocation(),
                           icon: const Icon(Icons.my_location),
                           label: Text(isUrdu ? 'موجودہ لوکیشن' : 'Use current'),
                         ),
@@ -4431,7 +5547,9 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
                           onPressed: _loadingLocation ? null : _confirmLocation,
                           icon: const Icon(Icons.check),
                           label: Text(isUrdu ? 'تصدیق' : 'Confirm'),
-                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D9488),
+                          ),
                         ),
                       ),
                     ],
@@ -4446,16 +5564,16 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
   }
 }
 
-
-
 class WorkerRecommendationsScreen extends StatefulWidget {
   const WorkerRecommendationsScreen({super.key});
 
   @override
-  State<WorkerRecommendationsScreen> createState() => _WorkerRecommendationsScreenState();
+  State<WorkerRecommendationsScreen> createState() =>
+      _WorkerRecommendationsScreenState();
 }
 
-class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScreen> {
+class _WorkerRecommendationsScreenState
+    extends State<WorkerRecommendationsScreen> {
   List<IssueItem> selectedIssues = [];
   String categoryKey = 'electrician';
   String paymentMethod = 'Cash';
@@ -4525,7 +5643,13 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
           }
           if (snapshot.hasError) {
             return Center(
-              child: Text(bilingual(context, 'Failed to load workers', 'ورکرز لوڈ کرنے میں ناکامی')),
+              child: Text(
+                bilingual(
+                  context,
+                  'Failed to load workers',
+                  'ورکرز لوڈ کرنے میں ناکامی',
+                ),
+              ),
             );
           }
           final matchedWorkers = snapshot.data ?? [];
@@ -4534,7 +5658,11 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Text(
-                  bilingual(context, 'No workers found for this category. Check back later.', 'اس زمرے میں کوئی ورکر نہیں ملا۔ بعد میں دوبارہ چیک کریں۔'),
+                  bilingual(
+                    context,
+                    'No workers found for this category. Check back later.',
+                    'اس زمرے میں کوئی ورکر نہیں ملا۔ بعد میں دوبارہ چیک کریں۔',
+                  ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16, color: Colors.black54),
                 ),
@@ -4567,12 +5695,21 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                             isUrdu
                                 ? '${matchedWorkers.length} ورکرز دستیاب ہیں'
                                 : '${matchedWorkers.length} workers available',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontSize: 15,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            isUrdu ? 'قیمت دیکھنے کے لیے پیشکش کریں' : 'Make an offer to negotiate price',
-                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            isUrdu
+                                ? 'قیمت دیکھنے کے لیے پیشکش کریں'
+                                : 'Make an offer to negotiate price',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -4587,7 +5724,10 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                   duration: Duration(milliseconds: 320 + i * 100),
                   builder: (_, value, child) => Opacity(
                     opacity: value,
-                    child: Transform.translate(offset: Offset(0, (1 - value) * 18), child: child),
+                    child: Transform.translate(
+                      offset: Offset(0, (1 - value) * 18),
+                      child: child,
+                    ),
                   ),
                   child: Card(
                     margin: const EdgeInsets.only(bottom: 14),
@@ -4603,20 +5743,30 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                         children: [
                           if (selectedIssues.isNotEmpty)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF0FDFA),
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFF99F6E4)),
+                                border: Border.all(
+                                  color: const Color(0xFF99F6E4),
+                                ),
                               ),
                               child: Text(
                                 isUrdu
                                     ? '📌 ${selectedIssues[i % selectedIssues.length].titleUr}'
                                     : '📌 ${selectedIssues[i % selectedIssues.length].titleEn}',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0D9488),
+                                ),
                               ),
                             ),
-                          if (selectedIssues.isNotEmpty) const SizedBox(height: 12),
+                          if (selectedIssues.isNotEmpty)
+                            const SizedBox(height: 12),
                           Row(
                             children: [
                               ClipRRect(
@@ -4627,56 +5777,87 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                                         width: 62,
                                         height: 62,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => CircleAvatar(
-                                          radius: 31,
-                                          child: Text(matchedWorkers[i].name.isNotEmpty ? matchedWorkers[i].name[0].toUpperCase() : '?'),
-                                        ),
+                                        errorBuilder: (_, __, ___) =>
+                                            CircleAvatar(
+                                              radius: 31,
+                                              child: Text(
+                                                matchedWorkers[i]
+                                                        .name
+                                                        .isNotEmpty
+                                                    ? matchedWorkers[i].name[0]
+                                                          .toUpperCase()
+                                                    : '?',
+                                              ),
+                                            ),
                                       )
                                     : CircleAvatar(
                                         radius: 31,
-                                        child: Text(matchedWorkers[i].name.isNotEmpty ? matchedWorkers[i].name[0].toUpperCase() : '?'),
+                                        child: Text(
+                                          matchedWorkers[i].name.isNotEmpty
+                                              ? matchedWorkers[i].name[0]
+                                                    .toUpperCase()
+                                              : '?',
+                                        ),
                                       ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  matchedWorkers[i].name,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.darkerText),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      matchedWorkers[i].name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: AppTheme.darkerText,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      matchedWorkers[i].category,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    if (matchedWorkers[i].price.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        matchedWorkers[i].price,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0D9488),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  matchedWorkers[i].category,
-                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  _favouriteIds.contains(matchedWorkers[i].id)
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color:
+                                      _favouriteIds.contains(
+                                        matchedWorkers[i].id,
+                                      )
+                                      ? Colors.red
+                                      : Colors.grey,
+                                  size: 22,
                                 ),
-                                if (matchedWorkers[i].price.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    matchedWorkers[i].price,
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              _favouriteIds.contains(matchedWorkers[i].id) ? Icons.favorite : Icons.favorite_border,
-                              color: _favouriteIds.contains(matchedWorkers[i].id) ? Colors.red : Colors.grey,
-                              size: 22,
-                            ),
-                            onPressed: () async {
-                              final wid = matchedWorkers[i].id;
-                              if (wid == null) return;
-                              if (_favouriteIds.contains(wid)) {
-                                removeFavouriteWorker(wid);
-                              } else {
-                                addFavouriteWorker(wid);
-                              }
-                            },
-                          ),
+                                onPressed: () async {
+                                  final wid = matchedWorkers[i].id;
+                                  if (wid == null) return;
+                                  if (_favouriteIds.contains(wid)) {
+                                    removeFavouriteWorker(wid);
+                                  } else {
+                                    addFavouriteWorker(wid);
+                                  }
+                                },
+                              ),
                             ],
                           ),
                           if (matchedWorkers[i].skillsEn.isNotEmpty) ...[
@@ -4684,14 +5865,32 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                             Wrap(
                               spacing: 6,
                               runSpacing: 4,
-                              children: (isUrdu ? matchedWorkers[i].skillsUr : matchedWorkers[i].skillsEn).map((s) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF3F4F6),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(s, style: const TextStyle(fontSize: 11, color: Colors.black54)),
-                              )).toList(),
+                              children:
+                                  (isUrdu
+                                          ? matchedWorkers[i].skillsUr
+                                          : matchedWorkers[i].skillsEn)
+                                      .map(
+                                        (s) => Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF3F4F6),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            s,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
                             ),
                           ],
                           const SizedBox(height: 12),
@@ -4700,12 +5899,20 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                             child: FilledButton.icon(
                               onPressed: () {
                                 final combinedEn = selectedIssues.isNotEmpty
-                                    ? selectedIssues.map((e) => e.titleEn).join(', ')
+                                    ? selectedIssues
+                                          .map((e) => e.titleEn)
+                                          .join(', ')
                                     : '';
                                 final combinedUr = selectedIssues.isNotEmpty
-                                    ? selectedIssues.map((e) => e.titleUr).join('، ')
+                                    ? selectedIssues
+                                          .map((e) => e.titleUr)
+                                          .join('، ')
                                     : '';
-                                final issueIndex = i % (selectedIssues.isNotEmpty ? selectedIssues.length : 1);
+                                final issueIndex =
+                                    i %
+                                    (selectedIssues.isNotEmpty
+                                        ? selectedIssues.length
+                                        : 1);
                                 Navigator.pushNamed(
                                   context,
                                   AppRoutes.workerProfile,
@@ -4713,8 +5920,18 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                                     worker: matchedWorkers[i],
                                     selectedIssues: selectedIssues,
                                     job: JobPostingArguments(
-                                      descriptionEn: combinedEn.isNotEmpty ? combinedEn : (selectedIssues.isNotEmpty ? selectedIssues[issueIndex].titleEn : ''),
-                                      descriptionUr: combinedUr.isNotEmpty ? combinedUr : (selectedIssues.isNotEmpty ? selectedIssues[issueIndex].titleUr : ''),
+                                      descriptionEn: combinedEn.isNotEmpty
+                                          ? combinedEn
+                                          : (selectedIssues.isNotEmpty
+                                                ? selectedIssues[issueIndex]
+                                                      .titleEn
+                                                : ''),
+                                      descriptionUr: combinedUr.isNotEmpty
+                                          ? combinedUr
+                                          : (selectedIssues.isNotEmpty
+                                                ? selectedIssues[issueIndex]
+                                                      .titleUr
+                                                : ''),
                                       price: 0,
                                       categoryKey: categoryKey,
                                       paymentMethod: paymentMethod,
@@ -4725,11 +5942,22 @@ class _WorkerRecommendationsScreenState extends State<WorkerRecommendationsScree
                                 );
                               },
                               icon: const Icon(Icons.person_outline, size: 16),
-                              label: Text(bilingual(context, 'View Profile', 'پروفائل دیکھیں'), style: const TextStyle(fontSize: 14)),
+                              label: Text(
+                                bilingual(
+                                  context,
+                                  'View Profile',
+                                  'پروفائل دیکھیں',
+                                ),
+                                style: const TextStyle(fontSize: 14),
+                              ),
                               style: FilledButton.styleFrom(
                                 backgroundColor: const Color(0xFF0D9488),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                             ),
                           ),
@@ -4762,7 +5990,8 @@ class FlowWorkerProfileScreen extends StatefulWidget {
   const FlowWorkerProfileScreen({super.key});
 
   @override
-  State<FlowWorkerProfileScreen> createState() => _FlowWorkerProfileScreenState();
+  State<FlowWorkerProfileScreen> createState() =>
+      _FlowWorkerProfileScreenState();
 }
 
 class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
@@ -4789,7 +6018,8 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as ProfileArguments?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as ProfileArguments?;
     final worker = args?.worker;
     final selectedIssues = args?.selectedIssues ?? const [];
     final scope = AppScope.of(context);
@@ -4797,7 +6027,9 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
 
     if (worker == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(bilingual(context, 'Worker not found', 'ورکر نہیں ملا'))),
+        appBar: AppBar(
+          title: Text(bilingual(context, 'Worker not found', 'ورکر نہیں ملا')),
+        ),
       );
     }
 
@@ -4818,33 +6050,42 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
           price = matchedWorkerSkill.price;
         }
 
-        displayedSkills.add(_FlowDisplayedSkill(
-          titleEn: issue.titleEn,
-          titleUr: issue.titleUr,
-          price: price,
-        ));
+        displayedSkills.add(
+          _FlowDisplayedSkill(
+            titleEn: issue.titleEn,
+            titleUr: issue.titleUr,
+            price: price,
+          ),
+        );
       }
     } else if (worker.skills.isNotEmpty) {
       for (final ws in worker.skills) {
-        displayedSkills.add(_FlowDisplayedSkill(
-          titleEn: ws.titleEn,
-          titleUr: ws.titleUr.isNotEmpty ? ws.titleUr : ws.titleEn,
-          price: ws.price,
-        ));
+        displayedSkills.add(
+          _FlowDisplayedSkill(
+            titleEn: ws.titleEn,
+            titleUr: ws.titleUr.isNotEmpty ? ws.titleUr : ws.titleEn,
+            price: ws.price,
+          ),
+        );
       }
     } else {
       for (int i = 0; i < worker.skillsEn.length; i++) {
         final en = worker.skillsEn[i];
         final ur = i < worker.skillsUr.length ? worker.skillsUr[i] : en;
-        displayedSkills.add(_FlowDisplayedSkill(
-          titleEn: en,
-          titleUr: ur,
-          price: worker.priceValue > 0 ? worker.priceValue : 300,
-        ));
+        displayedSkills.add(
+          _FlowDisplayedSkill(
+            titleEn: en,
+            titleUr: ur,
+            price: worker.priceValue > 0 ? worker.priceValue : 300,
+          ),
+        );
       }
     }
 
-    final double grandTotal = displayedSkills.fold<double>(0, (sum, item) => sum + item.price);
+    final double grandTotal = displayedSkills.fold<double>(
+      0,
+      (sum, item) => sum + item.price,
+    );
 
     if (!_initializedOffer && grandTotal > 0) {
       _offerController.text = grandTotal.toStringAsFixed(0);
@@ -4861,22 +6102,37 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
               Stack(
                 children: [
                   worker.image.isNotEmpty
-                      ? Image.network(worker.image, height: 260, width: double.infinity, fit: BoxFit.cover)
+                      ? Image.network(
+                          worker.image,
+                          height: 260,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
                       : Container(
                           height: 260,
                           width: double.infinity,
                           color: const Color(0xFF0D9488),
                           child: Center(
                             child: Text(
-                              worker.name.isNotEmpty ? worker.name[0].toUpperCase() : '?',
-                              style: const TextStyle(fontSize: 80, color: Colors.white, fontWeight: FontWeight.bold),
+                              worker.name.isNotEmpty
+                                  ? worker.name[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                fontSize: 80,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
                   Container(
                     height: 260,
                     decoration: const BoxDecoration(
-                      gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black54, Colors.transparent]),
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [Colors.black54, Colors.transparent],
+                      ),
                     ),
                   ),
                   Positioned(
@@ -4897,7 +6153,9 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       backgroundColor: Colors.white24,
                       child: IconButton(
                         icon: Icon(
-                          _favouriteIds.contains(worker.id) ? Icons.favorite : Icons.favorite_border,
+                          _favouriteIds.contains(worker.id)
+                              ? Icons.favorite
+                              : Icons.favorite_border,
                           color: Colors.white,
                         ),
                         onPressed: () {
@@ -4921,11 +6179,18 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         Expanded(
                           child: Text(
                             worker.name,
-                            style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.black54,
                             borderRadius: BorderRadius.circular(12),
@@ -4933,16 +6198,29 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 18),
+                              const Icon(
+                                Icons.star_rounded,
+                                color: Color(0xFFF59E0B),
+                                size: 18,
+                              ),
                               const SizedBox(width: 4),
                               Text(
-                                worker.rating > 0 ? worker.rating.toStringAsFixed(1) : (isUrdu ? 'نیا' : 'New'),
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+                                worker.rating > 0
+                                    ? worker.rating.toStringAsFixed(1)
+                                    : (isUrdu ? 'نیا' : 'New'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                ),
                               ),
                               if (worker.reviews > 0)
                                 Text(
                                   ' (${worker.reviews})',
-                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
                                 ),
                             ],
                           ),
@@ -4957,18 +6235,34 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${worker.category} • ${worker.distanceKm} km ${bilingual(context, 'away', 'دور')}', style: const TextStyle(color: Colors.black54)),
+                    Text(
+                      '${worker.category} • ${worker.distanceKm} km ${bilingual(context, 'away', 'دور')}',
+                      style: const TextStyle(color: Colors.black54),
+                    ),
                     const SizedBox(height: 10),
-                    Wrap(spacing: 8, children: const [
-                      _Tag('CNIC Verified', Colors.green),
-                      _Tag('Police Cleared', Colors.blue),
-                    ]),
+                    Wrap(
+                      spacing: 8,
+                      children: const [
+                        _Tag('CNIC Verified', Colors.green),
+                        _Tag('Police Cleared', Colors.blue),
+                      ],
+                    ),
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: _StatCard(label: bilingual(context, 'Jobs', 'مکمل کام'), value: '124+')),
+                        Expanded(
+                          child: _StatCard(
+                            label: bilingual(context, 'Jobs', 'مکمل کام'),
+                            value: '124+',
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        Expanded(child: _StatCard(label: bilingual(context, 'Response', 'جواب'), value: '<10 min')),
+                        Expanded(
+                          child: _StatCard(
+                            label: bilingual(context, 'Response', 'جواب'),
+                            value: '<10 min',
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -4980,15 +6274,28 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         prefixIcon: Container(
                           width: 48,
                           alignment: Alignment.center,
-                          child: const Text('PKR', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
+                          child: const Text(
+                            'PKR',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0D9488),
+                            ),
+                          ),
                         ),
                         hintText: isUrdu ? 'مثلاً 500' : 'E.g., 500',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFF0D9488), width: 2),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF0D9488),
+                            width: 2,
+                          ),
                         ),
-                        labelText: isUrdu ? 'اپنی پیشکش درج کریں (Rs)' : 'Enter Your Offer (Rs)',
+                        labelText: isUrdu
+                            ? 'اپنی پیشکش درج کریں (Rs)'
+                            : 'Enter Your Offer (Rs)',
                         filled: true,
                         fillColor: Colors.white,
                       ),
@@ -5005,27 +6312,82 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            bilingual(context, 'Offer visible to worker for:', 'ورکر کو پیشکش نظر آئے گی:'),
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F766E)),
+                            bilingual(
+                              context,
+                              'Offer visible to worker for:',
+                              'ورکر کو پیشکش نظر آئے گی:',
+                            ),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0F766E),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
                               children: [
-                                _DurationChip(label: '10 min', minutes: 10, selected: _visibilityMinutes == 10, onTap: () => setState(() => _visibilityMinutes = 10)),
+                                _DurationChip(
+                                  label: '10 min',
+                                  minutes: 10,
+                                  selected: _visibilityMinutes == 10,
+                                  onTap: () =>
+                                      setState(() => _visibilityMinutes = 10),
+                                ),
                                 const SizedBox(width: 6),
-                                _DurationChip(label: '30 min', minutes: 30, selected: _visibilityMinutes == 30, onTap: () => setState(() => _visibilityMinutes = 30)),
+                                _DurationChip(
+                                  label: '30 min',
+                                  minutes: 30,
+                                  selected: _visibilityMinutes == 30,
+                                  onTap: () =>
+                                      setState(() => _visibilityMinutes = 30),
+                                ),
                                 const SizedBox(width: 6),
-                                _DurationChip(label: '1 ${bilingual(context, 'hr', 'گھنٹہ')}', minutes: 60, selected: _visibilityMinutes == 60, onTap: () => setState(() => _visibilityMinutes = 60)),
+                                _DurationChip(
+                                  label:
+                                      '1 ${bilingual(context, 'hr', 'گھنٹہ')}',
+                                  minutes: 60,
+                                  selected: _visibilityMinutes == 60,
+                                  onTap: () =>
+                                      setState(() => _visibilityMinutes = 60),
+                                ),
                                 const SizedBox(width: 6),
-                                _DurationChip(label: '6 ${bilingual(context, 'hr', 'گھنٹے')}', minutes: 360, selected: _visibilityMinutes == 360, onTap: () => setState(() => _visibilityMinutes = 360)),
+                                _DurationChip(
+                                  label:
+                                      '6 ${bilingual(context, 'hr', 'گھنٹے')}',
+                                  minutes: 360,
+                                  selected: _visibilityMinutes == 360,
+                                  onTap: () =>
+                                      setState(() => _visibilityMinutes = 360),
+                                ),
                                 const SizedBox(width: 6),
-                                _DurationChip(label: '1 ${bilingual(context, 'day', 'دن')}', minutes: 1440, selected: _visibilityMinutes == 1440, onTap: () => setState(() => _visibilityMinutes = 1440)),
+                                _DurationChip(
+                                  label: '1 ${bilingual(context, 'day', 'دن')}',
+                                  minutes: 1440,
+                                  selected: _visibilityMinutes == 1440,
+                                  onTap: () =>
+                                      setState(() => _visibilityMinutes = 1440),
+                                ),
                                 const SizedBox(width: 6),
-                                _DurationChip(label: '3 ${bilingual(context, 'days', 'دن')}', minutes: 4320, selected: _visibilityMinutes == 4320, onTap: () => setState(() => _visibilityMinutes = 4320)),
+                                _DurationChip(
+                                  label:
+                                      '3 ${bilingual(context, 'days', 'دن')}',
+                                  minutes: 4320,
+                                  selected: _visibilityMinutes == 4320,
+                                  onTap: () =>
+                                      setState(() => _visibilityMinutes = 4320),
+                                ),
                                 const SizedBox(width: 6),
-                                _DurationChip(label: '1 ${bilingual(context, 'week', 'ہفتہ')}', minutes: 10080, selected: _visibilityMinutes == 10080, onTap: () => setState(() => _visibilityMinutes = 10080)),
+                                _DurationChip(
+                                  label:
+                                      '1 ${bilingual(context, 'week', 'ہفتہ')}',
+                                  minutes: 10080,
+                                  selected: _visibilityMinutes == 10080,
+                                  onTap: () => setState(
+                                    () => _visibilityMinutes = 10080,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -5038,13 +6400,29 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       children: [
                         Text(
                           bilingual(context, 'Skills', 'مہارتیں'),
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         TextButton.icon(
-                          onPressed: () => _showAllSkillsBottomSheet(context, worker, isUrdu, selectedIssues),
-                          icon: const Icon(Icons.format_list_bulleted, size: 16, color: Color(0xFF0D9488)),
+                          onPressed: () => _showAllSkillsBottomSheet(
+                            context,
+                            worker,
+                            isUrdu,
+                            selectedIssues,
+                          ),
+                          icon: const Icon(
+                            Icons.format_list_bulleted,
+                            size: 16,
+                            color: Color(0xFF0D9488),
+                          ),
                           label: Text(
-                            bilingual(context, 'View All Skills', 'تمام مہارتیں دیکھیں'),
+                            bilingual(
+                              context,
+                              'View All Skills',
+                              'تمام مہارتیں دیکھیں',
+                            ),
                             style: const TextStyle(
                               color: Color(0xFF0D9488),
                               fontWeight: FontWeight.bold,
@@ -5052,7 +6430,10 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                             ),
                           ),
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
@@ -5065,7 +6446,11 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(
                           children: [
-                            const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 20),
+                            const Icon(
+                              Icons.check_circle,
+                              color: Color(0xFF10B981),
+                              size: 20,
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -5091,7 +6476,10 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                     if (displayedSkills.isNotEmpty) ...[
                       const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF0FDFA),
                           borderRadius: BorderRadius.circular(12),
@@ -5102,10 +6490,18 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.receipt_long, size: 20, color: Color(0xFF0D9488)),
+                                const Icon(
+                                  Icons.receipt_long,
+                                  size: 20,
+                                  color: Color(0xFF0D9488),
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  bilingual(context, 'Total Bill / Grand Total:', 'کل بل / گرینڈ ٹوٹل:'),
+                                  bilingual(
+                                    context,
+                                    'Total Bill / Grand Total:',
+                                    'کل بل / گرینڈ ٹوٹل:',
+                                  ),
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -5127,13 +6523,25 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       ),
                     ],
                     const SizedBox(height: 10),
-                    Text(bilingual(context, 'Recent Reviews', 'حالیہ جائزے'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    Text(
+                      bilingual(context, 'Recent Reviews', 'حالیہ جائزے'),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     StreamBuilder<QuerySnapshot>(
                       stream: streamWorkerReviews(worker.id ?? ''),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()));
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
                         }
                         final docs = snapshot.data?.docs ?? [];
                         if (docs.isEmpty) {
@@ -5145,15 +6553,29 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                               side: BorderSide(color: Colors.grey.shade200),
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.star_outline_rounded, color: Colors.amber, size: 22),
+                                  const Icon(
+                                    Icons.star_outline_rounded,
+                                    color: Colors.amber,
+                                    size: 22,
+                                  ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      bilingual(context, 'No reviews yet for this worker.', 'اس کاریگر کے لیے ابھی کوئی جائزہ نہیں۔'),
-                                      style: const TextStyle(color: Colors.black54, fontSize: 13),
+                                      bilingual(
+                                        context,
+                                        'No reviews yet for this worker.',
+                                        'اس کاریگر کے لیے ابھی کوئی جائزہ نہیں۔',
+                                      ),
+                                      style: const TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -5164,12 +6586,15 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         return Column(
                           children: docs.take(5).map((doc) {
                             final data = doc.data() as Map<String, dynamic>;
-                            final customerName = data['customerName']?.toString() ?? 'Customer';
+                            final customerName =
+                                data['customerName']?.toString() ?? 'Customer';
                             final r = (data['rating'] as num?)?.toInt() ?? 5;
                             final reviewText = data['review']?.toString() ?? '';
                             final jobTitle = data['jobTitle']?.toString() ?? '';
                             final ts = data['createdAt'] as Timestamp?;
-                            final dateStr = ts != null ? DateFormat('d MMM').format(ts.toDate()) : '';
+                            final dateStr = ts != null
+                                ? DateFormat('d MMM').format(ts.toDate())
+                                : '';
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
@@ -5177,7 +6602,9 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                               color: const Color(0xFFF9FAFB),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                side: const BorderSide(color: Color(0xFFE5E7EB)),
+                                side: const BorderSide(
+                                  color: Color(0xFFE5E7EB),
+                                ),
                               ),
                               child: ListTile(
                                 dense: true,
@@ -5186,19 +6613,32 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                                     Expanded(
                                       child: Text(
                                         customerName,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
                                       ),
                                     ),
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: List.generate(
                                         r,
-                                        (i) => const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF59E0B)),
+                                        (i) => const Icon(
+                                          Icons.star_rounded,
+                                          size: 14,
+                                          color: Color(0xFFF59E0B),
+                                        ),
                                       ),
                                     ),
                                     if (dateStr.isNotEmpty) ...[
                                       const SizedBox(width: 6),
-                                      Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                      Text(
+                                        dateStr,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
                                     ],
                                   ],
                                 ),
@@ -5206,10 +6646,22 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     if (jobTitle.isNotEmpty)
-                                      Text(jobTitle, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                                      Text(
+                                        jobTitle,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
                                     if (reviewText.isNotEmpty) ...[
                                       const SizedBox(height: 2),
-                                      Text(reviewText, style: const TextStyle(fontSize: 12.5, color: Colors.black87)),
+                                      Text(
+                                        reviewText,
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
                                     ],
                                   ],
                                 ),
@@ -5222,7 +6674,7 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                     const SizedBox(height: 90),
                   ],
                 ),
-              )
+              ),
             ],
           ),
           Positioned(
@@ -5243,7 +6695,11 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       otherImage: worker.image,
                     );
                     if (existingId != null) {
-                      Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: args);
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.sharedConversation,
+                        arguments: args,
+                      );
                     } else {
                       final newId = await createConversation(
                         otherUserId: wid,
@@ -5270,8 +6726,10 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       final date = await showDatePicker(
-                        context: context, 
-                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        context: context,
+                        initialDate: DateTime.now().add(
+                          const Duration(days: 1),
+                        ),
                         firstDate: DateTime.now(),
                         lastDate: DateTime.now().add(const Duration(days: 30)),
                       );
@@ -5281,81 +6739,101 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                           initialTime: TimeOfDay.now(),
                         );
                         if (time != null && context.mounted) {
-                           final priceText = _offerController.text.trim();
-                           final offerPrice = double.tryParse(priceText);
-                           if (offerPrice == null || offerPrice <= 0) {
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               SnackBar(
-                                 content: Text(bilingual(context, 'Please enter a valid amount to make an offer.', 'براہ کرم پیشکش کرنے کے لئے ایک درست رقم درج کریں۔')),
-                                 backgroundColor: Colors.redAccent,
-                               ),
-                             );
-                             return;
-                           }
-                            final jobDesc = args?.job ?? JobPostingArguments(
-                              descriptionEn: 'Scheduled Service',
-                              descriptionUr: 'شیڈولڈ سروس',
-                              price: offerPrice,
-                              categoryKey: worker.category.toLowerCase(),
+                          final priceText = _offerController.text.trim();
+                          final offerPrice = double.tryParse(priceText);
+                          if (offerPrice == null || offerPrice <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  bilingual(
+                                    context,
+                                    'Please enter a valid amount to make an offer.',
+                                    'براہ کرم پیشکش کرنے کے لئے ایک درست رقم درج کریں۔',
+                                  ),
+                                ),
+                                backgroundColor: Colors.redAccent,
+                              ),
                             );
-                              double? latitude = jobDesc.customerLatitude;
-                              double? longitude = jobDesc.customerLongitude;
-                              if (latitude == null || longitude == null) {
-                                final loc = await Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.confirmLocation,
-                                  arguments: LocationPickArguments(),
+                            return;
+                          }
+                          final jobDesc =
+                              args?.job ??
+                              JobPostingArguments(
+                                descriptionEn: 'Scheduled Service',
+                                descriptionUr: 'شیڈولڈ سروس',
+                                price: offerPrice,
+                                categoryKey: worker.category.toLowerCase(),
+                              );
+                          double? latitude = jobDesc.customerLatitude;
+                          double? longitude = jobDesc.customerLongitude;
+                          if (latitude == null || longitude == null) {
+                            final loc = await Navigator.pushNamed(
+                              context,
+                              AppRoutes.confirmLocation,
+                              arguments: LocationPickArguments(),
+                            );
+                            if (loc is Map &&
+                                loc['lat'] != null &&
+                                loc['lng'] != null) {
+                              latitude = (loc['lat'] as num).toDouble();
+                              longitude = (loc['lng'] as num).toDouble();
+                            }
+                            if (!context.mounted) return;
+                          }
+                          final categoryKeyToUse =
+                              jobDesc.categoryKey.isNotEmpty
+                              ? jobDesc.categoryKey.toLowerCase()
+                              : worker.category.toLowerCase();
+                          final customerId =
+                              FirebaseAuth.instance.currentUser?.uid;
+                          if (customerId != null && customerId.isNotEmpty) {
+                            final hasActive =
+                                await customerHasActiveJobInCategory(
+                                  customerId,
+                                  categoryKeyToUse,
                                 );
-                                if (loc is Map && loc['lat'] != null && loc['lng'] != null) {
-                                  latitude = (loc['lat'] as num).toDouble();
-                                  longitude = (loc['lng'] as num).toDouble();
-                                }
-                                if (!context.mounted) return;
-                              }
-                               final categoryKeyToUse = jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey.toLowerCase() : worker.category.toLowerCase();
-                               final customerId = FirebaseAuth.instance.currentUser?.uid;
-                               if (customerId != null && customerId.isNotEmpty) {
-                                 final hasActive = await customerHasActiveJobInCategory(customerId, categoryKeyToUse);
-                                 if (hasActive && mounted) {
-                                   ScaffoldMessenger.of(context).showSnackBar(
-                                     SnackBar(
-                                        content: Text(bilingual(
-                                          context,
-                                          'You can book only one ${worker.category} at a time. Please complete your previous ${worker.category} job first.',
-                                          'آپ صرف ایک ${worker.category} ایک وقت میں بک کر سکتے ہیں۔ براہ کرم اپنا پچھلا ${worker.category} کام مکمل کریں۔',
-                                        )),
-                                       backgroundColor: Colors.redAccent,
-                                       duration: const Duration(seconds: 5),
-                                     ),
-                                   );
-                                   return;
-                                 }
-                               }
-                               final jobId = await createJobOffer(
-                                 workerId: worker.id,
-                                 workerName: worker.name,
-                                 descriptionEn: jobDesc.descriptionEn,
-                                 descriptionUr: jobDesc.descriptionUr,
-                                 price: offerPrice,
-                                 categoryKey: categoryKeyToUse,
-                                 paymentMethod: jobDesc.paymentMethod,
-                                 customerLatitude: latitude,
-                                 customerLongitude: longitude,
-                                 visibilityDurationMinutes: _visibilityMinutes,
-                               );
-                              if (context.mounted) {
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  AppRoutes.tracking,
-                                 arguments: TrackingArguments(
-                                   worker: worker,
-                                   job: jobDesc,
-                                   jobId: jobId,
-                                 ),
-                               );
-                             }
-                         }
-                       }
+                            if (hasActive && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    bilingual(
+                                      context,
+                                      'You can book only one ${worker.category} at a time. Please complete your previous ${worker.category} job first.',
+                                      'آپ صرف ایک ${worker.category} ایک وقت میں بک کر سکتے ہیں۔ براہ کرم اپنا پچھلا ${worker.category} کام مکمل کریں۔',
+                                    ),
+                                  ),
+                                  backgroundColor: Colors.redAccent,
+                                  duration: const Duration(seconds: 5),
+                                ),
+                              );
+                              return;
+                            }
+                          }
+                          final jobId = await createJobOffer(
+                            workerId: worker.id,
+                            workerName: worker.name,
+                            descriptionEn: jobDesc.descriptionEn,
+                            descriptionUr: jobDesc.descriptionUr,
+                            price: offerPrice,
+                            categoryKey: categoryKeyToUse,
+                            paymentMethod: jobDesc.paymentMethod,
+                            customerLatitude: latitude,
+                            customerLongitude: longitude,
+                            visibilityDurationMinutes: _visibilityMinutes,
+                          );
+                          if (context.mounted) {
+                            Navigator.pushReplacementNamed(
+                              context,
+                              AppRoutes.tracking,
+                              arguments: TrackingArguments(
+                                worker: worker,
+                                job: jobDesc,
+                                jobId: jobId,
+                              ),
+                            );
+                          }
+                        }
+                      }
                     },
                     icon: const Icon(Icons.calendar_month),
                     label: Text(bilingual(context, 'Schedule', 'شیڈول کریں')),
@@ -5370,18 +6848,26 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       if (offerPrice == null || offerPrice <= 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(bilingual(context, 'Please enter a valid amount to make an offer.', 'براہ کرم پیشکش کرنے کے لئے ایک درست رقم درج کریں۔')),
+                            content: Text(
+                              bilingual(
+                                context,
+                                'Please enter a valid amount to make an offer.',
+                                'براہ کرم پیشکش کرنے کے لئے ایک درست رقم درج کریں۔',
+                              ),
+                            ),
                             backgroundColor: Colors.redAccent,
                           ),
                         );
                         return;
                       }
-                      final jobDesc = args?.job ?? JobPostingArguments(
-                        descriptionEn: 'Service',
-                        descriptionUr: 'سروس',
-                        price: offerPrice,
-                        categoryKey: worker.category.toLowerCase(),
-                      );
+                      final jobDesc =
+                          args?.job ??
+                          JobPostingArguments(
+                            descriptionEn: 'Service',
+                            descriptionUr: 'سروس',
+                            price: offerPrice,
+                            categoryKey: worker.category.toLowerCase(),
+                          );
                       double? latitude = jobDesc.customerLatitude;
                       double? longitude = jobDesc.customerLongitude;
                       if (latitude == null || longitude == null) {
@@ -5390,43 +6876,52 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                           AppRoutes.confirmLocation,
                           arguments: LocationPickArguments(),
                         );
-                        if (loc is Map && loc['lat'] != null && loc['lng'] != null) {
+                        if (loc is Map &&
+                            loc['lat'] != null &&
+                            loc['lng'] != null) {
                           latitude = (loc['lat'] as num).toDouble();
                           longitude = (loc['lng'] as num).toDouble();
                         }
                         if (!context.mounted) return;
                       }
-                       final categoryKeyToUse = jobDesc.categoryKey.isNotEmpty ? jobDesc.categoryKey.toLowerCase() : worker.category.toLowerCase();
-                       final customerId = FirebaseAuth.instance.currentUser?.uid;
-                       if (customerId != null && customerId.isNotEmpty) {
-                         final hasActive = await customerHasActiveJobInCategory(customerId, categoryKeyToUse);
-                         if (hasActive && mounted) {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                             SnackBar(
-                                content: Text(bilingual(
+                      final categoryKeyToUse = jobDesc.categoryKey.isNotEmpty
+                          ? jobDesc.categoryKey.toLowerCase()
+                          : worker.category.toLowerCase();
+                      final customerId = FirebaseAuth.instance.currentUser?.uid;
+                      if (customerId != null && customerId.isNotEmpty) {
+                        final hasActive = await customerHasActiveJobInCategory(
+                          customerId,
+                          categoryKeyToUse,
+                        );
+                        if (hasActive && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                bilingual(
                                   context,
                                   'You can book only one ${worker.category} at a time. Please complete your previous ${worker.category} job first.',
                                   'آپ صرف ایک ${worker.category} ایک وقت میں بک کر سکتے ہیں۔ براہ کرم اپنا پچھلا ${worker.category} کام مکمل کریں۔',
-                                )),
-                               backgroundColor: Colors.redAccent,
-                               duration: const Duration(seconds: 5),
-                             ),
-                           );
-                           return;
-                         }
-                       }
-                       final jobId = await createJobOffer(
-                         workerId: worker.id,
-                         workerName: worker.name,
-                         descriptionEn: jobDesc.descriptionEn,
-                         descriptionUr: jobDesc.descriptionUr,
-                         price: offerPrice,
-                         categoryKey: categoryKeyToUse,
-                         paymentMethod: jobDesc.paymentMethod,
-                         customerLatitude: latitude,
-                         customerLongitude: longitude,
-                         visibilityDurationMinutes: _visibilityMinutes,
-                       );
+                                ),
+                              ),
+                              backgroundColor: Colors.redAccent,
+                              duration: const Duration(seconds: 5),
+                            ),
+                          );
+                          return;
+                        }
+                      }
+                      final jobId = await createJobOffer(
+                        workerId: worker.id,
+                        workerName: worker.name,
+                        descriptionEn: jobDesc.descriptionEn,
+                        descriptionUr: jobDesc.descriptionUr,
+                        price: offerPrice,
+                        categoryKey: categoryKeyToUse,
+                        paymentMethod: jobDesc.paymentMethod,
+                        customerLatitude: latitude,
+                        customerLongitude: longitude,
+                        visibilityDurationMinutes: _visibilityMinutes,
+                      );
                       if (context.mounted) {
                         Navigator.pushReplacementNamed(
                           context,
@@ -5442,7 +6937,9 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF0D9488),
                     ),
-                    child: Text(bilingual(context, 'Hire Now', 'ابھی ہائر کریں')),
+                    child: Text(
+                      bilingual(context, 'Hire Now', 'ابھی ہائر کریں'),
+                    ),
                   ),
                 ),
               ],
@@ -5464,11 +6961,13 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
 
     for (final ws in worker.skills) {
       if (seenTitles.add(ws.titleEn.toLowerCase().trim())) {
-        allSkills.add(_FlowDisplayedSkill(
-          titleEn: ws.titleEn,
-          titleUr: ws.titleUr.isNotEmpty ? ws.titleUr : ws.titleEn,
-          price: ws.price,
-        ));
+        allSkills.add(
+          _FlowDisplayedSkill(
+            titleEn: ws.titleEn,
+            titleUr: ws.titleUr.isNotEmpty ? ws.titleUr : ws.titleEn,
+            price: ws.price,
+          ),
+        );
       }
     }
 
@@ -5477,40 +6976,111 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
         final en = worker.skillsEn[i];
         final ur = i < worker.skillsUr.length ? worker.skillsUr[i] : en;
         if (seenTitles.add(en.toLowerCase().trim())) {
-          allSkills.add(_FlowDisplayedSkill(
-            titleEn: en,
-            titleUr: ur,
-            price: worker.priceValue > 0 ? worker.priceValue : 300,
-          ));
+          allSkills.add(
+            _FlowDisplayedSkill(
+              titleEn: en,
+              titleUr: ur,
+              price: worker.priceValue > 0 ? worker.priceValue : 300,
+            ),
+          );
         }
       }
     }
 
     final categoryKey = worker.category.toLowerCase();
-    final List<_FlowDisplayedSkill> defaultCategorySkills = (categoryKey.contains('plumb'))
+    final List<_FlowDisplayedSkill> defaultCategorySkills =
+        (categoryKey.contains('plumb'))
         ? const [
-            _FlowDisplayedSkill(titleEn: 'Water Tap Leakage Fix', titleUr: 'نلکے سے پانی کا رساو ٹھیک کرنا', price: 300),
-            _FlowDisplayedSkill(titleEn: 'Flush Tank Repair', titleUr: 'فلش ٹینک کی مرمت', price: 600),
-            _FlowDisplayedSkill(titleEn: 'Sink / Wash Basin Installation', titleUr: 'واش بیسن لگانا', price: 1200),
-            _FlowDisplayedSkill(titleEn: 'Motor Pump Installation', titleUr: 'پانی کی موٹر لگانا', price: 2500),
-            _FlowDisplayedSkill(titleEn: 'Geyser Repair & Service', titleUr: 'گیزر کی سروس اور مرمت', price: 1800),
-            _FlowDisplayedSkill(titleEn: 'Pipeline Leakage Repair', titleUr: 'پائپ لائن لیکیج مرمت', price: 1000),
-            _FlowDisplayedSkill(titleEn: 'Shower Fitting Replacement', titleUr: 'شاور فٹنگ تبدیل کرنا', price: 700),
-            _FlowDisplayedSkill(titleEn: 'Drain Blockage Cleaning', titleUr: 'بند نالی کی صفائی', price: 800),
-            _FlowDisplayedSkill(titleEn: 'Full Washroom Setup', titleUr: 'واش روم کا مکمل سیٹ اپ', price: 12000),
+            _FlowDisplayedSkill(
+              titleEn: 'Water Tap Leakage Fix',
+              titleUr: 'نلکے سے پانی کا رساو ٹھیک کرنا',
+              price: 300,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Flush Tank Repair',
+              titleUr: 'فلش ٹینک کی مرمت',
+              price: 600,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Sink / Wash Basin Installation',
+              titleUr: 'واش بیسن لگانا',
+              price: 1200,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Motor Pump Installation',
+              titleUr: 'پانی کی موٹر لگانا',
+              price: 2500,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Geyser Repair & Service',
+              titleUr: 'گیزر کی سروس اور مرمت',
+              price: 1800,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Pipeline Leakage Repair',
+              titleUr: 'پائپ لائن لیکیج مرمت',
+              price: 1000,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Shower Fitting Replacement',
+              titleUr: 'شاور فٹنگ تبدیل کرنا',
+              price: 700,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Drain Blockage Cleaning',
+              titleUr: 'بند نالی کی صفائی',
+              price: 800,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Full Washroom Setup',
+              titleUr: 'واش روم کا مکمل سیٹ اپ',
+              price: 12000,
+            ),
           ]
         : (categoryKey.contains('elect'))
-            ? const [
-                _FlowDisplayedSkill(titleEn: 'Broken Switch Repair', titleUr: 'خراب سوئچ کی مرمت', price: 300),
-                _FlowDisplayedSkill(titleEn: 'Short Circuit Fix', titleUr: 'شارٹ سرکٹ ٹھیک کرنا', price: 400),
-                _FlowDisplayedSkill(titleEn: 'Ceiling Fan Installation', titleUr: 'سیلنگ فین انسٹالیشن', price: 500),
-                _FlowDisplayedSkill(titleEn: 'Full Home Wiring Repair', titleUr: 'مکمل گھر کی وائرنگ مرمت', price: 8000),
-                _FlowDisplayedSkill(titleEn: 'AC Switch Installation', titleUr: 'اے سی سوئچ لگانا', price: 450),
-                _FlowDisplayedSkill(titleEn: 'UPS Setup & Installation', titleUr: 'یو پی ایس سیٹ اپ', price: 1500),
-                _FlowDisplayedSkill(titleEn: 'Generator Repair', titleUr: 'جنریٹر کی مرمت', price: 2000),
-                _FlowDisplayedSkill(titleEn: 'Bulb or Holder Replacement', titleUr: 'بلب یا ہولڈر تبدیل کرنا', price: 150),
-              ]
-            : const [];
+        ? const [
+            _FlowDisplayedSkill(
+              titleEn: 'Broken Switch Repair',
+              titleUr: 'خراب سوئچ کی مرمت',
+              price: 300,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Short Circuit Fix',
+              titleUr: 'شارٹ سرکٹ ٹھیک کرنا',
+              price: 400,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Ceiling Fan Installation',
+              titleUr: 'سیلنگ فین انسٹالیشن',
+              price: 500,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Full Home Wiring Repair',
+              titleUr: 'مکمل گھر کی وائرنگ مرمت',
+              price: 8000,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'AC Switch Installation',
+              titleUr: 'اے سی سوئچ لگانا',
+              price: 450,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'UPS Setup & Installation',
+              titleUr: 'یو پی ایس سیٹ اپ',
+              price: 1500,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Generator Repair',
+              titleUr: 'جنریٹر کی مرمت',
+              price: 2000,
+            ),
+            _FlowDisplayedSkill(
+              titleEn: 'Bulb or Holder Replacement',
+              titleUr: 'بلب یا ہولڈر تبدیل کرنا',
+              price: 150,
+            ),
+          ]
+        : const [];
 
     for (final def in defaultCategorySkills) {
       if (seenTitles.add(def.titleEn.toLowerCase().trim())) {
@@ -5518,7 +7088,9 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
       }
     }
 
-    final selectedTitles = selectedIssues.map((e) => e.titleEn.toLowerCase().trim()).toSet();
+    final selectedTitles = selectedIssues
+        .map((e) => e.titleEn.toLowerCase().trim())
+        .toSet();
 
     showModalBottomSheet(
       context: context,
@@ -5551,13 +7123,27 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            bilingual(ctx, '${worker.name}\'s Skills', '${worker.name} کی مہارتیں'),
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            bilingual(
+                              ctx,
+                              '${worker.name}\'s Skills',
+                              '${worker.name} کی مہارتیں',
+                            ),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            bilingual(ctx, 'All available services & pricing', 'تمام دستیاب سروسز اور قیمتیں'),
-                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                            bilingual(
+                              ctx,
+                              'All available services & pricing',
+                              'تمام دستیاب سروسز اور قیمتیں',
+                            ),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                         ],
                       ),
@@ -5572,29 +7158,43 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
               const Divider(height: 1),
               Expanded(
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   itemCount: allSkills.length,
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (ctx, i) {
                     final s = allSkills[i];
                     final sTitle = s.titleEn.toLowerCase().trim();
-                    final isRequested = selectedTitles.any((st) =>
-                        st == sTitle ||
-                        st.contains(sTitle) ||
-                        sTitle.contains(st));
+                    final isRequested = selectedTitles.any(
+                      (st) =>
+                          st == sTitle ||
+                          st.contains(sTitle) ||
+                          sTitle.contains(st),
+                    );
 
                     return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       leading: Container(
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: isRequested ? const Color(0xFF0D9488).withOpacity(0.12) : const Color(0xFFF3F4F6),
+                          color: isRequested
+                              ? const Color(0xFF0D9488).withOpacity(0.12)
+                              : const Color(0xFFF3F4F6),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          isRequested ? Icons.check_circle : Icons.handyman_outlined,
-                          color: isRequested ? const Color(0xFF0D9488) : Colors.black54,
+                          isRequested
+                              ? Icons.check_circle
+                              : Icons.handyman_outlined,
+                          color: isRequested
+                              ? const Color(0xFF0D9488)
+                              : Colors.black54,
                           size: 20,
                         ),
                       ),
@@ -5604,7 +7204,9 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                             child: Text(
                               isUrdu ? s.titleUr : s.titleEn,
                               style: TextStyle(
-                                fontWeight: isRequested ? FontWeight.bold : FontWeight.w500,
+                                fontWeight: isRequested
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
                                 fontSize: 14,
                               ),
                             ),
@@ -5612,7 +7214,10 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                           if (isRequested) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFDCFCE7),
                                 borderRadius: BorderRadius.circular(12),
@@ -5659,7 +7264,10 @@ class _Tag extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Text(text, style: TextStyle(color: color, fontSize: 12)),
     );
   }
@@ -5675,10 +7283,16 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+          ),
           Text(label),
         ],
       ),
@@ -5725,7 +7339,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   }
 
   void _listenToJob() {
-    final args = ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
     final jobId = args?.jobId;
     if (jobId == null) return;
     _jobSub = streamJobById(jobId).listen((snapshot) {
@@ -5735,20 +7350,33 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       final status = data['status']?.toString() ?? 'pending';
       if (status == 'rejected') {
         final wasScheduled = data['scheduleDeclined'] as bool? ?? false;
-        showToast(wasScheduled
-            ? bilingual(context, 'You declined the worker\'s proposed schedule. This job is closed.', 'آپ نے ورکر کے تجویز کردہ شیڈول کو مسترد کر دیا۔ یہ کام بند ہو گیا۔')
-            : bilingual(context, 'Worker declined your offer. Please find another worker.', 'ورکر نے آپ کی پیشکش مسترد کر دی۔ براہ کرم دوسرا ورکر تلاش کریں۔'));
+        showToast(
+          wasScheduled
+              ? bilingual(
+                  context,
+                  'You declined the worker\'s proposed schedule. This job is closed.',
+                  'آپ نے ورکر کے تجویز کردہ شیڈول کو مسترد کر دیا۔ یہ کام بند ہو گیا۔',
+                )
+              : bilingual(
+                  context,
+                  'Worker declined your offer. Please find another worker.',
+                  'ورکر نے آپ کی پیشکش مسترد کر دی۔ براہ کرم دوسرا ورکر تلاش کریں۔',
+                ),
+        );
         Navigator.pop(context);
         return;
       }
       double? lat, lng;
-      if (data['customerLatitude'] != null && data['customerLongitude'] != null) {
+      if (data['customerLatitude'] != null &&
+          data['customerLongitude'] != null) {
         lat = (data['customerLatitude'] as num).toDouble();
         lng = (data['customerLongitude'] as num).toDouble();
       }
       setState(() {
         final scheduledRaw = data['scheduledReminderAt'];
-        _scheduledTime = scheduledRaw is Timestamp ? scheduledRaw.toDate() : null;
+        _scheduledTime = scheduledRaw is Timestamp
+            ? scheduledRaw.toDate()
+            : null;
         _scheduleConfirmed = data['scheduleConfirmed'] as bool? ?? false;
         _jobDescEmail = data['descriptionEn']?.toString() ?? '';
         if (status == 'accepted') {
@@ -5759,7 +7387,9 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           _trackingState = 4;
         } else if (status == 'worker_completed') {
           _trackingState = 2;
-        } else if (status == 'payment_pending' || status == 'worker_payment_pending' || status == 'payment_disputed') {
+        } else if (status == 'payment_pending' ||
+            status == 'worker_payment_pending' ||
+            status == 'payment_disputed') {
           _trackingState = 6;
         } else if (status == 'completed') {
           _trackingState = 5;
@@ -5776,7 +7406,9 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           Marker(
             markerId: const MarkerId('customer'),
             position: _customerLocation ?? LocationService.defaultIslamabad,
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueBlue,
+            ),
             infoWindow: InfoWindow(title: bilingual(context, 'You', 'آپ')),
           ),
           Marker(
@@ -5784,15 +7416,23 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
             position: _trackingState >= 1
                 ? (_customerLocation ?? LocationService.defaultIslamabad)
                 : LatLng(
-                    (_customerLocation?.latitude ?? LocationService.defaultIslamabad.latitude) + 0.005,
-                    (_customerLocation?.longitude ?? LocationService.defaultIslamabad.longitude) + 0.005,
+                    (_customerLocation?.latitude ??
+                            LocationService.defaultIslamabad.latitude) +
+                        0.005,
+                    (_customerLocation?.longitude ??
+                            LocationService.defaultIslamabad.longitude) +
+                        0.005,
                   ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueGreen,
+            ),
             infoWindow: InfoWindow(title: bilingual(context, 'Worker', 'ورکر')),
           ),
         };
         if (_mapController != null && _customerLocation != null) {
-          _mapController!.animateCamera(CameraUpdate.newLatLng(_customerLocation!));
+          _mapController!.animateCamera(
+            CameraUpdate.newLatLng(_customerLocation!),
+          );
         }
       });
     });
@@ -5810,19 +7450,32 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     final scheduled = _scheduledTime;
     if (scheduled == null) return const SizedBox.shrink();
     final t = DateFormat('hh:mm a, d MMM').format(scheduled);
-    final args = ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
     final worker = args?.worker;
 
     if (_scheduleConfirmed) {
       final remaining = scheduled.difference(DateTime.now());
       final String reminder;
       if (remaining.isNegative) {
-        reminder = bilingual(context, 'Worker should be arriving now', 'ورکر کو اب پہنچنا چاہیے');
+        reminder = bilingual(
+          context,
+          'Worker should be arriving now',
+          'ورکر کو اب پہنچنا چاہیے',
+        );
       } else if (remaining.inHours > 0) {
         final mins = remaining.inMinutes % 60;
-        reminder = bilingual(context, 'Worker arrives in ${remaining.inHours} h $mins min', 'ورکر ${remaining.inHours} گھنٹے $mins منٹ میں پہنچے گا');
+        reminder = bilingual(
+          context,
+          'Worker arrives in ${remaining.inHours} h $mins min',
+          'ورکر ${remaining.inHours} گھنٹے $mins منٹ میں پہنچے گا',
+        );
       } else {
-        reminder = bilingual(context, 'Worker arrives in ${remaining.inMinutes} min', 'ورکر ${remaining.inMinutes} منٹ میں پہنچے گا');
+        reminder = bilingual(
+          context,
+          'Worker arrives in ${remaining.inMinutes} min',
+          'ورکر ${remaining.inMinutes} منٹ میں پہنچے گا',
+        );
       }
       return Container(
         width: double.infinity,
@@ -5844,10 +7497,23 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        bilingual(context, 'Schedule confirmed for $t', 'شیڈول $t کے لیے منظور شدہ'),
-                        style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0D9488)),
+                        bilingual(
+                          context,
+                          'Schedule confirmed for $t',
+                          'شیڈول $t کے لیے منظور شدہ',
+                        ),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0D9488),
+                        ),
                       ),
-                      Text(reminder, style: const TextStyle(fontSize: 12, color: Color(0xFF92400E))),
+                      Text(
+                        reminder,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF92400E),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -5858,7 +7524,9 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.chat_outlined, size: 18),
-                label: Text(bilingual(context, 'Message Worker', 'ورکر کو میسج کریں')),
+                label: Text(
+                  bilingual(context, 'Message Worker', 'ورکر کو میسج کریں'),
+                ),
                 onPressed: () async {
                   final workerId = worker?.id;
                   if (workerId == null || workerId.isEmpty) return;
@@ -5866,13 +7534,31 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                   final existingId = await findExistingConversation(workerId);
                   if (!context.mounted) return;
                   if (existingId != null) {
-                    Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                      arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: worker?.image));
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.sharedConversation,
+                      arguments: ConversationArguments(
+                        conversationId: existingId,
+                        otherName: workerName,
+                        otherImage: worker?.image,
+                      ),
+                    );
                   } else {
-                    final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: worker?.image ?? '');
+                    final newId = await createConversation(
+                      otherUserId: workerId,
+                      otherUserName: workerName,
+                      otherUserImage: worker?.image ?? '',
+                    );
                     if (context.mounted) {
-                      Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                        arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: worker?.image));
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.sharedConversation,
+                        arguments: ConversationArguments(
+                          conversationId: newId,
+                          otherName: workerName,
+                          otherImage: worker?.image,
+                        ),
+                      );
                     }
                   }
                 },
@@ -5905,7 +7591,11 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     'Worker wants to schedule this work to $t',
                     'ورکر یہ کام $t پر شیڈول کرنا چاہتا ہے',
                   ),
-                  style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF92400E), fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF92400E),
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ],
@@ -5923,7 +7613,13 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(bilingual(context, 'Schedule accepted!', 'شیڈول منظور ہو گیا!')),
+                            content: Text(
+                              bilingual(
+                                context,
+                                'Schedule accepted!',
+                                'شیڈول منظور ہو گیا!',
+                              ),
+                            ),
                             backgroundColor: const Color(0xFF0D9488),
                           ),
                         );
@@ -5954,13 +7650,31 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     final existingId = await findExistingConversation(workerId);
                     if (!context.mounted) return;
                     if (existingId != null) {
-                      Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                        arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: worker?.image));
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.sharedConversation,
+                        arguments: ConversationArguments(
+                          conversationId: existingId,
+                          otherName: workerName,
+                          otherImage: worker?.image,
+                        ),
+                      );
                     } else {
-                      final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: worker?.image ?? '');
+                      final newId = await createConversation(
+                        otherUserId: workerId,
+                        otherUserName: workerName,
+                        otherUserImage: worker?.image ?? '',
+                      );
                       if (context.mounted) {
-                        Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                          arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: worker?.image));
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.sharedConversation,
+                          arguments: ConversationArguments(
+                            conversationId: newId,
+                            otherName: workerName,
+                            otherImage: worker?.image,
+                          ),
+                        );
                       }
                     }
                   },
@@ -5974,11 +7688,14 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
             child: TextButton(
               onPressed: () async {
                 if (jobId != null) {
-                  await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
-                    'status': 'rejected',
-                    'scheduleDeclined': true,
-                    'statusUpdatedAt': FieldValue.serverTimestamp(),
-                  });
+                  await FirebaseFirestore.instance
+                      .collection('jobs')
+                      .doc(jobId)
+                      .update({
+                        'status': 'rejected',
+                        'scheduleDeclined': true,
+                        'statusUpdatedAt': FieldValue.serverTimestamp(),
+                      });
                   _notifyScheduleDeclined(jobId);
                 }
               },
@@ -5995,14 +7712,21 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
 
   Future<void> _notifyScheduleApproval(String jobId) async {
     try {
-      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+      final jobDoc = await FirebaseFirestore.instance
+          .collection('jobs')
+          .doc(jobId)
+          .get();
       final data = jobDoc.data();
       if (data == null) return;
       final workerId = data['workerId']?.toString();
-      final workerEmail = workerId != null ? await getUserEmail(workerId) : null;
+      final workerEmail = workerId != null
+          ? await getUserEmail(workerId)
+          : null;
       if (workerEmail == null) return;
       final scheduledRaw = data['scheduledReminderAt'];
-      final scheduled = scheduledRaw is Timestamp ? scheduledRaw.toDate() : null;
+      final scheduled = scheduledRaw is Timestamp
+          ? scheduledRaw.toDate()
+          : null;
       if (scheduled == null) return;
       await SmtpService.sendScheduleConfirmedEmail(
         email: workerEmail,
@@ -6015,11 +7739,16 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
 
   Future<void> _notifyScheduleDeclined(String jobId) async {
     try {
-      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+      final jobDoc = await FirebaseFirestore.instance
+          .collection('jobs')
+          .doc(jobId)
+          .get();
       final data = jobDoc.data();
       if (data == null) return;
       final workerId = data['workerId']?.toString();
-      final workerEmail = workerId != null ? await getUserEmail(workerId) : null;
+      final workerEmail = workerId != null
+          ? await getUserEmail(workerId)
+          : null;
       if (workerEmail == null) return;
       await SmtpService.sendScheduleDeclinedEmail(
         email: workerEmail,
@@ -6040,7 +7769,11 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     } catch (_) {}
   }
 
-  Future<void> _onCustomerClickJobCompleted(BuildContext context, String? jobId, TrackingArguments? args) async {
+  Future<void> _onCustomerClickJobCompleted(
+    BuildContext context,
+    String? jobId,
+    TrackingArguments? args,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -6049,21 +7782,29 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           children: [
             const Icon(Icons.check_circle, color: Color(0xFF0D9488)),
             const SizedBox(width: 8),
-            Expanded(child: Text(bilingual(context, 'Completed?', 'کیا کام مکمل ہو گیا ہے؟'))),
+            Expanded(
+              child: Text(
+                bilingual(context, 'Completed?', 'کیا کام مکمل ہو گیا ہے؟'),
+              ),
+            ),
           ],
         ),
-        content: Text(bilingual(
-          context,
-          'Are you sure the worker has completed the job satisfactorily?',
-          'کیا آپ تصدیق کرتے ہیں کہ ورکر نے تسلی بخش طریقے سے کام مکمل کر لیا ہے؟',
-        )),
+        content: Text(
+          bilingual(
+            context,
+            'Are you sure the worker has completed the job satisfactorily?',
+            'کیا آپ تصدیق کرتے ہیں کہ ورکر نے تسلی بخش طریقے سے کام مکمل کر لیا ہے؟',
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(bilingual(context, 'Cancel', 'منسوخ کریں')),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0D9488),
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(bilingual(context, 'Yes', 'ہاں')),
           ),
@@ -6076,7 +7817,13 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(bilingual(context, 'Job confirmed completed!', 'کام مکمل ہونے کی تصدیق ہو گئی!')),
+        content: Text(
+          bilingual(
+            context,
+            'Job confirmed completed!',
+            'کام مکمل ہونے کی تصدیق ہو گئی!',
+          ),
+        ),
         backgroundColor: const Color(0xFF0D9488),
         duration: const Duration(seconds: 2),
       ),
@@ -6103,32 +7850,68 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   String _trackingTitle(BuildContext context) {
     switch (_trackingState) {
       case 0:
-        return bilingual(context, 'Waiting for worker to accept...', 'ورکر کے قبول کرنے کا انتظار ہے...');
+        return bilingual(
+          context,
+          'Waiting for worker to accept...',
+          'ورکر کے قبول کرنے کا انتظار ہے...',
+        );
       case 1:
         if (_scheduledTime != null && _scheduleConfirmed) {
           final t = DateFormat('hh:mm a, d MMM').format(_scheduledTime!);
-          return bilingual(context, 'Worker will arrive at $t', 'ورکر $t پر پہنچے گا');
+          return bilingual(
+            context,
+            'Worker will arrive at $t',
+            'ورکر $t پر پہنچے گا',
+          );
         }
         return bilingual(context, 'Worker is on the way', 'ورکر راستے میں ہے');
       case 2:
-        return bilingual(context, 'Worker claims job is completed', 'ورکر کا دعویٰ ہے کہ کام مکمل ہو گیا');
+        return bilingual(
+          context,
+          'Worker claims job is completed',
+          'ورکر کا دعویٰ ہے کہ کام مکمل ہو گیا',
+        );
       case 3:
         return bilingual(context, 'Worker has arrived', 'ورکر پہنچ گیا ہے');
       case 4:
-        return bilingual(context, 'Worker is working at your location', 'ورکر آپ کے مقام پر کام کر رہا ہے');
+        return bilingual(
+          context,
+          'Worker is working at your location',
+          'ورکر آپ کے مقام پر کام کر رہا ہے',
+        );
       case 5:
         return bilingual(context, 'Job completed', 'کام مکمل ہو گیا');
       case 6:
-        return bilingual(context, 'Awaiting payment confirmation', 'ادائیگی کی تصدیق زیر التوا');
+        return bilingual(
+          context,
+          'Awaiting payment confirmation',
+          'ادائیگی کی تصدیق زیر التوا',
+        );
       case 7:
-        return bilingual(context, 'Worker arrival was declined', 'ورکر کی آمد مسترد کر دی گئی');
+        return bilingual(
+          context,
+          'Worker arrival was declined',
+          'ورکر کی آمد مسترد کر دی گئی',
+        );
       case 8:
         if (_scheduleConfirmed) {
-          final t = _scheduledTime != null ? DateFormat('hh:mm a, d MMM').format(_scheduledTime!) : '';
-          return bilingual(context, 'Scheduled for $t', 'شیڈول $t کے لیے منظور شدہ');
+          final t = _scheduledTime != null
+              ? DateFormat('hh:mm a, d MMM').format(_scheduledTime!)
+              : '';
+          return bilingual(
+            context,
+            'Scheduled for $t',
+            'شیڈول $t کے لیے منظور شدہ',
+          );
         }
-        final t = _scheduledTime != null ? DateFormat('hh:mm a, d MMM').format(_scheduledTime!) : '';
-        return bilingual(context, 'Worker wants to schedule ($t)', 'ورکر شیڈول کرنا چاہتا ہے ($t)');
+        final t = _scheduledTime != null
+            ? DateFormat('hh:mm a, d MMM').format(_scheduledTime!)
+            : '';
+        return bilingual(
+          context,
+          'Worker wants to schedule ($t)',
+          'ورکر شیڈول کرنا چاہتا ہے ($t)',
+        );
       default:
         return bilingual(context, 'Tracking job', 'کام ٹریک ہو رہا ہے');
     }
@@ -6137,18 +7920,42 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   String? _trackingDetail(BuildContext context) {
     switch (_trackingState) {
       case 3:
-        return bilingual(context, 'Please confirm the worker is at your location.', 'براہ کرم تصدیق کریں کہ ورکر آپ کے مقام پر موجود ہے۔');
+        return bilingual(
+          context,
+          'Please confirm the worker is at your location.',
+          'براہ کرم تصدیق کریں کہ ورکر آپ کے مقام پر موجود ہے۔',
+        );
       case 4:
-        return bilingual(context, 'This job is now working at customer.', 'یہ کام اب کسٹمر کے مقام پر جاری ہے۔');
+        return bilingual(
+          context,
+          'This job is now working at customer.',
+          'یہ کام اب کسٹمر کے مقام پر جاری ہے۔',
+        );
       case 6:
-        return bilingual(context, 'Waiting for the worker to confirm receipt of payment.', 'ورکر ادائیگی موصول ہونے کی تصدیق کرے گا۔');
+        return bilingual(
+          context,
+          'Waiting for the worker to confirm receipt of payment.',
+          'ورکر ادائیگی موصول ہونے کی تصدیق کرے گا۔',
+        );
       case 7:
-        return bilingual(context, 'This job has been closed because the arrival was declined.', 'آمد مسترد ہونے کی وجہ سے یہ کام بند ہو گیا۔');
+        return bilingual(
+          context,
+          'This job has been closed because the arrival was declined.',
+          'آمد مسترد ہونے کی وجہ سے یہ کام بند ہو گیا۔',
+        );
       case 8:
         if (!_scheduleConfirmed) {
-          return bilingual(context, 'Worker wants to schedule this work. Accept or Chat to discuss.', 'ورکر یہ کام شیڈول کرنا چاہتا ہے۔ قبول کریں یا بات چیت کے لیے چیٹ کریں۔');
+          return bilingual(
+            context,
+            'Worker wants to schedule this work. Accept or Chat to discuss.',
+            'ورکر یہ کام شیڈول کرنا چاہتا ہے۔ قبول کریں یا بات چیت کے لیے چیٹ کریں۔',
+          );
         }
-        return bilingual(context, 'This request is scheduled. The job will become active once it starts.', 'یہ درخواست شیڈول ہو چکی ہے۔ کام شروع ہوتے ہی ایکٹو ہو جائے گی۔');
+        return bilingual(
+          context,
+          'This request is scheduled. The job will become active once it starts.',
+          'یہ درخواست شیڈول ہو چکی ہے۔ کام شروع ہوتے ہی ایکٹو ہو جائے گی۔',
+        );
       default:
         return null;
     }
@@ -6156,7 +7963,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
     final worker = args?.worker;
     final job = args?.job;
     final jobId = args?.jobId;
@@ -6164,7 +7972,13 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     if (worker == null) {
       return Scaffold(
         body: Center(
-          child: Text(bilingual(context, 'Tracking data not available', 'ٹریکنگ ڈیٹا دستیاب نہیں')),
+          child: Text(
+            bilingual(
+              context,
+              'Tracking data not available',
+              'ٹریکنگ ڈیٹا دستیاب نہیں',
+            ),
+          ),
         ),
       );
     }
@@ -6194,12 +8008,23 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                   const CircularProgressIndicator(color: Color(0xFF0D9488)),
                   const SizedBox(height: 24),
                   Text(
-                    bilingual(context, 'Request sent to worker...', 'ورکر کو درخواست بھیج دی گئی...'),
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    bilingual(
+                      context,
+                      'Request sent to worker...',
+                      'ورکر کو درخواست بھیج دی گئی...',
+                    ),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    bilingual(context, 'Waiting for them to accept your offer', 'ان کے آپ کی پیشکش قبول کرنے کا انتظار ہے'),
+                    bilingual(
+                      context,
+                      'Waiting for them to accept your offer',
+                      'ان کے آپ کی پیشکش قبول کرنے کا انتظار ہے',
+                    ),
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
@@ -6211,44 +8036,78 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
               top: 20,
               right: 20,
               child: FloatingActionButton.extended(
-              heroTag: 'customer_sos',
-              backgroundColor: Colors.red,
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: Text(bilingual(context, 'Emergency SOS', 'ہنگامی صورتحال (SOS)')),
-                    content: Text(bilingual(context, 'Are you in danger? Calling Admin/Police.', 'کیا آپ خطرے میں ہیں؟ پولیس کو کال کی جا رہی ہے۔')),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx), child: Text(bilingual(context, 'Cancel', 'منسوخ کریں'))),
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                        icon: const Icon(Icons.call),
-                        label: const Text('15 / Admin'),
-                        onPressed: () async {
-                          Navigator.pop(ctx);
-                          final uri = Uri(scheme: 'tel', path: '15');
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri);
-                          } else {
-                            showToast(bilingual(context, 'Unable to call emergency', 'ایمرجنسی کال کرنے سے قاصر'));
-                          }
-                        },
+                heroTag: 'customer_sos',
+                backgroundColor: Colors.red,
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(
+                        bilingual(
+                          context,
+                          'Emergency SOS',
+                          'ہنگامی صورتحال (SOS)',
+                        ),
                       ),
-                    ],
+                      content: Text(
+                        bilingual(
+                          context,
+                          'Are you in danger? Calling Admin/Police.',
+                          'کیا آپ خطرے میں ہیں؟ پولیس کو کال کی جا رہی ہے۔',
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text(
+                            bilingual(context, 'Cancel', 'منسوخ کریں'),
+                          ),
+                        ),
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                          icon: const Icon(Icons.call),
+                          label: const Text('15 / Admin'),
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            final uri = Uri(scheme: 'tel', path: '15');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri);
+                            } else {
+                              showToast(
+                                bilingual(
+                                  context,
+                                  'Unable to call emergency',
+                                  'ایمرجنسی کال کرنے سے قاصر',
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.local_police, color: Colors.white),
+                label: const Text(
+                  'SOS',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
-                );
-              },
-              icon: const Icon(Icons.local_police, color: Colors.white),
-              label: const Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
             ),
-          ),
           if (_trackingState == 0 || _trackingState == 1)
             Positioned(
               top: 20,
               left: 20,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black87,
                   borderRadius: BorderRadius.circular(16),
@@ -6259,7 +8118,11 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     const SizedBox(width: 6),
                     Text(
                       '${bilingual(context, 'PIN', 'پِن')}: $_pin',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ],
                 ),
@@ -6267,54 +8130,77 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
             ),
           if (_trackingState >= 1)
             Positioned(
-            top: 110,
-            left: 80,
-            child: Column(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.network(
-                    worker.image,
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const CircleAvatar(radius: 20, child: Icon(Icons.person)),
+              top: 110,
+              left: 80,
+              child: Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.network(
+                      worker.image,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const CircleAvatar(
+                        radius: 20,
+                        child: Icon(Icons.person),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.black87,
-                    borderRadius: BorderRadius.circular(4),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      worker.name.split(' ').first,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                  child: Text(
-                    worker.name.split(' ').first,
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           if (_trackingState >= 1)
             Positioned(
-            top: 240,
-            right: 70,
-            child: Column(
-              children: const [
-                CircleAvatar(radius: 18, backgroundColor: Colors.black87, child: Icon(Icons.location_on, color: Colors.white)),
-                Text('You'),
-              ],
+              top: 240,
+              right: 70,
+              child: Column(
+                children: const [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.black87,
+                    child: Icon(Icons.location_on, color: Colors.white),
+                  ),
+                  Text('You'),
+                ],
+              ),
             ),
-          ),
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(26), topRight: Radius.circular(26)),
-                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 30, offset: Offset(0, -8))],
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(26),
+                  topRight: Radius.circular(26),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 30,
+                    offset: Offset(0, -8),
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -6326,21 +8212,41 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       Expanded(
                         child: Text(
                           _trackingTitle(context),
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       const Icon(Icons.explore),
                     ],
                   ),
-                  if (_trackingState == 1) Text(bilingual(context, 'Worker has accepted the job', 'ورکر نے کام قبول کر لیا ہے')),
-                  if ((_trackingState == 1 || _trackingState == 8) && _scheduledTime != null) _buildSchedulePanel(context, jobId),
-                  if (_trackingDetail(context) != null) Text(_trackingDetail(context)!),
+                  if (_trackingState == 1)
+                    Text(
+                      bilingual(
+                        context,
+                        'Worker has accepted the job',
+                        'ورکر نے کام قبول کر لیا ہے',
+                      ),
+                    ),
+                  if ((_trackingState == 1 || _trackingState == 8) &&
+                      _scheduledTime != null)
+                    _buildSchedulePanel(context, jobId),
+                  if (_trackingDetail(context) != null)
+                    Text(_trackingDetail(context)!),
                   if (_trackingState == 2) ...[
                     const SizedBox(height: 8),
                     Text(
-                      bilingual(context, 'Is it completed?', 'کیا کام مکمل ہو گیا ہے؟'),
-                      style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold),
+                      bilingual(
+                        context,
+                        'Is it completed?',
+                        'کیا کام مکمل ہو گیا ہے؟',
+                      ),
+                      style: const TextStyle(
+                        color: Color(0xFF0D9488),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 10),
@@ -6353,12 +8259,13 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         width: 48,
                         height: 48,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const CircleAvatar(child: Icon(Icons.person)),
+                        errorBuilder: (_, __, ___) =>
+                            const CircleAvatar(child: Icon(Icons.person)),
                       ),
                     ),
                     title: Text(worker.name),
                     subtitle: Text(
-                      '${worker.category} • ${bilingual(context, job?.descriptionEn ?? "Service", job?.descriptionUr ?? "سروس")} • ${worker.price}'
+                      '${worker.category} • ${bilingual(context, job?.descriptionEn ?? "Service", job?.descriptionUr ?? "سروس")} • ${worker.price}',
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -6367,14 +8274,36 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                           onPressed: () async {
                             final wid = worker.id;
                             if (wid == null) return;
-                            final existingId = await findExistingConversation(wid);
+                            final existingId = await findExistingConversation(
+                              wid,
+                            );
                             if (!context.mounted) return;
                             if (existingId != null) {
-                              Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: existingId, otherName: worker.name, otherImage: worker.image));
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.sharedConversation,
+                                arguments: ConversationArguments(
+                                  conversationId: existingId,
+                                  otherName: worker.name,
+                                  otherImage: worker.image,
+                                ),
+                              );
                             } else {
-                              final newId = await createConversation(otherUserId: wid, otherUserName: worker.name, otherUserImage: worker.image);
+                              final newId = await createConversation(
+                                otherUserId: wid,
+                                otherUserName: worker.name,
+                                otherUserImage: worker.image,
+                              );
                               if (context.mounted) {
-                                Navigator.pushNamed(context, AppRoutes.sharedConversation, arguments: ConversationArguments(conversationId: newId, otherName: worker.name, otherImage: worker.image));
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.sharedConversation,
+                                  arguments: ConversationArguments(
+                                    conversationId: newId,
+                                    otherName: worker.name,
+                                    otherImage: worker.image,
+                                  ),
+                                );
                               }
                             }
                           },
@@ -6383,17 +8312,32 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         IconButton(
                           onPressed: () async {
                             if (worker.phone.isNotEmpty) {
-                              final uri = Uri(scheme: 'tel', path: worker.phone);
+                              final uri = Uri(
+                                scheme: 'tel',
+                                path: worker.phone,
+                              );
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri);
                               } else {
-                                showToast(bilingual(context, 'Unable to call', 'کال کرنے سے قاصر'));
+                                showToast(
+                                  bilingual(
+                                    context,
+                                    'Unable to call',
+                                    'کال کرنے سے قاصر',
+                                  ),
+                                );
                               }
                             } else {
-                              showToast(bilingual(context, 'No phone number available', 'فون نمبر دستیاب نہیں'));
+                              showToast(
+                                bilingual(
+                                  context,
+                                  'No phone number available',
+                                  'فون نمبر دستیاب نہیں',
+                                ),
+                              );
                             }
                           },
-                          icon: const Icon(Icons.call, color: Colors.green)
+                          icon: const Icon(Icons.call, color: Colors.green),
                         ),
                       ],
                     ),
@@ -6405,11 +8349,22 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                           child: OutlinedButton(
                             onPressed: () async {
                               if (jobId != null) {
-                                await updateJobStatus(jobId, 'arrival_declined');
+                                await updateJobStatus(
+                                  jobId,
+                                  'arrival_declined',
+                                );
                               }
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(bilingual(context, 'Worker presence declined.', 'ورکر کی موجودگی مسترد کر دی گئی۔'))),
+                                SnackBar(
+                                  content: Text(
+                                    bilingual(
+                                      context,
+                                      'Worker presence declined.',
+                                      'ورکر کی موجودگی مسترد کر دی گئی۔',
+                                    ),
+                                  ),
+                                ),
                               );
                             },
                             child: Text(bilingual(context, 'No', 'نہیں')),
@@ -6423,7 +8378,9 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                                 await updateJobStatus(jobId, 'working');
                               }
                             },
-                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D9488),
+                            ),
                             child: Text(bilingual(context, 'Yes', 'ہاں')),
                           ),
                         ),
@@ -6439,7 +8396,15 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                                 await updateJobStatus(jobId, 'working');
                               }
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(bilingual(context, 'Waiting for worker to finish.', 'ورکر کا انتظار کیا جا رہا ہے۔'))),
+                                SnackBar(
+                                  content: Text(
+                                    bilingual(
+                                      context,
+                                      'Waiting for worker to finish.',
+                                      'ورکر کا انتظار کیا جا رہا ہے۔',
+                                    ),
+                                  ),
+                                ),
                               );
                             },
                             child: Text(bilingual(context, 'No', 'نہیں')),
@@ -6448,10 +8413,25 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: FilledButton.icon(
-                            onPressed: () => _onCustomerClickJobCompleted(context, jobId, args),
-                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-                            icon: const Icon(Icons.check_circle_outline, size: 18),
-                            label: Text(bilingual(context, 'Yes, Completed', 'ہاں، مکمل ہو گیا')),
+                            onPressed: () => _onCustomerClickJobCompleted(
+                              context,
+                              jobId,
+                              args,
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D9488),
+                            ),
+                            icon: const Icon(
+                              Icons.check_circle_outline,
+                              size: 18,
+                            ),
+                            label: Text(
+                              bilingual(
+                                context,
+                                'Yes, Completed',
+                                'ہاں، مکمل ہو گیا',
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -6463,18 +8443,41 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                           child: OutlinedButton(
                             onPressed: () => Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const CancelJobScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const CancelJobScreen(),
+                              ),
                             ),
-                            child: Text(bilingual(context, 'Cancel Job', 'کام منسوخ کریں')),
+                            child: Text(
+                              bilingual(
+                                context,
+                                'Cancel Job',
+                                'کام منسوخ کریں',
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: FilledButton.icon(
-                            onPressed: () => _onCustomerClickJobCompleted(context, jobId, args),
-                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-                            icon: const Icon(Icons.check_circle_outline, size: 18),
-                            label: Text(bilingual(context, 'Job Completed', 'کام مکمل ہو گیا')),
+                            onPressed: () => _onCustomerClickJobCompleted(
+                              context,
+                              jobId,
+                              args,
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D9488),
+                            ),
+                            icon: const Icon(
+                              Icons.check_circle_outline,
+                              size: 18,
+                            ),
+                            label: Text(
+                              bilingual(
+                                context,
+                                'Job Completed',
+                                'کام مکمل ہو گیا',
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -6486,11 +8489,26 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         Expanded(
                           child: FilledButton.icon(
                             onPressed: () {
-                              Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: args);
+                              Navigator.pushReplacementNamed(
+                                context,
+                                AppRoutes.rating,
+                                arguments: args,
+                              );
                             },
-                            icon: const Icon(Icons.star_rounded, color: Colors.amber),
-                            label: Text(bilingual(context, 'Rate Worker', 'ورکر کی درجہ بندی کریں')),
-                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                            icon: const Icon(
+                              Icons.star_rounded,
+                              color: Colors.amber,
+                            ),
+                            label: Text(
+                              bilingual(
+                                context,
+                                'Rate Worker',
+                                'ورکر کی درجہ بندی کریں',
+                              ),
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D9488),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -6510,7 +8528,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         onPressed: () => Navigator.pop(context),
                         child: Text(bilingual(context, 'Back', 'واپس جائیں')),
                       ),
-                    )
+                    ),
                   ] else ...[
                     Row(
                       children: [
@@ -6518,29 +8536,52 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                           child: OutlinedButton(
                             onPressed: () => Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const CancelJobScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const CancelJobScreen(),
+                              ),
                             ),
-                            child: Text(bilingual(context, 'Cancel Job', 'کام منسوخ کریں')),
+                            child: Text(
+                              bilingual(
+                                context,
+                                'Cancel Job',
+                                'کام منسوخ کریں',
+                              ),
+                            ),
                           ),
                         ),
                         if (_trackingState == 1) ...[
                           const SizedBox(width: 8),
                           Expanded(
                             child: FilledButton.icon(
-                              onPressed: () => _onCustomerClickJobCompleted(context, jobId, args),
-                              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-                              icon: const Icon(Icons.check_circle_outline, size: 18),
-                              label: Text(bilingual(context, 'Job Completed', 'کام مکمل ہو گیا')),
+                              onPressed: () => _onCustomerClickJobCompleted(
+                                context,
+                                jobId,
+                                args,
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF0D9488),
+                              ),
+                              icon: const Icon(
+                                Icons.check_circle_outline,
+                                size: 18,
+                              ),
+                              label: Text(
+                                bilingual(
+                                  context,
+                                  'Job Completed',
+                                  'کام مکمل ہو گیا',
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ],
                     ),
-                  ]
+                  ],
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -6558,7 +8599,7 @@ enum PostJobStep {
   onlinePaymentSelect,
   onlinePaymentForm,
   ratingForm,
-  completed
+  completed,
 }
 
 class RatingReviewScreen extends StatefulWidget {
@@ -6605,7 +8646,10 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
     final jobId = _jobId(context);
     if (jobId == null || jobId.isEmpty) return;
     try {
-      final doc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('jobs')
+          .doc(jobId)
+          .get();
       if (doc.exists && mounted) {
         final data = doc.data() ?? {};
         setState(() {
@@ -6613,11 +8657,13 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         });
 
         // If online payment gateway was selected, open payment gateway immediately
-        final method = data['paymentMethod']?.toString() ?? _jobPaymentMethod(context);
+        final method =
+            data['paymentMethod']?.toString() ?? _jobPaymentMethod(context);
         final isOnline = method.toLowerCase() != 'cash';
         if (isOnline) {
           _selectedProvider = method;
-          final amount = (data['price'] as num?)?.toDouble() ?? _jobAmount(context);
+          final amount =
+              (data['price'] as num?)?.toDouble() ?? _jobAmount(context);
           if (amount > 0) {
             _payAmount.text = amount.toStringAsFixed(0);
           }
@@ -6628,7 +8674,10 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
 
         final wid = data['workerId']?.toString() ?? '';
         if (wid.isNotEmpty) {
-          final wDoc = await FirebaseFirestore.instance.collection('users').doc(wid).get();
+          final wDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(wid)
+              .get();
           if (wDoc.exists && mounted) {
             setState(() {
               _loadedWorkerData = wDoc.data() ?? {};
@@ -6668,7 +8717,8 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   }
 
   String? _jobId(BuildContext context) {
-    return _trackingArgs(context)?.jobId ?? _loadedJobData?['jobId']?.toString();
+    return _trackingArgs(context)?.jobId ??
+        _loadedJobData?['jobId']?.toString();
   }
 
   String _getWorkerName(BuildContext context) {
@@ -6704,10 +8754,43 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
     setState(() => _step = PostJobStep.paymentSuccessTick);
   }
 
+  Future<void> _payWithSafepay(BuildContext context, double amount) async {
+    final jobId =
+        _jobId(context) ?? 'JOB-${DateTime.now().millisecondsSinceEpoch}';
+    final isUrdu = AppScope.of(context).isUrdu;
+
+    await SafepayService.instance.startPaymentFlow(
+      context: context,
+      amount: amount > 0 ? amount : 100,
+      orderId: 'JOB-$jobId-${DateTime.now().millisecondsSinceEpoch}',
+      title: isUrdu ? 'سروس کی آن لائن ادائیگی' : 'Service Online Payment',
+      onPaymentSuccess: () async {
+        final jId = _jobId(context);
+        if (jId != null) {
+          await updateJobCompleted(jId);
+          await FirebaseFirestore.instance.collection('jobs').doc(jId).set({
+            'paymentStatus': 'paid',
+            'paymentMethod': 'Safepay',
+            'paidAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
+        if (mounted) {
+          setState(() => _step = PostJobStep.paymentSuccessTick);
+        }
+      },
+    );
+  }
+
   Future<void> _submitPaymentIssue(BuildContext context) async {
     final reason = _paymentIssue.text.trim();
     if (reason.isEmpty) {
-      showToast(bilingual(context, 'Please explain why you are not paying.', 'براہ کرم وجہ لکھیں کہ ادائیگی کیوں نہیں کر رہے۔'));
+      showToast(
+        bilingual(
+          context,
+          'Please explain why you are not paying.',
+          'براہ کرم وجہ لکھیں کہ ادائیگی کیوں نہیں کر رہے۔',
+        ),
+      );
       return;
     }
     final jobId = _jobId(context);
@@ -6723,7 +8806,13 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
       await updateJobStatus(jobId, 'payment_disputed');
     }
     if (!mounted) return;
-    showToast(bilingual(context, 'Payment issue sent to admin.', 'ادائیگی کا مسئلہ ایڈمن کو بھیج دیا گیا۔'));
+    showToast(
+      bilingual(
+        context,
+        'Payment issue sent to admin.',
+        'ادائیگی کا مسئلہ ایڈمن کو بھیج دیا گیا۔',
+      ),
+    );
     setState(() => _step = PostJobStep.completed);
   }
 
@@ -6731,12 +8820,16 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(bilingual(context, 'Have you paid?', 'کیا آپ نے ادائیگی کر دی؟')),
-        content: Text(bilingual(
-          context,
-          'Have you paid Rs. ${amount.toStringAsFixed(0)} to the worker by hand?',
-          'کیا آپ نے ورکر کو ${amount.toStringAsFixed(0)} روپے نقد ادا کر دیے ہیں؟',
-        )),
+        title: Text(
+          bilingual(context, 'Have you paid?', 'کیا آپ نے ادائیگی کر دی؟'),
+        ),
+        content: Text(
+          bilingual(
+            context,
+            'Have you paid Rs. ${amount.toStringAsFixed(0)} to the worker by hand?',
+            'کیا آپ نے ورکر کو ${amount.toStringAsFixed(0)} روپے نقد ادا کر دیے ہیں؟',
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -6767,7 +8860,13 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
     }
 
     if (jobId == null || jobId.isEmpty) {
-      showToast(bilingual(context, 'Unable to submit rating: Job not found', 'درجہ بندی جمع نہیں ہو سکی: کام نہیں ملا'));
+      showToast(
+        bilingual(
+          context,
+          'Unable to submit rating: Job not found',
+          'درجہ بندی جمع نہیں ہو سکی: کام نہیں ملا',
+        ),
+      );
       setState(() => _step = PostJobStep.completed);
       return;
     }
@@ -6782,7 +8881,13 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         reviewText: review.text.trim().isNotEmpty ? review.text.trim() : null,
       );
       if (!mounted) return;
-      showToast(bilingual(context, 'Rating and review submitted!', 'درجہ بندی اور جائزہ جمع کر دیا گیا!'));
+      showToast(
+        bilingual(
+          context,
+          'Rating and review submitted!',
+          'درجہ بندی اور جائزہ جمع کر دیا گیا!',
+        ),
+      );
       setState(() {
         _submittingRating = false;
         _step = PostJobStep.completed;
@@ -6790,7 +8895,13 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
     } catch (e) {
       if (!mounted) return;
       debugPrint('Rating submit fallback caught: $e');
-      showToast(bilingual(context, 'Rating saved successfully!', 'درجہ بندی کامیابی سے محفوظ ہو گئی!'));
+      showToast(
+        bilingual(
+          context,
+          'Rating saved successfully!',
+          'درجہ بندی کامیابی سے محفوظ ہو گئی!',
+        ),
+      );
       setState(() {
         _submittingRating = false;
         _step = PostJobStep.completed;
@@ -6799,9 +8910,13 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
   }
 
   String _getTitle(BuildContext context) {
-    if (_step == PostJobStep.chooseAction) return bilingual(context, 'Service Summary', 'سروس کا خلاصہ');
-    if (_step == PostJobStep.complaintForm) return bilingual(context, 'Lodge Complaint', 'شکایت درج کریں');
-    if (_step == PostJobStep.paymentMethod || _step == PostJobStep.onlinePaymentSelect || _step == PostJobStep.onlinePaymentForm) {
+    if (_step == PostJobStep.chooseAction)
+      return bilingual(context, 'Service Summary', 'سروس کا خلاصہ');
+    if (_step == PostJobStep.complaintForm)
+      return bilingual(context, 'Lodge Complaint', 'شکایت درج کریں');
+    if (_step == PostJobStep.paymentMethod ||
+        _step == PostJobStep.onlinePaymentSelect ||
+        _step == PostJobStep.onlinePaymentForm) {
       return bilingual(context, 'Payment', 'ادائیگی');
     }
     return bilingual(context, 'Rate Service', 'درجہ بندی کریں');
@@ -6853,7 +8968,11 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
       children: [
         const Icon(Icons.task_alt, color: Color(0xFF059669), size: 64),
         const SizedBox(height: 16),
-        Text(bilingual(context, 'Job Completed!', 'کام مکمل ہو گیا!'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+        Text(
+          bilingual(context, 'Job Completed!', 'کام مکمل ہو گیا!'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+        ),
         const SizedBox(height: 24),
         Card(
           child: Padding(
@@ -6863,7 +8982,11 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
                 _BillRow('Service Fee', 'Rs. ${amount.toStringAsFixed(0)}'),
                 _BillRow('Payment Method', paymentMethod),
                 const Divider(),
-                _BillRow('Total', 'Rs. ${amount.toStringAsFixed(0)}', bold: true),
+                _BillRow(
+                  'Total',
+                  'Rs. ${amount.toStringAsFixed(0)}',
+                  bold: true,
+                ),
               ],
             ),
           ),
@@ -6890,13 +9013,20 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
       key: const ValueKey('complaint'),
       padding: const EdgeInsets.all(16),
       children: [
-        Text(bilingual(context, 'File a Complaint', 'ایک شکایت درج کریں'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(
+          bilingual(context, 'File a Complaint', 'ایک شکایت درج کریں'),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 16),
         TextField(
           controller: _paymentIssue,
           maxLines: 3,
           decoration: InputDecoration(
-            labelText: bilingual(context, 'Description / Issue', 'تفصیل / مسئلہ'),
+            labelText: bilingual(
+              context,
+              'Description / Issue',
+              'تفصیل / مسئلہ',
+            ),
             alignLabelWithHint: true,
           ),
         ),
@@ -6905,12 +9035,22 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           controller: _claimAmount,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            labelText: bilingual(context, 'Money Claim Amount', 'رقم کے دعوے کی رقم'),
-            prefixText: 'Rs. '
+            labelText: bilingual(
+              context,
+              'Money Claim Amount',
+              'رقم کے دعوے کی رقم',
+            ),
+            prefixText: 'Rs. ',
           ),
         ),
         const SizedBox(height: 24),
-        Text(bilingual(context, 'Add Photos (Optional)', 'تصاویر شامل کریں (اختیاری)')),
+        Text(
+          bilingual(
+            context,
+            'Add Photos (Optional)',
+            'تصاویر شامل کریں (اختیاری)',
+          ),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -6922,9 +9062,13 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300)
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                  child: Icon(_img1Added ? Icons.image : Icons.add_a_photo, color: _img1Added ? Colors.green : Colors.grey, size: 32),
+                  child: Icon(
+                    _img1Added ? Icons.image : Icons.add_a_photo,
+                    color: _img1Added ? Colors.green : Colors.grey,
+                    size: 32,
+                  ),
                 ),
               ),
             ),
@@ -6937,9 +9081,13 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300)
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                  child: Icon(_img2Added ? Icons.image : Icons.add_a_photo, color: _img2Added ? Colors.green : Colors.grey, size: 32),
+                  child: Icon(
+                    _img2Added ? Icons.image : Icons.add_a_photo,
+                    color: _img2Added ? Colors.green : Colors.grey,
+                    size: 32,
+                  ),
                 ),
               ),
             ),
@@ -6959,14 +9107,30 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
       key: const ValueKey('paymentMethod'),
       padding: const EdgeInsets.all(24),
       children: [
-        Text(bilingual(context, 'Select Payment Method', 'ادائیگی کا طریقہ منتخب کریں'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        Text(
+          bilingual(
+            context,
+            'Select Payment Method',
+            'ادائیگی کا طریقہ منتخب کریں',
+          ),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 24),
         ListTile(
           leading: const Icon(Icons.money, size: 36, color: Colors.green),
           title: Text(bilingual(context, 'Cash by Hand', 'نقد ادا کریں')),
-          subtitle: Text(bilingual(context, 'Pay directly to worker', 'براہ راست ورکر کو ادائیگی کریں')),
+          subtitle: Text(
+            bilingual(
+              context,
+              'Pay directly to worker',
+              'براہ راست ورکر کو ادائیگی کریں',
+            ),
+          ),
           tileColor: Colors.white,
-          shape: RoundedRectangleBorder(side: BorderSide(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
           onTap: () {
             setState(() => _step = PostJobStep.workerConfirmationWaiting);
             Future.delayed(const Duration(seconds: 4), () {
@@ -6978,11 +9142,30 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         ),
         const SizedBox(height: 16),
         ListTile(
-          leading: const Icon(Icons.account_balance_wallet, size: 36, color: Colors.blue),
-          title: Text(bilingual(context, 'Pay Online', 'آن لائن ادائیگی')),
-          subtitle: Text(bilingual(context, 'JazzCash, EasyPaisa, etc.', 'جاز کیش، ایزی پیسہ وغیرہ')),
+          leading: const Icon(
+            Icons.credit_card,
+            size: 36,
+            color: Color(0xFF0D9488),
+          ),
+          title: Text(
+            bilingual(
+              context,
+              'Pay Online (Safepay)',
+              'آن لائن ادائیگی (سیف پے)',
+            ),
+          ),
+          subtitle: Text(
+            bilingual(
+              context,
+              'Debit / Credit Card (Visa, MasterCard, PayPak)',
+              'ڈیبٹ / کریڈٹ کارڈ سے ادائیگی',
+            ),
+          ),
           tileColor: Colors.white,
-          shape: RoundedRectangleBorder(side: BorderSide(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
           onTap: () {
             setState(() => _step = PostJobStep.onlinePaymentSelect);
           },
@@ -7018,9 +9201,24 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 24),
-            Text(bilingual(context, 'Message sent to worker...', 'ورکر کو پیغام بھیجا گیا...'), style: const TextStyle(fontSize: 16, color: Colors.grey)),
+            Text(
+              bilingual(
+                context,
+                'Message sent to worker...',
+                'ورکر کو پیغام بھیجا گیا...',
+              ),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
             const SizedBox(height: 8),
-            Text(bilingual(context, 'Waiting for worker to confirm payment received', 'ورکر کی جانب سے ادائیگی کی وصولی کی تصدیق کا انتظار ہے'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              bilingual(
+                context,
+                'Waiting for worker to confirm payment received',
+                'ورکر کی جانب سے ادائیگی کی وصولی کی تصدیق کا انتظار ہے',
+              ),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
@@ -7040,7 +9238,14 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         children: [
           const Icon(Icons.check_circle, color: Colors.green, size: 100),
           const SizedBox(height: 20),
-          Text(bilingual(context, 'Payment Successful!', 'ادائیگی کامیاب!'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+          Text(
+            bilingual(context, 'Payment Successful!', 'ادائیگی کامیاب!'),
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
           const SizedBox(height: 18),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -7056,7 +9261,11 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
                   const Divider(),
                   _BillRow('Worker', workerName),
                   _BillRow('Payment', method),
-                  _BillRow('Amount', 'Rs. ${amount.toStringAsFixed(0)}', bold: true),
+                  _BillRow(
+                    'Amount',
+                    'Rs. ${amount.toStringAsFixed(0)}',
+                    bold: true,
+                  ),
                 ],
               ),
             ),
@@ -7064,88 +9273,236 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           const SizedBox(height: 24),
           FilledButton(
             onPressed: () => setState(() => _step = PostJobStep.ratingForm),
-            child: Text(bilingual(context, 'Continue to Rating', 'درجہ بندی پر جائیں')),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOnlineSelect(BuildContext context) {
-    return Padding(
-      key: const ValueKey('onlineSelect'),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(bilingual(context, 'Choose Provider', 'فراہم کنندہ منتخب کریں'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 30),
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () => setState(() {
-                    _selectedProvider = 'JazzCash';
-                    _step = PostJobStep.onlinePaymentForm;
-                  }),
-                  child: Container(
-                    height: 120,
-                    decoration: BoxDecoration(border: Border.all(color: Colors.red), borderRadius: BorderRadius.circular(8)),
-                    child: const Center(child: Text('JazzCash', style: TextStyle(color: Colors.red, fontSize: 20, fontWeight: FontWeight.bold))),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: InkWell(
-                  onTap: () => setState(() {
-                    _selectedProvider = 'EasyPaisa';
-                    _step = PostJobStep.onlinePaymentForm;
-                  }),
-                  child: Container(
-                    height: 120,
-                    decoration: BoxDecoration(border: Border.all(color: Colors.green), borderRadius: BorderRadius.circular(8)),
-                    child: const Center(child: Text('EasyPaisa', style: TextStyle(color: Colors.green, fontSize: 20, fontWeight: FontWeight.bold))),
-                  ),
-                ),
-              ),
-            ],
+            child: Text(
+              bilingual(context, 'Continue to Rating', 'درجہ بندی پر جائیں'),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOnlineForm(BuildContext context) {
+  Widget _buildOnlineSelect(BuildContext context) {
+    final amount = _jobAmount(context);
     return ListView(
-      key: const ValueKey('onlineForm'),
+      key: const ValueKey('onlineSelect'),
       padding: const EdgeInsets.all(24),
       children: [
-        Text('${bilingual(context, 'Pay via', 'ذریعے ادائیگی کریں')} $_selectedProvider', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 30),
-        TextField(
-          controller: _senderName,
-          decoration: InputDecoration(labelText: bilingual(context, 'Sender Name', 'بھیجنے والے کا نام')),
+        Text(
+          bilingual(
+            context,
+            'Choose Payment Gateway',
+            'ادائیگی کا طریقہ منتخب کریں',
+          ),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _mobileNumber,
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(labelText: bilingual(context, 'Mobile Number', 'موبائل نمبر')),
+        const SizedBox(height: 6),
+        Text(
+          bilingual(
+            context,
+            'Select how you would like to pay for your service',
+            'سروس کی ادائیگی کے لیے طریقہ منتخب کریں',
+          ),
+          style: const TextStyle(fontSize: 14, color: Colors.black54),
         ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _payAmount,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: bilingual(context, 'Amount', 'رقم')),
+        const SizedBox(height: 24),
+        // Safepay Gateway Card (Featured)
+        InkWell(
+          onTap: () => _payWithSafepay(context, amount),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0D9488),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.credit_card,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Safepay Gateway',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              bilingual(
+                                context,
+                                'Cards & Digital Wallets',
+                                'کارڈز اور ڈیجیٹل والٹ',
+                              ),
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.7),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF059669).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF059669)),
+                      ),
+                      child: Text(
+                        bilingual(context, 'Instant', 'فوری'),
+                        style: const TextStyle(
+                          color: Color(0xFF34D399),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  bilingual(
+                    context,
+                    'Pay securely with Visa, MasterCard, PayPak, or UnionPay via Safepay Sandbox.',
+                    'ویزا، ماسٹر کارڈ، پے پاک کے ذریعے باحفاظت ادائیگی کریں۔',
+                  ),
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Rs. ${amount.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D9488),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            bilingual(
+                              context,
+                              'Pay with Safepay',
+                              'سیف پے سے ادا کریں',
+                            ),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(height: 30),
-        FilledButton(
-          onPressed: () => _completeOnlinePayment(context),
-          child: Text(bilingual(context, 'Send Payment', 'ادائیگی بھیجیں')),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            const Expanded(child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                bilingual(context, 'PREFER CASH?', 'کیش ادا کرنا چاہتے ہیں؟'),
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Expanded(child: Divider()),
+          ],
+        ),
+        const SizedBox(height: 20),
+        OutlinedButton.icon(
+          onPressed: () {
+            _showCashPaidDialog(context, amount);
+          },
+          icon: const Icon(Icons.money, color: Colors.green),
+          label: Text(
+            bilingual(context, 'Pay in Cash to Worker', 'ورکر کو نقد ادا کریں'),
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: Colors.green, width: 1.5),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         ),
       ],
     );
+  }
+
+  Widget _buildOnlineForm(BuildContext context) {
+    return _buildOnlineSelect(context);
   }
 
   Widget _buildRatingForm(BuildContext context) {
@@ -7179,23 +9536,40 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
             children: [
               CircleAvatar(
                 radius: 40,
-                backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
-                backgroundImage: workerImage.isNotEmpty ? NetworkImage(workerImage) : null,
+                backgroundColor: const Color(
+                  0xFF0D9488,
+                ).withValues(alpha: 0.15),
+                backgroundImage: workerImage.isNotEmpty
+                    ? NetworkImage(workerImage)
+                    : null,
                 child: workerImage.isEmpty
                     ? Text(
-                        workerName.isNotEmpty ? workerName[0].toUpperCase() : 'W',
-                        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                        workerName.isNotEmpty
+                            ? workerName[0].toUpperCase()
+                            : 'W',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0D9488),
+                        ),
                       )
                     : null,
               ),
               const SizedBox(height: 12),
               Text(
                 workerName,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
-                bilingual(context, 'How was your experience?', 'آپ کا تجربہ کیسا رہا؟'),
+                bilingual(
+                  context,
+                  'How was your experience?',
+                  'آپ کا تجربہ کیسا رہا؟',
+                ),
                 style: const TextStyle(fontSize: 14, color: Colors.black54),
               ),
             ],
@@ -7244,7 +9618,11 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           minLines: 3,
           maxLines: 4,
           decoration: InputDecoration(
-            hintText: bilingual(context, 'Write an honest review for this worker (optional)...', 'کاریگر کے کام کے بارے میں اپنا جائزہ لکھیں (اختیاری)...'),
+            hintText: bilingual(
+              context,
+              'Write an honest review for this worker (optional)...',
+              'کاریگر کے کام کے بارے میں اپنا جائزہ لکھیں (اختیاری)...',
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -7254,7 +9632,11 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         ),
         const SizedBox(height: 20),
         Text(
-          bilingual(context, 'Add a Tip for the Worker', 'ورکر کے لیے ٹپ شامل کریں'),
+          bilingual(
+            context,
+            'Add a Tip for the Worker',
+            'ورکر کے لیے ٹپ شامل کریں',
+          ),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 8),
@@ -7262,21 +9644,51 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(bilingual(context, 'Rs. 50 Tip Added', '50 روپے کی ٹپ شامل کر دی گئی')))),
+                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      bilingual(
+                        context,
+                        'Rs. 50 Tip Added',
+                        '50 روپے کی ٹپ شامل کر دی گئی',
+                      ),
+                    ),
+                  ),
+                ),
                 child: const Text('Rs. 50'),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton(
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(bilingual(context, 'Rs. 100 Tip Added', '100 روپے کی ٹپ شامل کر دی گئی')))),
+                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      bilingual(
+                        context,
+                        'Rs. 100 Tip Added',
+                        '100 روپے کی ٹپ شامل کر دی گئی',
+                      ),
+                    ),
+                  ),
+                ),
                 child: const Text('Rs. 100'),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton(
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(bilingual(context, 'Rs. 200 Tip Added', '200 روپے کی ٹپ شامل کر دی گئی')))),
+                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      bilingual(
+                        context,
+                        'Rs. 200 Tip Added',
+                        '200 روپے کی ٹپ شامل کر دی گئی',
+                      ),
+                    ),
+                  ),
+                ),
                 child: const Text('Rs. 200'),
               ),
             ),
@@ -7289,18 +9701,32 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           child: FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF0D9488),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            onPressed: (rating == 0 || _submittingRating) ? null : () => _submitRating(context),
+            onPressed: (rating == 0 || _submittingRating)
+                ? null
+                : () => _submitRating(context),
             child: _submittingRating
                 ? const SizedBox(
                     width: 24,
                     height: 24,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
                   )
                 : Text(
-                    bilingual(context, 'Submit Review & Rating', 'جائزہ اور درجہ بندی جمع کریں'),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    bilingual(
+                      context,
+                      'Submit Review & Rating',
+                      'جائزہ اور درجہ بندی جمع کریں',
+                    ),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
           ),
         ),
@@ -7319,7 +9745,8 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.6, end: 1),
               duration: const Duration(milliseconds: 300),
-              builder: (_, value, child) => Transform.scale(scale: value, child: child),
+              builder: (_, value, child) =>
+                  Transform.scale(scale: value, child: child),
               child: const CircleAvatar(
                 radius: 40,
                 backgroundColor: Color(0xFFD1FAE5),
@@ -7327,14 +9754,30 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            Text(bilingual(context, 'Thank You!', 'شکریہ!'), style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
+            Text(
+              bilingual(context, 'Thank You!', 'شکریہ!'),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 6),
-            Text(bilingual(context, 'Your feedback helps keep our community safe.', 'آپ کا فیڈ بیک کمیونٹی کو محفوظ بناتا ہے۔'), textAlign: TextAlign.center),
+            Text(
+              bilingual(
+                context,
+                'Your feedback helps keep our community safe.',
+                'آپ کا فیڈ بیک کمیونٹی کو محفوظ بناتا ہے۔',
+              ),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 18),
             FilledButton(
-              onPressed: () => Navigator.pushNamedAndRemoveUntil(context, AppRoutes.customerHome, (r) => false),
-              child: Text(bilingual(context, 'Back to Home', 'ہوم پر واپس جائیں')),
-            )
+              onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.customerHome,
+                (r) => false,
+              ),
+              child: Text(
+                bilingual(context, 'Back to Home', 'ہوم پر واپس جائیں'),
+              ),
+            ),
           ],
         ),
       ),
@@ -7355,9 +9798,19 @@ class _BillRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Text(left, style: TextStyle(fontWeight: bold ? FontWeight.w700 : FontWeight.w400)),
+          Text(
+            left,
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+            ),
+          ),
           const Spacer(),
-          Text(right, style: TextStyle(fontWeight: bold ? FontWeight.w700 : FontWeight.w400)),
+          Text(
+            right,
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+            ),
+          ),
         ],
       ),
     );
@@ -7398,13 +9851,24 @@ void showWorkerReviewsSheet(BuildContext context, String workerId) {
                       color: Color(0xFFFEF3C7),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 24),
+                    child: const Icon(
+                      Icons.star_rounded,
+                      color: Color(0xFFD97706),
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      bilingual(context, 'Customer Reviews & Ratings', 'کسٹمر جائزے اور درجہ بندی'),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      bilingual(
+                        context,
+                        'Customer Reviews & Ratings',
+                        'کسٹمر جائزے اور درجہ بندی',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -7430,11 +9894,23 @@ void showWorkerReviewsSheet(BuildContext context, String workerId) {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.rate_review_outlined, size: 56, color: Colors.grey.shade400),
+                            Icon(
+                              Icons.rate_review_outlined,
+                              size: 56,
+                              color: Colors.grey.shade400,
+                            ),
                             const SizedBox(height: 16),
                             Text(
-                              bilingual(context, 'No Reviews Yet', 'ابھی تک کوئی جائزہ نہیں ملا'),
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
+                              bilingual(
+                                context,
+                                'No Reviews Yet',
+                                'ابھی تک کوئی جائزہ نہیں ملا',
+                              ),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black54,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -7444,7 +9920,10 @@ void showWorkerReviewsSheet(BuildContext context, String workerId) {
                                 'گاہکوں سے 5 اسٹار ریٹنگز اور جائزے حاصل کرنے کے لیے کام مکمل کریں۔',
                               ),
                               textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 13, color: Colors.grey),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey,
+                              ),
                             ),
                           ],
                         ),
@@ -7457,12 +9936,16 @@ void showWorkerReviewsSheet(BuildContext context, String workerId) {
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final data = docs[index].data() as Map<String, dynamic>;
-                      final customerName = data['customerName']?.toString() ?? (isUrdu ? 'کسٹمر' : 'Customer');
+                      final customerName =
+                          data['customerName']?.toString() ??
+                          (isUrdu ? 'کسٹمر' : 'Customer');
                       final r = (data['rating'] as num?)?.toInt() ?? 5;
                       final reviewStr = data['review']?.toString() ?? '';
                       final jobTitle = data['jobTitle']?.toString() ?? '';
                       final ts = data['createdAt'] as Timestamp?;
-                      final dateStr = ts != null ? DateFormat('d MMM yyyy').format(ts.toDate()) : '';
+                      final dateStr = ts != null
+                          ? DateFormat('d MMM yyyy').format(ts.toDate())
+                          : '';
 
                       return Container(
                         padding: const EdgeInsets.all(14),
@@ -7478,32 +9961,61 @@ void showWorkerReviewsSheet(BuildContext context, String workerId) {
                               children: [
                                 CircleAvatar(
                                   radius: 16,
-                                  backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                                  backgroundColor: const Color(
+                                    0xFF0D9488,
+                                  ).withValues(alpha: 0.15),
                                   child: Text(
-                                    customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488), fontSize: 13),
+                                    customerName.isNotEmpty
+                                        ? customerName[0].toUpperCase()
+                                        : 'C',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0D9488),
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                      Text(
+                                        customerName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
                                       if (jobTitle.isNotEmpty)
-                                        Text(jobTitle, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                                        Text(
+                                          jobTitle,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.black54,
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
                                 if (dateStr.isNotEmpty)
-                                  Text(dateStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                  Text(
+                                    dateStr,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                               ],
                             ),
                             const SizedBox(height: 8),
                             Row(
                               children: List.generate(5, (sIdx) {
                                 return Icon(
-                                  sIdx < r ? Icons.star_rounded : Icons.star_outline_rounded,
+                                  sIdx < r
+                                      ? Icons.star_rounded
+                                      : Icons.star_outline_rounded,
                                   color: const Color(0xFFF59E0B),
                                   size: 18,
                                 );
@@ -7513,7 +10025,11 @@ void showWorkerReviewsSheet(BuildContext context, String workerId) {
                               const SizedBox(height: 6),
                               Text(
                                 reviewStr,
-                                style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  height: 1.4,
+                                  color: Colors.black87,
+                                ),
                               ),
                             ],
                           ],
@@ -7563,28 +10079,42 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       return;
     }
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       final data = doc.data();
 
       // Guard: worker must be approved by admin
-      final workerStatus = data?['workerStatus']?.toString() ?? data?['status']?.toString();
-      final roles = (data?['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
-      final hasWorkerRole = roles.contains('worker') || data?['role'] == 'worker';
+      final workerStatus =
+          data?['workerStatus']?.toString() ?? data?['status']?.toString();
+      final roles =
+          (data?['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      final hasWorkerRole =
+          roles.contains('worker') || data?['role'] == 'worker';
       if (!hasWorkerRole || workerStatus != 'approved') {
         if (mounted) {
           final isUrdu = AppScope.of(context).isUrdu;
           AppScope.of(context).switchActiveRole(UserRole.customer);
-          Navigator.pushNamedAndRemoveUntil(context, AppRoutes.customerHome, (r) => false);
-          showToast(isUrdu
-              ? 'ورکر موڈ استعمال کرنے کے لیے ایڈمن کی منظوری درکار ہے'
-              : 'Admin approval is required to access Worker Mode');
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.customerHome,
+            (r) => false,
+          );
+          showToast(
+            isUrdu
+                ? 'ورکر موڈ استعمال کرنے کے لیے ایڈمن کی منظوری درکار ہے'
+                : 'Admin approval is required to access Worker Mode',
+          );
         }
         return;
       }
 
       final isOn = data?['isOnline'] as bool? ?? false;
-      final hasLocation = await LocationService.instance.isLocationEnabledAndPermitted();
-      final effectiveOnline = (WorkerPresenceService.instance.isOnline || isOn) && hasLocation;
+      final hasLocation = await LocationService.instance
+          .isLocationEnabledAndPermitted();
+      final effectiveOnline =
+          (WorkerPresenceService.instance.isOnline || isOn) && hasLocation;
 
       if (!hasLocation && isOn) {
         await WorkerPresenceService.instance.setOnline(false);
@@ -7607,7 +10137,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 
   Future<void> _toggleOnline(bool value) async {
     if (value) {
-      final allowed = await LocationService.instance.verifyWorkerLocationForOnline(context);
+      final allowed = await LocationService.instance
+          .verifyWorkerLocationForOnline(context);
       if (!allowed || !mounted) {
         setState(() => online = false);
         return;
@@ -7631,17 +10162,29 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       initialTime: TimeOfDay.now(),
     );
     if (time == null || !mounted) return null;
-    final scheduled = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final scheduled = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
     if (scheduled.isBefore(DateTime.now())) {
-      showToast(isUrdu
-          ? 'براہ کرم مستقبل کا وقت منتخب کریں'
-          : 'Please select a future time');
+      showToast(
+        isUrdu
+            ? 'براہ کرم مستقبل کا وقت منتخب کریں'
+            : 'Please select a future time',
+      );
       return null;
     }
     return scheduled;
   }
 
-  Future<void> _handleInstantAcceptJob(BuildContext context, String jobId, double price) async {
+  Future<void> _handleInstantAcceptJob(
+    BuildContext context,
+    String jobId,
+    double price,
+  ) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -7664,7 +10207,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     _notifyScheduleProposal(jobId, scheduled);
 
     try {
-      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+      final jobDoc = await FirebaseFirestore.instance
+          .collection('jobs')
+          .doc(jobId)
+          .get();
       final data = jobDoc.data();
       final customerId = data?['customerId']?.toString();
       final customerName = data?['customerName']?.toString() ?? 'Customer';
@@ -7682,18 +10228,25 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
       }
     } catch (_) {}
 
-    showToast(isUrdu
-        ? 'شیڈول تجویز گاہک کو بھیج دی گئی'
-        : 'Schedule proposal sent to customer');
+    showToast(
+      isUrdu
+          ? 'شیڈول تجویز گاہک کو بھیج دی گئی'
+          : 'Schedule proposal sent to customer',
+    );
   }
 
   Future<void> _notifyScheduleProposal(String jobId, DateTime scheduled) async {
     try {
-      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+      final jobDoc = await FirebaseFirestore.instance
+          .collection('jobs')
+          .doc(jobId)
+          .get();
       final data = jobDoc.data();
       if (data == null) return;
       final customerId = data['customerId']?.toString();
-      final customerEmail = customerId != null ? await getUserEmail(customerId) : null;
+      final customerEmail = customerId != null
+          ? await getUserEmail(customerId)
+          : null;
       if (customerEmail == null) return;
       await SmtpService.sendScheduleProposalEmail(
         email: customerEmail,
@@ -7719,11 +10272,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             stream: streamCurrentUserData(),
             builder: (context, snapshot) {
               final data = snapshot.data?.data() as Map<String, dynamic>?;
-              final name = data?['name']?.toString() ?? (isUrdu ? 'ورکر' : 'Worker');
+              final name =
+                  data?['name']?.toString() ?? (isUrdu ? 'ورکر' : 'Worker');
               final categoryUr = data?['categoryNameUr']?.toString() ?? '';
               final categoryEn = data?['categoryNameEn']?.toString() ?? '';
               final profileImage = data?['profileImage']?.toString() ?? '';
-              final double ratingVal = (data?['rating'] as num?)?.toDouble() ?? 0.0;
+              final double ratingVal =
+                  (data?['rating'] as num?)?.toDouble() ?? 0.0;
               final int reviewsVal = (data?['reviews'] as num?)?.toInt() ?? 0;
 
               return Column(
@@ -7732,52 +10287,84 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: CircleAvatar(
-                      backgroundImage: profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
+                      backgroundImage: profileImage.isNotEmpty
+                          ? NetworkImage(profileImage)
+                          : null,
                       child: profileImage.isEmpty
                           ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'W')
                           : null,
                     ),
                     title: Text(
                       name,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(isUrdu && categoryUr.isNotEmpty ? categoryUr : categoryEn),
+                        Text(
+                          isUrdu && categoryUr.isNotEmpty
+                              ? categoryUr
+                              : categoryEn,
+                        ),
                         const SizedBox(height: 3),
                         Row(
                           children: [
-                            const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
+                            const Icon(
+                              Icons.star_rounded,
+                              color: Color(0xFFF59E0B),
+                              size: 16,
+                            ),
                             const SizedBox(width: 3),
                             Text(
-                              ratingVal > 0 ? ratingVal.toStringAsFixed(1) : (isUrdu ? 'نیا' : 'New'),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFD97706)),
+                              ratingVal > 0
+                                  ? ratingVal.toStringAsFixed(1)
+                                  : (isUrdu ? 'نیا' : 'New'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Color(0xFFD97706),
+                              ),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               '($reviewsVal ${isUrdu ? 'جائزے' : 'reviews'})',
-                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
                             ),
                           ],
                         ),
                       ],
                     ),
                     trailing: IconButton(
-                      icon: const Icon(Icons.assignment_outlined, color: Color(0xFF0D9488), size: 26),
+                      icon: const Icon(
+                        Icons.assignment_outlined,
+                        color: Color(0xFF0D9488),
+                        size: 26,
+                      ),
                       tooltip: isUrdu ? 'میرے کام' : 'My Jobs',
-                      onPressed: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
+                      onPressed: () =>
+                          Navigator.pushNamed(context, AppRoutes.sharedHistory),
                     ),
                   ),
                   ValueListenableBuilder<AppLocation>(
-                    valueListenable: LocationService.instance.currentLocationNotifier,
+                    valueListenable:
+                        LocationService.instance.currentLocationNotifier,
                     builder: (context, loc, _) {
                       return InkWell(
-                        onTap: () => LocationService.instance.showAreaPickerDialog(context),
+                        onTap: () => LocationService.instance
+                            .showAreaPickerDialog(context),
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 12, top: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF0FDFA),
                             borderRadius: BorderRadius.circular(12),
@@ -7788,10 +10375,16 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                               Container(
                                 padding: const EdgeInsets.all(5),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                                  color: const Color(
+                                    0xFF0D9488,
+                                  ).withValues(alpha: 0.15),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.location_on, color: Color(0xFF0D9488), size: 16),
+                                child: const Icon(
+                                  Icons.location_on,
+                                  color: Color(0xFF0D9488),
+                                  size: 16,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -7801,7 +10394,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                     Row(
                                       children: [
                                         Text(
-                                          isUrdu ? 'آپ کا ورکنگ علاقہ' : 'Working Area',
+                                          isUrdu
+                                              ? 'آپ کا ورکنگ علاقہ'
+                                              : 'Working Area',
                                           style: const TextStyle(
                                             fontSize: 10,
                                             color: Color(0xFF0D9488),
@@ -7810,10 +10405,17 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                         ),
                                         const SizedBox(width: 6),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                            vertical: 1,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF0D9488).withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(6),
+                                            color: const Color(
+                                              0xFF0D9488,
+                                            ).withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: const Text(
                                             'ISB / RWP',
@@ -7850,7 +10452,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const Icon(Icons.chevron_right, size: 16, color: Color(0xFF0D9488)),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    size: 16,
+                                    color: Color(0xFF0D9488),
+                                  ),
                                 ],
                               ),
                             ],
@@ -7898,8 +10504,12 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                           Flexible(
                             child: Text(
                               online
-                                  ? (isUrdu ? 'لوکیشن فعال ہے • جابز موصول ہو رہی ہیں' : 'Location Active • Receiving Jobs')
-                                  : (isUrdu ? 'آن لائن ہونے کے لیے لوکیشن درکار ہے' : 'Location required to go online'),
+                                  ? (isUrdu
+                                        ? 'لوکیشن فعال ہے • جابز موصول ہو رہی ہیں'
+                                        : 'Location Active • Receiving Jobs')
+                                  : (isUrdu
+                                        ? 'آن لائن ہونے کے لیے لوکیشن درکار ہے'
+                                        : 'Location required to go online'),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: online ? Colors.white70 : Colors.black54,
@@ -7939,7 +10549,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                       color: const Color(0xFF0D9488).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.assignment_outlined, color: Color(0xFF0D9488), size: 22),
+                    child: const Icon(
+                      Icons.assignment_outlined,
+                      color: Color(0xFF0D9488),
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -7948,11 +10562,21 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                       children: [
                         Text(
                           bilingual(context, 'My Jobs', 'میرے کام'),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                         Text(
-                          bilingual(context, 'Active, Scheduled & Past jobs', 'ایکٹو، شیڈول اور پچھلے کام'),
-                          style: const TextStyle(fontSize: 12, color: Colors.black54),
+                          bilingual(
+                            context,
+                            'Active, Scheduled & Past jobs',
+                            'ایکٹو، شیڈول اور پچھلے کام',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
                         ),
                       ],
                     ),
@@ -7983,7 +10607,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   final expiresAtStr = data['expiresAt']?.toString();
                   if (expiresAtStr != null) {
                     final expiresAt = DateTime.tryParse(expiresAtStr);
-                    if (expiresAt != null && expiresAt.isBefore(now)) return false;
+                    if (expiresAt != null && expiresAt.isBefore(now))
+                      return false;
                   }
                   return true;
                 }).toList();
@@ -7993,8 +10618,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   final bData = b.data() as Map<String, dynamic>;
                   final aCreated = aData['createdAt'];
                   final bCreated = bData['createdAt'];
-                  final aTime = (aCreated as Timestamp?)?.toDate() ?? DateTime(2000);
-                  final bTime = (bCreated as Timestamp?)?.toDate() ?? DateTime(2000);
+                  final aTime =
+                      (aCreated as Timestamp?)?.toDate() ?? DateTime(2000);
+                  final bTime =
+                      (bCreated as Timestamp?)?.toDate() ?? DateTime(2000);
                   return bTime.compareTo(aTime);
                 });
 
@@ -8003,8 +10630,15 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 32),
                     child: Center(
                       child: Text(
-                        bilingual(context, 'No new jobs yet', 'ابھی تک کوئی نیا کام نہیں'),
-                        style: const TextStyle(color: Colors.grey, fontSize: 16),
+                        bilingual(
+                          context,
+                          'No new jobs yet',
+                          'ابھی تک کوئی نیا کام نہیں',
+                        ),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   );
@@ -8013,11 +10647,15 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   children: jobs.map((doc) {
                     final jobData = doc.data() as Map<String, dynamic>;
                     final jobId = doc.id;
-                    final descEn = jobData['descriptionEn']?.toString() ?? 'Service';
-                    final descUr = jobData['descriptionUr']?.toString() ?? 'سروس';
+                    final descEn =
+                        jobData['descriptionEn']?.toString() ?? 'Service';
+                    final descUr =
+                        jobData['descriptionUr']?.toString() ?? 'سروس';
                     final price = (jobData['price'] as num?)?.toDouble() ?? 0;
-                    final payment = jobData['paymentMethod']?.toString() ?? 'Cash';
-                    final customerName = jobData['customerName']?.toString() ?? 'Customer';
+                    final payment =
+                        jobData['paymentMethod']?.toString() ?? 'Cash';
+                    final customerName =
+                        jobData['customerName']?.toString() ?? 'Customer';
 
                     String remainingTime = '';
                     final expiresAtStr = jobData['expiresAt']?.toString();
@@ -8055,7 +10693,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                       child: Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         shape: RoundedRectangleBorder(
-                          side: const BorderSide(color: Color(0xFF0D9488), width: 2),
+                          side: const BorderSide(
+                            color: Color(0xFF0D9488),
+                            width: 2,
+                          ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Padding(
@@ -8065,20 +10706,31 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                             children: [
                               Text(
                                 isUrdu ? 'نیا کام!' : 'New Job!',
-                                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                               const SizedBox(height: 6),
-                              Text(isUrdu ? descUr : descEn, style: const TextStyle(fontSize: 16)),
+                              Text(
+                                isUrdu ? descUr : descEn,
+                                style: const TextStyle(fontSize: 16),
+                              ),
                               Text(
                                 '${bilingual(context, 'Customer:', 'گاہک:')} $customerName',
-                                style: const TextStyle(color: Colors.black54, fontSize: 13),
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 13,
+                                ),
                               ),
                               if (remainingTime.isNotEmpty) ...[
                                 const SizedBox(height: 2),
                                 Text(
                                   remainingTime,
                                   style: TextStyle(
-                                    color: remainingTime.contains('Expired') || remainingTime.contains('ختم')
+                                    color:
+                                        remainingTime.contains('Expired') ||
+                                            remainingTime.contains('ختم')
                                         ? Colors.red
                                         : Colors.orange,
                                     fontSize: 12,
@@ -8089,7 +10741,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 '${bilingual(context, 'Payment:', 'ادائیگی:')} $payment',
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0D9488),
+                                ),
                               ),
                               const SizedBox(height: 8),
                               Text(
@@ -8108,44 +10763,73 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                     child: OutlinedButton(
                                       onPressed: () {
                                         updateJobStatus(jobId, 'rejected');
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
-                                            content: Text(isUrdu ? 'کام رد کر دیا گیا' : 'Job rejected'),
+                                            content: Text(
+                                              isUrdu
+                                                  ? 'کام رد کر دیا گیا'
+                                                  : 'Job rejected',
+                                            ),
                                             backgroundColor: Colors.redAccent,
                                           ),
                                         );
                                       },
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.redAccent,
-                                        side: const BorderSide(color: Colors.redAccent),
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        side: const BorderSide(
+                                          color: Colors.redAccent,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
                                       ),
-                                      child: Text(isUrdu ? 'رد کریں' : 'Reject'),
+                                      child: Text(
+                                        isUrdu ? 'رد کریں' : 'Reject',
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 6),
                                   // Schedule
                                   Expanded(
                                     child: OutlinedButton(
-                                      onPressed: () => _handleScheduleJob(context, jobId),
+                                      onPressed: () =>
+                                          _handleScheduleJob(context, jobId),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.amber.shade800,
-                                        side: BorderSide(color: Colors.amber.shade800),
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        side: BorderSide(
+                                          color: Colors.amber.shade800,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
                                       ),
-                                      child: Text(isUrdu ? 'شیڈول' : 'Schedule'),
+                                      child: Text(
+                                        isUrdu ? 'شیڈول' : 'Schedule',
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 6),
                                   // Accept (Instantly accepts and starts workflow of maps)
                                   Expanded(
                                     child: FilledButton(
-                                      onPressed: () => _handleInstantAcceptJob(context, jobId, price),
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: const Color(0xFF0D9488),
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                      onPressed: () => _handleInstantAcceptJob(
+                                        context,
+                                        jobId,
+                                        price,
                                       ),
-                                      child: Text(isUrdu ? 'قبول کریں' : 'Accept'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF0D9488,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        isUrdu ? 'قبول کریں' : 'Accept',
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -8166,54 +10850,93 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 if (snapshot.hasError || !snapshot.hasData) {
                   return const SizedBox.shrink();
                 }
-                final upcoming = snapshot.data!.docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return data['scheduledReminderAt'] != null;
-                }).toList()
-                  ..sort((a, b) {
-                    final at = (a.data() as Map<String, dynamic>)['scheduledReminderAt'] as Timestamp?;
-                    final bt = (b.data() as Map<String, dynamic>)['scheduledReminderAt'] as Timestamp?;
-                    return ((at?.toDate()) ?? DateTime(9999)).compareTo((bt?.toDate()) ?? DateTime(9999));
-                  });
+                final upcoming =
+                    snapshot.data!.docs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return data['scheduledReminderAt'] != null;
+                    }).toList()..sort((a, b) {
+                      final at =
+                          (a.data()
+                                  as Map<
+                                    String,
+                                    dynamic
+                                  >)['scheduledReminderAt']
+                              as Timestamp?;
+                      final bt =
+                          (b.data()
+                                  as Map<
+                                    String,
+                                    dynamic
+                                  >)['scheduledReminderAt']
+                              as Timestamp?;
+                      return ((at?.toDate()) ?? DateTime(9999)).compareTo(
+                        (bt?.toDate()) ?? DateTime(9999),
+                      );
+                    });
                 if (upcoming.isEmpty) return const SizedBox.shrink();
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 14),
                     Text(
-                      bilingual(context, 'Upcoming Scheduled', 'آئندہ شیڈول کام'),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      bilingual(
+                        context,
+                        'Upcoming Scheduled',
+                        'آئندہ شیڈول کام',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     ...upcoming.map((doc) {
                       final data = doc.data() as Map<String, dynamic>;
-                      final scheduled = (data['scheduledReminderAt'] as Timestamp?)?.toDate();
-                      final confirmed = data['scheduleConfirmed'] as bool? ?? false;
-                      final descEn = data['descriptionEn']?.toString() ?? 'Service';
-                      final descUr = data['descriptionUr']?.toString() ?? 'سروس';
+                      final scheduled =
+                          (data['scheduledReminderAt'] as Timestamp?)?.toDate();
+                      final confirmed =
+                          data['scheduleConfirmed'] as bool? ?? false;
+                      final descEn =
+                          data['descriptionEn']?.toString() ?? 'Service';
+                      final descUr =
+                          data['descriptionUr']?.toString() ?? 'سروس';
                       final price = (data['price'] as num?)?.toDouble() ?? 0;
-                      final timeStr = scheduled != null ? DateFormat('hh:mm a, d MMM').format(scheduled) : '';
-                      final isPast = scheduled != null && scheduled.isBefore(DateTime.now());
+                      final timeStr = scheduled != null
+                          ? DateFormat('hh:mm a, d MMM').format(scheduled)
+                          : '';
+                      final isPast =
+                          scheduled != null &&
+                          scheduled.isBefore(DateTime.now());
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
                         shape: RoundedRectangleBorder(
                           side: BorderSide(
-                            color: confirmed ? const Color(0xFF0D9488) : Colors.amber.shade700,
+                            color: confirmed
+                                ? const Color(0xFF0D9488)
+                                : Colors.amber.shade700,
                             width: 1.5,
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ListTile(
                           leading: Icon(
-                            isPast ? Icons.notifications_active : Icons.schedule,
-                            color: isPast ? const Color(0xFF0D9488) : Colors.amber.shade700,
+                            isPast
+                                ? Icons.notifications_active
+                                : Icons.schedule,
+                            color: isPast
+                                ? const Color(0xFF0D9488)
+                                : Colors.amber.shade700,
                           ),
                           title: Text(isUrdu ? descUr : descEn),
                           subtitle: Text(
                             confirmed
                                 ? (isPast
-                                    ? bilingual(context, 'Scheduled time reached — start the job', 'شیڈول وقت ہو گیا — کام شروع کریں')
-                                    : '${bilingual(context, 'Confirmed for', 'تصدیق شدہ وقت')} $timeStr')
+                                      ? bilingual(
+                                          context,
+                                          'Scheduled time reached — start the job',
+                                          'شیڈول وقت ہو گیا — کام شروع کریں',
+                                        )
+                                      : '${bilingual(context, 'Confirmed for', 'تصدیق شدہ وقت')} $timeStr')
                                 : '${bilingual(context, 'Waiting for customer approval', 'گاہک کی منظوری کا انتظار')} • $timeStr',
                             style: const TextStyle(fontSize: 12),
                           ),
@@ -8222,7 +10945,10 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => WorkerTrackingScreen(jobPrice: price, jobId: doc.id),
+                                  builder: (_) => WorkerTrackingScreen(
+                                    jobPrice: price,
+                                    jobId: doc.id,
+                                  ),
                                 ),
                               );
                             },
@@ -8239,7 +10965,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             StreamBuilder<QuerySnapshot>(
               stream: streamWorkerScheduledJobs(user.uid),
               builder: (context, snapshot) {
-                if (snapshot.hasError || !snapshot.hasData) return const SizedBox.shrink();
+                if (snapshot.hasError || !snapshot.hasData)
+                  return const SizedBox.shrink();
                 final docs = snapshot.data!.docs;
                 if (docs.isEmpty) return const SizedBox.shrink();
                 return Column(
@@ -8248,29 +10975,50 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                     const SizedBox(height: 14),
                     Row(
                       children: [
-                        Icon(Icons.calendar_month, color: Colors.amber.shade700, size: 18),
+                        Icon(
+                          Icons.calendar_month,
+                          color: Colors.amber.shade700,
+                          size: 18,
+                        ),
                         const SizedBox(width: 6),
                         Text(
-                          bilingual(context, 'Proposed Schedules', 'تجویز کردہ شیڈول'),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                          bilingual(
+                            context,
+                            'Proposed Schedules',
+                            'تجویز کردہ شیڈول',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     ...docs.map((doc) {
                       final data = doc.data() as Map<String, dynamic>;
-                      final scheduled = (data['scheduledReminderAt'] as Timestamp?)?.toDate();
-                      final confirmed = data['scheduleConfirmed'] as bool? ?? false;
-                      final descEn = data['descriptionEn']?.toString() ?? 'Service';
-                      final descUr = data['descriptionUr']?.toString() ?? 'سروس';
+                      final scheduled =
+                          (data['scheduledReminderAt'] as Timestamp?)?.toDate();
+                      final confirmed =
+                          data['scheduleConfirmed'] as bool? ?? false;
+                      final descEn =
+                          data['descriptionEn']?.toString() ?? 'Service';
+                      final descUr =
+                          data['descriptionUr']?.toString() ?? 'سروس';
                       final price = (data['price'] as num?)?.toDouble() ?? 0;
-                      final timeStr = scheduled != null ? DateFormat('hh:mm a, d MMM').format(scheduled) : '';
-                      final isPast = scheduled != null && scheduled.isBefore(DateTime.now());
+                      final timeStr = scheduled != null
+                          ? DateFormat('hh:mm a, d MMM').format(scheduled)
+                          : '';
+                      final isPast =
+                          scheduled != null &&
+                          scheduled.isBefore(DateTime.now());
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
                         shape: RoundedRectangleBorder(
                           side: BorderSide(
-                            color: confirmed ? const Color(0xFF0D9488) : Colors.amber.shade400,
+                            color: confirmed
+                                ? const Color(0xFF0D9488)
+                                : Colors.amber.shade400,
                             width: 1.5,
                           ),
                           borderRadius: BorderRadius.circular(12),
@@ -8282,38 +11030,71 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.calendar_month,
-                                      color: confirmed ? const Color(0xFF0D9488) : Colors.amber.shade700, size: 18),
+                                  Icon(
+                                    Icons.calendar_month,
+                                    color: confirmed
+                                        ? const Color(0xFF0D9488)
+                                        : Colors.amber.shade700,
+                                    size: 18,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       isUrdu ? descUr : descEn,
-                                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                      ),
                                     ),
                                   ),
-                                  Text('Rs. $price',
-                                      style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
+                                  Text(
+                                    'Rs. $price',
+                                    style: const TextStyle(
+                                      color: Color(0xFF0D9488),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(timeStr, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                              Text(
+                                timeStr,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Row(
                                 children: [
                                   Icon(
-                                    confirmed ? Icons.check_circle : Icons.hourglass_empty,
+                                    confirmed
+                                        ? Icons.check_circle
+                                        : Icons.hourglass_empty,
                                     size: 14,
-                                    color: confirmed ? const Color(0xFF0D9488) : Colors.amber.shade700,
+                                    color: confirmed
+                                        ? const Color(0xFF0D9488)
+                                        : Colors.amber.shade700,
                                   ),
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
                                       confirmed
-                                          ? bilingual(context, 'Customer approved — ready to start', 'گاہک نے منظور کیا — شروع کریں')
-                                          : bilingual(context, 'Waiting for customer approval', 'گاہک کی منظوری کا انتظار ہے'),
+                                          ? bilingual(
+                                              context,
+                                              'Customer approved — ready to start',
+                                              'گاہک نے منظور کیا — شروع کریں',
+                                            )
+                                          : bilingual(
+                                              context,
+                                              'Waiting for customer approval',
+                                              'گاہک کی منظوری کا انتظار ہے',
+                                            ),
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: confirmed ? const Color(0xFF0D9488) : Colors.amber.shade700,
+                                        color: confirmed
+                                            ? const Color(0xFF0D9488)
+                                            : Colors.amber.shade700,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -8326,15 +11107,26 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                                   width: double.infinity,
                                   child: FilledButton.icon(
                                     icon: const Icon(Icons.play_arrow),
-                                    label: Text(bilingual(context, 'Start Job Now', 'ابھی کام شروع کریں')),
-                                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                                    label: Text(
+                                      bilingual(
+                                        context,
+                                        'Start Job Now',
+                                        'ابھی کام شروع کریں',
+                                      ),
+                                    ),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xFF0D9488),
+                                    ),
                                     onPressed: () async {
                                       await startScheduledJob(doc.id);
                                       if (!mounted) return;
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => WorkerTrackingScreen(jobPrice: price, jobId: doc.id),
+                                          builder: (_) => WorkerTrackingScreen(
+                                            jobPrice: price,
+                                            jobId: doc.id,
+                                          ),
                                         ),
                                       );
                                     },
@@ -8345,22 +11137,57 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.chat_outlined, size: 18),
-                                  label: Text(bilingual(context, 'Message Customer', 'گاہک کو میسیج کریں')),
+                                  icon: const Icon(
+                                    Icons.chat_outlined,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    bilingual(
+                                      context,
+                                      'Message Customer',
+                                      'گاہک کو میسیج کریں',
+                                    ),
+                                  ),
                                   onPressed: () async {
-                                    final customerId = data['customerId']?.toString();
-                                    if (customerId == null || customerId.isEmpty) return;
-                                    final customerName = data['customerName']?.toString() ?? 'Customer';
-                                    final existingId = await findExistingConversation(customerId);
+                                    final customerId = data['customerId']
+                                        ?.toString();
+                                    if (customerId == null ||
+                                        customerId.isEmpty)
+                                      return;
+                                    final customerName =
+                                        data['customerName']?.toString() ??
+                                        'Customer';
+                                    final existingId =
+                                        await findExistingConversation(
+                                          customerId,
+                                        );
                                     if (!context.mounted) return;
                                     if (existingId != null) {
-                                      Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                                        arguments: ConversationArguments(conversationId: existingId, otherName: customerName, otherImage: ''));
+                                      Navigator.pushNamed(
+                                        context,
+                                        AppRoutes.sharedConversation,
+                                        arguments: ConversationArguments(
+                                          conversationId: existingId,
+                                          otherName: customerName,
+                                          otherImage: '',
+                                        ),
+                                      );
                                     } else {
-                                      final newId = await createConversation(otherUserId: customerId, otherUserName: customerName, otherUserImage: '');
+                                      final newId = await createConversation(
+                                        otherUserId: customerId,
+                                        otherUserName: customerName,
+                                        otherUserImage: '',
+                                      );
                                       if (context.mounted) {
-                                        Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                                          arguments: ConversationArguments(conversationId: newId, otherName: customerName, otherImage: ''));
+                                        Navigator.pushNamed(
+                                          context,
+                                          AppRoutes.sharedConversation,
+                                          arguments: ConversationArguments(
+                                            conversationId: newId,
+                                            otherName: customerName,
+                                            otherImage: '',
+                                          ),
+                                        );
                                       }
                                     }
                                   },
@@ -8382,7 +11209,11 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
 }
 
 class _ColorStatCard extends StatelessWidget {
-  const _ColorStatCard({required this.color, required this.label, required this.value});
+  const _ColorStatCard({
+    required this.color,
+    required this.label,
+    required this.value,
+  });
 
   final Color color;
   final String label;
@@ -8392,31 +11223,37 @@ class _ColorStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         children: [
           Text(label, style: const TextStyle(fontSize: 18)),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );
   }
 }
 
-
 class EarningsDashboardScreen extends StatefulWidget {
   const EarningsDashboardScreen({super.key});
 
   @override
-  State<EarningsDashboardScreen> createState() => _EarningsDashboardScreenState();
+  State<EarningsDashboardScreen> createState() =>
+      _EarningsDashboardScreenState();
 }
 
 class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
   bool weekly = true;
 
   void _showTopUpDialog(BuildContext context, bool isUrdu) {
-    String selectedMethod = 'JazzCash';
+    String selectedMethod = 'Safepay';
     final amountController = TextEditingController();
     final phoneController = TextEditingController();
     bool isSubmitting = false;
@@ -8424,16 +11261,29 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
           return Padding(
-            padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            padding: EdgeInsets.fromLTRB(
+              24,
+              24,
+              24,
+              MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(isUrdu ? 'ٹاپ اپ کریں' : 'Add Top-up', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                Text(
+                  isUrdu ? 'ٹاپ اپ کریں' : 'Add Top-up',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: selectedMethod,
@@ -8441,21 +11291,87 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                     labelText: isUrdu ? 'طریقہ منتخب کریں' : 'Select Method',
                     border: const OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'JazzCash', child: Text('JazzCash')),
-                    DropdownMenuItem(value: 'EasyPaisa', child: Text('EasyPaisa')),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'Safepay',
+                      child: Text(
+                        isUrdu
+                            ? 'سیف پے (آن لائن کارڈ)'
+                            : 'Safepay (Debit / Credit Card & Online)',
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Cash',
+                      child: Text(
+                        isUrdu
+                            ? 'نقد (فرنچائز / ایڈمن)'
+                            : 'Pay in Cash (Franchise / Admin)',
+                      ),
+                    ),
                   ],
-                  onChanged: (val) => setModalState(() => selectedMethod = val!),
+                  onChanged: (val) =>
+                      setModalState(() => selectedMethod = val!),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: isUrdu ? 'اکاؤنٹ نمبر' : 'Account Number',
-                    border: const OutlineInputBorder(),
+                if (selectedMethod == 'Cash') ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.money, color: Colors.green, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            isUrdu
+                                ? 'رقم فرنچائز یا آفس میں نقد جمع کروائیں'
+                                : 'Deposit cash directly at franchise or admin office',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ] else ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.shield_outlined,
+                          color: Color(0xFF16A34A),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            isUrdu
+                                ? 'سیف پے چیک آؤٹ میں ویزا، ماسٹر کارڈ، یا پے پاک سے ادا کریں'
+                                : 'Pay securely via Visa, MasterCard, or PayPak in Safepay',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF166534),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: amountController,
@@ -8467,72 +11383,213 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                 ),
                 const SizedBox(height: 20),
                 FilledButton(
-                  onPressed: isSubmitting ? null : () async {
-                    final amount = int.tryParse(amountController.text.trim()) ?? 0;
-                    if (amount <= 0) return;
-                    final user = FirebaseAuth.instance.currentUser;
-                    if (user == null) return;
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final amount =
+                              int.tryParse(amountController.text.trim()) ?? 0;
+                          if (amount <= 0) return;
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user == null) return;
 
-                    setModalState(() => isSubmitting = true);
+                          if (selectedMethod == 'Safepay') {
+                            Navigator.pop(ctx);
+                            await SafepayService.instance.startPaymentFlow(
+                              context: context,
+                              amount: amount.toDouble(),
+                              orderId:
+                                  'TOPUP-${user.uid}-${DateTime.now().millisecondsSinceEpoch}',
+                              title: isUrdu
+                                  ? 'ورکر والٹ ٹاپ اپ'
+                                  : 'Worker Wallet Top-up',
+                              onPaymentSuccess: () async {
+                                try {
+                                  final userDoc = await FirebaseFirestore
+                                      .instance
+                                      .collection('users')
+                                      .doc(user.uid)
+                                      .get();
+                                  final workerName =
+                                      userDoc.data()?['name']?.toString() ??
+                                      user.displayName ??
+                                      'Worker';
 
-                    try {
-                      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-                      final workerName = userDoc.data()?['name']?.toString() ?? user.displayName ?? 'Worker';
+                                  final depositQuery = await FirebaseFirestore
+                                      .instance
+                                      .collection('security_deposits')
+                                      .where('workerId', isEqualTo: user.uid)
+                                      .limit(1)
+                                      .get();
 
-                      final depositQuery = await FirebaseFirestore.instance
-                          .collection('security_deposits')
-                          .where('workerId', isEqualTo: user.uid)
-                          .limit(1)
-                          .get();
+                                  if (depositQuery.docs.isNotEmpty) {
+                                    final docId = depositQuery.docs.first.id;
+                                    await FirebaseFirestore.instance
+                                        .collection('security_deposits')
+                                        .doc(docId)
+                                        .update({
+                                          'totalDeposited':
+                                              FieldValue.increment(amount),
+                                          'currentBalance':
+                                              FieldValue.increment(amount),
+                                          'status': 'Active',
+                                          'lastTopUpAt':
+                                              FieldValue.serverTimestamp(),
+                                          'updatedAt':
+                                              FieldValue.serverTimestamp(),
+                                          'method': 'Safepay',
+                                          'accountNumber': 'Online Card',
+                                        });
+                                  } else {
+                                    await FirebaseFirestore.instance
+                                        .collection('security_deposits')
+                                        .add({
+                                          'workerId': user.uid,
+                                          'workerName': workerName,
+                                          'totalDeposited': amount.toDouble(),
+                                          'currentBalance': amount.toDouble(),
+                                          'status': 'Active',
+                                          'createdAt':
+                                              FieldValue.serverTimestamp(),
+                                          'updatedAt':
+                                              FieldValue.serverTimestamp(),
+                                          'method': 'Safepay',
+                                          'accountNumber': 'Online Card',
+                                        });
+                                  }
 
-                      if (depositQuery.docs.isNotEmpty) {
-                        final docId = depositQuery.docs.first.id;
-                        await FirebaseFirestore.instance.collection('security_deposits').doc(docId).update({
-                          'totalDeposited': FieldValue.increment(amount),
-                          'currentBalance': FieldValue.increment(amount),
-                          'status': 'Active',
-                          'lastTopUpAt': FieldValue.serverTimestamp(),
-                          'updatedAt': FieldValue.serverTimestamp(),
-                          'method': selectedMethod,
-                          'accountNumber': phoneController.text.trim(),
-                        });
-                      } else {
-                        await FirebaseFirestore.instance.collection('security_deposits').add({
-                          'workerId': user.uid,
-                          'workerName': workerName,
-                          'totalDeposited': amount.toDouble(),
-                          'currentBalance': amount.toDouble(),
-                          'status': 'Active',
-                          'createdAt': FieldValue.serverTimestamp(),
-                          'updatedAt': FieldValue.serverTimestamp(),
-                          'method': selectedMethod,
-                          'accountNumber': phoneController.text.trim(),
-                        });
-                      }
+                                  await FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(user.uid)
+                                      .set({
+                                        'topupBalance': FieldValue.increment(
+                                          amount,
+                                        ),
+                                      }, SetOptions(merge: true));
 
-                      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-                        'topupBalance': FieldValue.increment(amount),
-                      }, SetOptions(merge: true));
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          isUrdu
+                                              ? 'سیف پے کے ذریعے ٹاپ اپ کامیاب ہو گیا!'
+                                              : 'Top-up of Rs. $amount via Safepay Successful!',
+                                        ),
+                                        backgroundColor: const Color(
+                                          0xFF0D9488,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Failed to update balance: $e',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                            );
+                            return;
+                          }
 
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(isUrdu ? 'ٹاپ اپ کامیاب ہو گیا' : 'Top-up Successful!')),
-                        );
-                      }
-                    } catch (e) {
-                      setModalState(() => isSubmitting = false);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Top-up failed: $e')),
-                        );
-                      }
-                    }
-                  },
-                  style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                          setModalState(() => isSubmitting = true);
+
+                          try {
+                            final userDoc = await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(user.uid)
+                                .get();
+                            final workerName =
+                                userDoc.data()?['name']?.toString() ??
+                                user.displayName ??
+                                'Worker';
+
+                            final depositQuery = await FirebaseFirestore
+                                .instance
+                                .collection('security_deposits')
+                                .where('workerId', isEqualTo: user.uid)
+                                .limit(1)
+                                .get();
+
+                            if (depositQuery.docs.isNotEmpty) {
+                              final docId = depositQuery.docs.first.id;
+                              await FirebaseFirestore.instance
+                                  .collection('security_deposits')
+                                  .doc(docId)
+                                  .update({
+                                    'totalDeposited': FieldValue.increment(
+                                      amount,
+                                    ),
+                                    'currentBalance': FieldValue.increment(
+                                      amount,
+                                    ),
+                                    'status': 'Active',
+                                    'lastTopUpAt': FieldValue.serverTimestamp(),
+                                    'updatedAt': FieldValue.serverTimestamp(),
+                                    'method': 'Cash',
+                                    'accountNumber': 'Cash at Franchise',
+                                  });
+                            } else {
+                              await FirebaseFirestore.instance
+                                  .collection('security_deposits')
+                                  .add({
+                                    'workerId': user.uid,
+                                    'workerName': workerName,
+                                    'totalDeposited': amount.toDouble(),
+                                    'currentBalance': amount.toDouble(),
+                                    'status': 'Active',
+                                    'createdAt': FieldValue.serverTimestamp(),
+                                    'updatedAt': FieldValue.serverTimestamp(),
+                                    'method': 'Cash',
+                                    'accountNumber': 'Cash at Franchise',
+                                  });
+                            }
+
+                            await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(user.uid)
+                                .set({
+                                  'topupBalance': FieldValue.increment(amount),
+                                }, SetOptions(merge: true));
+
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    isUrdu
+                                        ? 'نقد ٹاپ اپ کامیاب ہو گیا'
+                                        : 'Cash Top-up Successful!',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setModalState(() => isSubmitting = false);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Top-up failed: $e')),
+                              );
+                            }
+                          }
+                        },
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                   child: isSubmitting
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text(isUrdu ? 'رقم بھیجیں' : 'Send Money'),
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(isUrdu ? 'رقم بھیجیں' : 'Proceed to Top-up'),
                 ),
               ],
             ),
@@ -8573,15 +11630,24 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                   Container(
                     padding: const EdgeInsets.fromLTRB(18, 22, 18, 24),
                     decoration: const BoxDecoration(
-                      gradient: LinearGradient(colors: [Color(0xFF0D9488), Color(0xFF14B8A6)]),
-                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF0D9488), Color(0xFF14B8A6)],
+                      ),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           isUrdu ? 'میری آمدنی' : 'My Earnings',
-                          style: const TextStyle(fontSize: 28, color: Colors.white, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            fontSize: 28,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         Text(
                           isUrdu ? 'اب تک کی کل کمائی' : 'Total earnings',
@@ -8589,8 +11655,14 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          isUrdu ? '${totalEarnings.toStringAsFixed(0)} روپے' : 'Rs. ${totalEarnings.toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.w700),
+                          isUrdu
+                              ? '${totalEarnings.toStringAsFixed(0)} روپے'
+                              : 'Rs. ${totalEarnings.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 36,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     ),
@@ -8603,7 +11675,9 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                           child: _ColorStatCard(
                             color: const Color(0xFFDCFCE7),
                             label: isUrdu ? 'مکمل' : 'Completed',
-                            value: isUrdu ? '$completedCount کام' : '$completedCount jobs',
+                            value: isUrdu
+                                ? '$completedCount کام'
+                                : '$completedCount jobs',
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -8611,7 +11685,9 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                           child: _ColorStatCard(
                             color: const Color(0xFFDBEAFE),
                             label: isUrdu ? 'کل کمائی' : 'Total Earned',
-                            value: isUrdu ? '${totalEarnings.toStringAsFixed(0)} روپے' : 'Rs. ${totalEarnings.toStringAsFixed(0)}',
+                            value: isUrdu
+                                ? '${totalEarnings.toStringAsFixed(0)} روپے'
+                                : 'Rs. ${totalEarnings.toStringAsFixed(0)}',
                           ),
                         ),
                       ],
@@ -8627,9 +11703,14 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                           .snapshots(),
                       builder: (context, depositSnap) {
                         double topupBalance = 0;
-                        if (depositSnap.hasData && depositSnap.data!.docs.isNotEmpty) {
-                          final depData = depositSnap.data!.docs.first.data() as Map<String, dynamic>;
-                          topupBalance = (depData['currentBalance'] as num?)?.toDouble() ?? 0;
+                        if (depositSnap.hasData &&
+                            depositSnap.data!.docs.isNotEmpty) {
+                          final depData =
+                              depositSnap.data!.docs.first.data()
+                                  as Map<String, dynamic>;
+                          topupBalance =
+                              (depData['currentBalance'] as num?)?.toDouble() ??
+                              0;
                         }
                         return Container(
                           padding: const EdgeInsets.all(12),
@@ -8643,19 +11724,30 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(isUrdu ? 'ٹاپ اپ بیلنس' : 'Top-up Balance', style: const TextStyle(fontSize: 18)),
+                                  Text(
+                                    isUrdu ? 'ٹاپ اپ بیلنس' : 'Top-up Balance',
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    isUrdu ? '${topupBalance.toStringAsFixed(0)} روپے' : 'Rs. ${topupBalance.toStringAsFixed(0)}',
-                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                                    isUrdu
+                                        ? '${topupBalance.toStringAsFixed(0)} روپے'
+                                        : 'Rs. ${topupBalance.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ],
                               ),
                               FilledButton.icon(
-                                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF4F46E5),
+                                ),
                                 icon: const Icon(Icons.add_card),
                                 label: Text(isUrdu ? 'ٹاپ اپ کریں' : 'Top-up'),
-                                onPressed: () => _showTopUpDialog(context, isUrdu),
+                                onPressed: () =>
+                                    _showTopUpDialog(context, isUrdu),
                               ),
                             ],
                           ),
@@ -8668,7 +11760,10 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       isUrdu ? 'حالیہ لین دین' : 'Recent Transactions',
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -8677,7 +11772,9 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Center(
                         child: Text(
-                          isUrdu ? 'ابھی تک کوئی لین دین نہیں' : 'No transactions yet',
+                          isUrdu
+                              ? 'ابھی تک کوئی لین دین نہیں'
+                              : 'No transactions yet',
                           style: const TextStyle(color: Colors.grey),
                         ),
                       ),
@@ -8686,24 +11783,38 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                     ...jobs.map((doc) {
                       final data = doc.data() as Map<String, dynamic>;
                       final desc = isUrdu
-                          ? (data['descriptionUr']?.toString() ?? data['descriptionEn']?.toString() ?? 'Service')
-                          : (data['descriptionEn']?.toString() ?? data['descriptionUr']?.toString() ?? 'Service');
+                          ? (data['descriptionUr']?.toString() ??
+                                data['descriptionEn']?.toString() ??
+                                'Service')
+                          : (data['descriptionEn']?.toString() ??
+                                data['descriptionUr']?.toString() ??
+                                'Service');
                       final price = (data['price'] as num?)?.toDouble() ?? 0;
                       final status = data['status']?.toString() ?? '';
-                      final customer = data['customerName']?.toString() ?? 'Customer';
+                      final customer =
+                          data['customerName']?.toString() ?? 'Customer';
                       return ListTile(
                         leading: Icon(
-                          status == 'completed' ? Icons.check_circle : Icons.south_west,
-                          color: status == 'completed' ? Colors.green : Colors.orange,
+                          status == 'completed'
+                              ? Icons.check_circle
+                              : Icons.south_west,
+                          color: status == 'completed'
+                              ? Colors.green
+                              : Colors.orange,
                         ),
                         title: Text(desc),
                         subtitle: Text(
-                          isUrdu ? '$customer • ${status == "completed" ? "مکمل" : "جاری"}' : '$customer • ${status == "completed" ? "Completed" : "In progress"}',
+                          isUrdu
+                              ? '$customer • ${status == "completed" ? "مکمل" : "جاری"}'
+                              : '$customer • ${status == "completed" ? "Completed" : "In progress"}',
                           style: const TextStyle(fontSize: 12),
                         ),
                         trailing: Text(
                           '+${price.toStringAsFixed(0)}',
-                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       );
                     }),
@@ -8758,7 +11869,11 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Text(
-                  bilingual(context, 'No conversations yet. Start a chat with a worker to see it here.', 'ابھی تک کوئی گفتگو نہیں۔ کسی ورکر کے ساتھ چیٹ شروع کریں۔'),
+                  bilingual(
+                    context,
+                    'No conversations yet. Start a chat with a worker to see it here.',
+                    'ابھی تک کوئی گفتگو نہیں۔ کسی ورکر کے ساتھ چیٹ شروع کریں۔',
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -8770,15 +11885,21 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
             itemBuilder: (_, i) {
               final doc = conversations[i];
               final data = doc.data() as Map<String, dynamic>;
-              final participants = List<String>.from(data['participants'] ?? []);
-              final participantNames = data['participantNames'] as Map<String, dynamic>?;
-              final participantImages = data['participantImages'] as Map<String, dynamic>?;
+              final participants = List<String>.from(
+                data['participants'] ?? [],
+              );
+              final participantNames =
+                  data['participantNames'] as Map<String, dynamic>?;
+              final participantImages =
+                  data['participantImages'] as Map<String, dynamic>?;
               final lastMsg = data['lastMessage'] as String? ?? '';
               final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
-              final otherId = participants.where((p) => p != currentUid).firstOrNull ?? '';
+              final otherId =
+                  participants.where((p) => p != currentUid).firstOrNull ?? '';
               final otherName = participantNames?[otherId] as String? ?? '';
               final otherImage = participantImages?[otherId] as String? ?? '';
-              final unreadCounts = data['unreadCounts'] as Map<String, dynamic>?;
+              final unreadCounts =
+                  data['unreadCounts'] as Map<String, dynamic>?;
               final unread = (unreadCounts?[currentUid] as num?)?.toInt() ?? 0;
               final hasImage = otherImage.isNotEmpty;
               return ListTile(
@@ -8788,11 +11909,19 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                   child: hasImage
                       ? null
                       : Text(
-                          otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                          otherName.isNotEmpty
+                              ? otherName[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0D9488),
+                          ),
                         ),
                 ),
-                title: Text(otherName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  otherName,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Text(
                   _conversationPreview(context, data, lastMsg),
                   maxLines: 1,
@@ -8800,17 +11929,28 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                 ),
                 trailing: unread > 0
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF0D9488),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           unread > 99 ? '99+' : '$unread',
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       )
-                    : const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                    : const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
                 onTap: () {
                   Navigator.pushNamed(
                     context,
@@ -8897,29 +12037,39 @@ class _ConversationScreenState extends State<ConversationScreen> {
         .doc(widget.conversationId)
         .snapshots()
         .listen((doc) {
-      if (!mounted) return;
-      final data = doc.data() ?? const {};
-      final me = FirebaseAuth.instance.currentUser?.uid ?? '';
-      final otherId = List<String>.from(data['participants'] ?? [])
-          .where((p) => p != me)
-          .firstOrNull ?? '';
-      setState(() {
-        if (otherId.isNotEmpty && otherId != _otherId) {
-          _otherId = otherId;
-          _presenceSub?.cancel();
-          _presenceSub = streamPresence(otherId).listen((p) {
-            if (!mounted) return;
-            setState(() => _otherOnline = _isOnline(p.data() as Map<String, dynamic>?));
+          if (!mounted) return;
+          final data = doc.data() ?? const {};
+          final me = FirebaseAuth.instance.currentUser?.uid ?? '';
+          final otherId =
+              List<String>.from(
+                data['participants'] ?? [],
+              ).where((p) => p != me).firstOrNull ??
+              '';
+          setState(() {
+            if (otherId.isNotEmpty && otherId != _otherId) {
+              _otherId = otherId;
+              _presenceSub?.cancel();
+              _presenceSub = streamPresence(otherId).listen((p) {
+                if (!mounted) return;
+                setState(
+                  () => _otherOnline = _isOnline(
+                    p.data() as Map<String, dynamic>?,
+                  ),
+                );
+              });
+            }
+            final typingMap = Map<String, dynamic>.from(
+              data['typing'] as Map? ?? {},
+            );
+            _otherTyping = _isTypingFresh(typingMap[otherId]);
           });
-        }
-        final typingMap = Map<String, dynamic>.from(data['typing'] as Map? ?? {});
-        _otherTyping = _isTypingFresh(typingMap[otherId]);
-      });
-      final unread = Map<String, dynamic>.from(data['unreadCounts'] as Map? ?? {});
-      if (((unread[me] as num?)?.toInt() ?? 0) > 0) {
-        _scheduleMarkRead();
-      }
-    });
+          final unread = Map<String, dynamic>.from(
+            data['unreadCounts'] as Map? ?? {},
+          );
+          if (((unread[me] as num?)?.toInt() ?? 0) > 0) {
+            _scheduleMarkRead();
+          }
+        });
   }
 
   bool _isOnline(Map<String, dynamic>? data) {
@@ -9020,7 +12170,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
         QueryDocumentSnapshot? jobDoc;
         for (final doc in docs) {
           final data = doc.data() as Map<String, dynamic>;
-          final otherMatch = (isCustomer ? data['workerId'] : data['customerId']) == _otherId;
+          final otherMatch =
+              (isCustomer ? data['workerId'] : data['customerId']) == _otherId;
           if (otherMatch && data['status'] == 'scheduled') {
             jobDoc = doc;
             break;
@@ -9037,20 +12188,30 @@ class _ConversationScreenState extends State<ConversationScreen> {
           timeStr = DateFormat('hh:mm a, d MMM').format(scheduledRaw.toDate());
         }
         final price = data['price'];
-        final priceStr = price != null ? 'Rs. ${(price as num).toStringAsFixed(0)}' : '';
+        final priceStr = price != null
+            ? 'Rs. ${(price as num).toStringAsFixed(0)}'
+            : '';
         final isUrdu = AppScope.of(context).isUrdu;
         final title = isUrdu
-            ? (data['descriptionUr']?.toString() ?? data['categoryKey']?.toString() ?? 'کام')
-            : (data['descriptionEn']?.toString() ?? data['categoryKey']?.toString() ?? 'Job');
+            ? (data['descriptionUr']?.toString() ??
+                  data['categoryKey']?.toString() ??
+                  'کام')
+            : (data['descriptionEn']?.toString() ??
+                  data['categoryKey']?.toString() ??
+                  'Job');
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isConfirmed ? const Color(0xFFF0FDF4) : const Color(0xFFFEF3C7),
+            color: isConfirmed
+                ? const Color(0xFFF0FDF4)
+                : const Color(0xFFFEF3C7),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isConfirmed ? const Color(0xFF22C55E) : const Color(0xFFF59E0B),
+              color: isConfirmed
+                  ? const Color(0xFF22C55E)
+                  : const Color(0xFFF59E0B),
               width: 1.2,
             ),
             boxShadow: [
@@ -9069,13 +12230,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: isConfirmed ? const Color(0xFFDCFCE7) : const Color(0xFFFDE68A),
+                      color: isConfirmed
+                          ? const Color(0xFFDCFCE7)
+                          : const Color(0xFFFDE68A),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       isConfirmed ? Icons.check_circle : Icons.schedule,
                       size: 18,
-                      color: isConfirmed ? const Color(0xFF16A34A) : const Color(0xFFB45309),
+                      color: isConfirmed
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFFB45309),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -9085,7 +12250,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -9095,7 +12263,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: isConfirmed ? const Color(0xFF16A34A) : const Color(0xFF92400E),
+                              color: isConfirmed
+                                  ? const Color(0xFF16A34A)
+                                  : const Color(0xFF92400E),
                             ),
                           ),
                       ],
@@ -9116,11 +12286,23 @@ class _ConversationScreenState extends State<ConversationScreen> {
               if (isConfirmed) ...[
                 Row(
                   children: [
-                    const Icon(Icons.verified, size: 14, color: Color(0xFF16A34A)),
+                    const Icon(
+                      Icons.verified,
+                      size: 14,
+                      color: Color(0xFF16A34A),
+                    ),
                     const SizedBox(width: 4),
                     Text(
-                      bilingual(context, 'Schedule Confirmed', 'شیڈول منظور شدہ'),
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF16A34A)),
+                      bilingual(
+                        context,
+                        'Schedule Confirmed',
+                        'شیڈول منظور شدہ',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF16A34A),
+                      ),
                     ),
                   ],
                 ),
@@ -9135,14 +12317,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
                             'Worker proposed this schedule. Accept when ready:',
                             'ورکر نے یہ وقت تجویز کیا ہے۔ تیار ہونے پر منظور کریں:',
                           ),
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF92400E)),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF92400E),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       FilledButton.icon(
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF0D9488),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           visualDensity: VisualDensity.compact,
                         ),
                         icon: const Icon(Icons.check, size: 14),
@@ -9178,7 +12366,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 ] else ...[
                   Row(
                     children: [
-                      const Icon(Icons.hourglass_top, size: 14, color: Color(0xFFB45309)),
+                      const Icon(
+                        Icons.hourglass_top,
+                        size: 14,
+                        color: Color(0xFFB45309),
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -9187,7 +12379,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
                             'Waiting for customer to accept schedule...',
                             'گاہک کی جانب سے شیڈول قبول کرنے کا انتظار...',
                           ),
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF92400E)),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF92400E),
+                          ),
                         ),
                       ),
                     ],
@@ -9229,12 +12425,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
             CircleAvatar(
               radius: 18,
               backgroundColor: const Color(0xFF0D9488).withOpacity(0.15),
-              backgroundImage: hasImage ? NetworkImage(widget.otherImage!) : null,
+              backgroundImage: hasImage
+                  ? NetworkImage(widget.otherImage!)
+                  : null,
               child: hasImage
                   ? null
                   : Text(
-                      widget.otherName.isNotEmpty ? widget.otherName[0].toUpperCase() : '?',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+                      widget.otherName.isNotEmpty
+                          ? widget.otherName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0D9488),
+                      ),
                     ),
             ),
             if (_otherId.isNotEmpty)
@@ -9246,7 +12449,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   height: 12,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _otherOnline ? const Color(0xFF22C55E) : Colors.grey.shade400,
+                    color: _otherOnline
+                        ? const Color(0xFF22C55E)
+                        : Colors.grey.shade400,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
                 ),
@@ -9266,8 +12471,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
               _otherId.isEmpty
                   ? ''
                   : (_otherOnline
-                      ? bilingual(context, 'Online', 'آن لائن')
-                      : bilingual(context, 'Offline', 'آف لائن')),
+                        ? bilingual(context, 'Online', 'آن لائن')
+                        : bilingual(context, 'Offline', 'آف لائن')),
               style: TextStyle(
                 fontSize: 12,
                 color: _otherOnline ? const Color(0xFF22C55E) : Colors.grey,
@@ -9293,7 +12498,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
             child: Padding(
               padding: const EdgeInsets.all(32),
               child: Text(
-                bilingual(context, 'Say hello to start the conversation', 'گفتگو شروع کرنے کے لیے سلام کہیں'),
+                bilingual(
+                  context,
+                  'Say hello to start the conversation',
+                  'گفتگو شروع کرنے کے لیے سلام کہیں',
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -9303,7 +12512,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
           controller: _scrollCtrl,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           itemCount: docs.length,
-          itemBuilder: (_, i) => _buildBubble(context, docs[i].data() as Map<String, dynamic>),
+          itemBuilder: (_, i) =>
+              _buildBubble(context, docs[i].data() as Map<String, dynamic>),
         );
       },
     );
@@ -9332,21 +12542,34 @@ class _ConversationScreenState extends State<ConversationScreen> {
           color: isMe ? const Color(0xFF0D9488) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(text, style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15)),
+            Text(
+              text,
+              style: TextStyle(
+                color: isMe ? Colors.white : Colors.black87,
+                fontSize: 15,
+              ),
+            ),
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   _formatTime(ts),
-                  style: TextStyle(color: isMe ? Colors.white70 : Colors.black45, fontSize: 10),
+                  style: TextStyle(
+                    color: isMe ? Colors.white70 : Colors.black45,
+                    fontSize: 10,
+                  ),
                 ),
                 if (isMe) ...[
                   const SizedBox(width: 4),
@@ -9373,7 +12596,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
           const SizedBox(
             width: 12,
             height: 12,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D9488)),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFF0D9488),
+            ),
           ),
           const SizedBox(width: 8),
           Text(
@@ -9417,8 +12643,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
               onChanged: (_) => _onTypingChanged(),
               onSubmitted: (_) => _send(),
               decoration: InputDecoration(
-                hintText: bilingual(context, 'Type a message...', 'پیغام لکھیں...'),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                hintText: bilingual(
+                  context,
+                  'Type a message...',
+                  'پیغام لکھیں...',
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -9429,7 +12661,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   child: SizedBox(
                     width: 22,
                     height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF0D9488)),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Color(0xFF0D9488),
+                    ),
                   ),
                 )
               : IconButton(
@@ -9462,15 +12697,31 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       case 'accepted':
         return bilingual(context, 'Worker on the way', 'ورکر راستے میں ہے');
       case 'arrival_pending':
-        return bilingual(context, 'Arrival confirmation pending', 'آمد کی تصدیق باقی ہے');
+        return bilingual(
+          context,
+          'Arrival confirmation pending',
+          'آمد کی تصدیق باقی ہے',
+        );
       case 'working':
-        return bilingual(context, 'Working at customer', 'کسٹمر کے مقام پر کام جاری ہے');
+        return bilingual(
+          context,
+          'Working at customer',
+          'کسٹمر کے مقام پر کام جاری ہے',
+        );
       case 'worker_completed':
-        return bilingual(context, 'Customer completion pending', 'کسٹمر کی تکمیل تصدیق باقی ہے');
+        return bilingual(
+          context,
+          'Customer completion pending',
+          'کسٹمر کی تکمیل تصدیق باقی ہے',
+        );
       case 'payment_pending':
         return bilingual(context, 'Payment pending', 'ادائیگی زیر التوا');
       case 'worker_payment_pending':
-        return bilingual(context, 'Awaiting payment confirmation', 'ادائیگی کی تصدیق زیر التوا');
+        return bilingual(
+          context,
+          'Awaiting payment confirmation',
+          'ادائیگی کی تصدیق زیر التوا',
+        );
       case 'payment_disputed':
         return bilingual(context, 'Payment disputed', 'ادائیگی کا تنازع');
       case 'completed':
@@ -9565,7 +12816,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(32),
                       child: Text(
-                        bilingual(context, 'Failed to load bookings. Please try again.', 'بکنگز لوڈ کرنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔'),
+                        bilingual(
+                          context,
+                          'Failed to load bookings. Please try again.',
+                          'بکنگز لوڈ کرنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔',
+                        ),
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.black54),
                       ),
@@ -9579,20 +12834,39 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                 final List<String> statusFilter = _tab == 0
                     ? _activeStatuses
                     : _tab == 1
-                        ? _scheduledStatuses
-                        : _pastStatuses;
-                final filtered = docs.where((doc) {
-                  final status = (doc.data() as Map<String, dynamic>)['status']?.toString() ?? '';
-                  return statusFilter.contains(status);
-                }).toList()
-                  ..sort((a, b) {
-                    final aTime = ((a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
-                    final bTime = ((b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
-                    return bTime.compareTo(aTime);
-                  });
+                    ? _scheduledStatuses
+                    : _pastStatuses;
+                final filtered =
+                    docs.where((doc) {
+                      final status =
+                          (doc.data() as Map<String, dynamic>)['status']
+                              ?.toString() ??
+                          '';
+                      return statusFilter.contains(status);
+                    }).toList()..sort((a, b) {
+                      final aTime =
+                          ((a.data() as Map<String, dynamic>)['createdAt']
+                                  as Timestamp?)
+                              ?.toDate() ??
+                          DateTime(2000);
+                      final bTime =
+                          ((b.data() as Map<String, dynamic>)['createdAt']
+                                  as Timestamp?)
+                              ?.toDate() ??
+                          DateTime(2000);
+                      return bTime.compareTo(aTime);
+                    });
 
                 if (filtered.isEmpty) {
-                  return Center(child: Text(bilingual(context, 'No bookings yet', 'ابھی کوئی بکنگ نہیں')));
+                  return Center(
+                    child: Text(
+                      bilingual(
+                        context,
+                        'No bookings yet',
+                        'ابھی کوئی بکنگ نہیں',
+                      ),
+                    ),
+                  );
                 }
 
                 return ListView(
@@ -9603,7 +12877,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                     final descEn = data['descriptionEn']?.toString() ?? '';
                     final descUr = data['descriptionUr']?.toString() ?? '';
                     final price = data['price'];
-                    final priceStr = price != null ? 'Rs. ${(price as num).toStringAsFixed(0)}' : '';
+                    final priceStr = price != null
+                        ? 'Rs. ${(price as num).toStringAsFixed(0)}'
+                        : '';
                     final createdAt = data['createdAt'] as Timestamp?;
                     final timeStr = createdAt != null
                         ? DateFormat('d MMM yyyy').format(createdAt.toDate())
@@ -9615,345 +12891,605 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                         ? DateFormat('hh:mm a').format(scheduledRaw.toDate())
                         : '';
                     if (scheduledRaw is Timestamp) {
-                      final confirmed = data['scheduleConfirmed'] as bool? ?? false;
+                      final confirmed =
+                          data['scheduleConfirmed'] as bool? ?? false;
                       reminderLine = confirmed
                           ? '${bilingual(context, 'Reminder: worker arrives at', 'یاد دہانی: ورکر آئے گا')} $schedTime'
                           : '${bilingual(context, 'Schedule approval pending', 'شیڈول کی منظوری زیر التوا')} • $schedTime';
                     }
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () async {
-                        if (_tab != 2 && AppScope.of(context).role == UserRole.worker) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => WorkerTrackingScreen(
-                                jobPrice: (price as num?)?.toDouble() ?? 0,
-                                jobId: doc.id,
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () async {
+                          if (_tab != 2 &&
+                              AppScope.of(context).role == UserRole.worker) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => WorkerTrackingScreen(
+                                  jobPrice: (price as num?)?.toDouble() ?? 0,
+                                  jobId: doc.id,
+                                ),
                               ),
-                            ),
-                          );
-                        } else if (_tab == 0) {
-                          final workerId = data['workerId']?.toString() ?? '';
-                          if (workerId.isNotEmpty) {
-                            final workerDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
-                            final workerData = workerDoc.data();
-                            if (workerData != null && context.mounted) {
-                              final worker = WorkerModel.fromFirestore(workerData, docId: workerDoc.id);
-                              final jobArgs = JobPostingArguments(
-                                descriptionEn: descEn,
-                                descriptionUr: descUr,
-                                price: (price as num?)?.toDouble() ?? 0,
-                                categoryKey: data['categoryKey']?.toString() ?? '',
-                                paymentMethod: data['paymentMethod']?.toString() ?? 'Cash',
-                                customerLatitude: (data['customerLatitude'] as num?)?.toDouble(),
-                                customerLongitude: (data['customerLongitude'] as num?)?.toDouble(),
-                              );
-                              Navigator.pushNamed(context, AppRoutes.tracking, arguments: TrackingArguments(
-                                worker: worker,
-                                job: jobArgs,
-                                jobId: doc.id,
-                              ));
+                            );
+                          } else if (_tab == 0) {
+                            final workerId = data['workerId']?.toString() ?? '';
+                            if (workerId.isNotEmpty) {
+                              final workerDoc = await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(workerId)
+                                  .get();
+                              final workerData = workerDoc.data();
+                              if (workerData != null && context.mounted) {
+                                final worker = WorkerModel.fromFirestore(
+                                  workerData,
+                                  docId: workerDoc.id,
+                                );
+                                final jobArgs = JobPostingArguments(
+                                  descriptionEn: descEn,
+                                  descriptionUr: descUr,
+                                  price: (price as num?)?.toDouble() ?? 0,
+                                  categoryKey:
+                                      data['categoryKey']?.toString() ?? '',
+                                  paymentMethod:
+                                      data['paymentMethod']?.toString() ??
+                                      'Cash',
+                                  customerLatitude:
+                                      (data['customerLatitude'] as num?)
+                                          ?.toDouble(),
+                                  customerLongitude:
+                                      (data['customerLongitude'] as num?)
+                                          ?.toDouble(),
+                                );
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.tracking,
+                                  arguments: TrackingArguments(
+                                    worker: worker,
+                                    job: jobArgs,
+                                    jobId: doc.id,
+                                  ),
+                                );
+                              }
                             }
                           }
-                        }
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  status == 'completed' ? Icons.check_circle
-                                  : status == 'scheduled' ? Icons.calendar_month
-                                  : Icons.schedule,
-                                  color: status == 'completed' ? Colors.green
-                                  : status == 'scheduled' ? Colors.amber.shade700
-                                  : const Color(0xFF0D9488),
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    isUrdu ? descUr : descEn,
-                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    status == 'completed'
+                                        ? Icons.check_circle
+                                        : status == 'scheduled'
+                                        ? Icons.calendar_month
+                                        : Icons.schedule,
+                                    color: status == 'completed'
+                                        ? Colors.green
+                                        : status == 'scheduled'
+                                        ? Colors.amber.shade700
+                                        : const Color(0xFF0D9488),
+                                    size: 18,
                                   ),
-                                ),
-                                Text(priceStr, style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w700)),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$timeStr • ${_bookingStatusLabel(context, status)}',
-                              style: const TextStyle(fontSize: 12, color: Colors.black54),
-                            ),
-                            if (reminderLine != null) ...[
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      isUrdu ? descUr : descEn,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    priceStr,
+                                    style: const TextStyle(
+                                      color: Color(0xFF0D9488),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 4),
                               Text(
-                                reminderLine,
-                                style: const TextStyle(fontSize: 12, color: Color(0xFFB45309), fontWeight: FontWeight.w600),
+                                '$timeStr • ${_bookingStatusLabel(context, status)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
                               ),
-                            ],
-                            // --- Scheduled tab actions ---
-                            if (_tab == 1) ...[
-                              const SizedBox(height: 12),
-                              if (AppScope.of(context).role == UserRole.worker) ...[
-                                // Worker: start the job
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton.icon(
-                                    icon: const Icon(Icons.play_arrow),
-                                    label: Text(bilingual(context, 'Start Job Now', 'ابھی کام شروع کریں')),
-                                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-                                    onPressed: () async {
-                                      await startScheduledJob(doc.id);
-                                      if (context.mounted) {
-                                        Navigator.push(
+                              if (reminderLine != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  reminderLine,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFFB45309),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                              // --- Scheduled tab actions ---
+                              if (_tab == 1) ...[
+                                const SizedBox(height: 12),
+                                if (AppScope.of(context).role ==
+                                    UserRole.worker) ...[
+                                  // Worker: start the job
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      icon: const Icon(Icons.play_arrow),
+                                      label: Text(
+                                        bilingual(
                                           context,
-                                          MaterialPageRoute(
-                                            builder: (_) => WorkerTrackingScreen(
-                                              jobPrice: (price as num?)?.toDouble() ?? 0,
-                                              jobId: doc.id,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    icon: const Icon(Icons.chat_outlined),
-                                    label: Text(bilingual(context, 'Message Customer', 'گاہک کو میسیج کریں')),
-                                    onPressed: () async {
-                                      final customerId = data['customerId']?.toString();
-                                      if (customerId == null || customerId.isEmpty) return;
-                                      final customerName = data['customerName']?.toString() ?? 'Customer';
-                                      final existingId = await findExistingConversation(customerId);
-                                      if (!context.mounted) return;
-                                      if (existingId != null) {
-                                        Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                                          arguments: ConversationArguments(conversationId: existingId, otherName: customerName, otherImage: ''));
-                                      } else {
-                                        final newId = await createConversation(otherUserId: customerId, otherUserName: customerName, otherUserImage: '');
+                                          'Start Job Now',
+                                          'ابھی کام شروع کریں',
+                                        ),
+                                      ),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF0D9488,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        await startScheduledJob(doc.id);
                                         if (context.mounted) {
-                                          Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                                            arguments: ConversationArguments(conversationId: newId, otherName: customerName, otherImage: ''));
-                                        }
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ] else ...[
-                                // Customer: Approve / Decline / Message worker
-                                if (!(data['scheduleConfirmed'] as bool? ?? false)) ...[
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFEF3C7),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFFF59E0B)),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.schedule, color: Color(0xFFB45309), size: 16),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Text(
-                                            bilingual(
-                                              context,
-                                              schedTime.isNotEmpty
-                                                  ? 'Worker wants to schedule this work to $schedTime. Accept or Chat?'
-                                                  : 'Worker wants to schedule this work. Accept or Chat?',
-                                              schedTime.isNotEmpty
-                                                  ? 'ورکر اس کام کو $schedTime پر شیڈول کرنا چاہتا ہے۔ منظور کریں یا بات چیت کریں؟'
-                                                  : 'ورکر اس کام کو شیڈول کرنا چاہتا ہے۔ منظور کریں یا بات چیت کریں؟',
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  WorkerTrackingScreen(
+                                                    jobPrice:
+                                                        (price as num?)
+                                                            ?.toDouble() ??
+                                                        0,
+                                                    jobId: doc.id,
+                                                  ),
                                             ),
-                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF92400E)),
-                                          ),
-                                        ),
-                                      ],
+                                          );
+                                        }
+                                      },
                                     ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: const Color(0xFF0D9488),
-                                            side: const BorderSide(color: Color(0xFF0D9488)),
-                                          ),
-                                          icon: const Icon(Icons.chat_outlined, size: 16),
-                                          label: Text(bilingual(context, 'Chat', 'چیٹ کریں')),
-                                          onPressed: () async {
-                                            final workerId = data['workerId']?.toString();
-                                            if (workerId == null || workerId.isEmpty) return;
-                                            final workerName = data['workerName']?.toString() ?? 'Worker';
-                                            final existingId = await findExistingConversation(workerId);
-                                            if (!context.mounted) return;
-                                            if (existingId != null) {
-                                              Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                                                arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: ''));
-                                            } else {
-                                              final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: '');
-                                              if (context.mounted) {
-                                                Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                                                  arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: ''));
-                                              }
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: FilledButton.icon(
-                                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-                                          icon: const Icon(Icons.check_circle_outline, size: 16),
-                                          label: Text(bilingual(context, 'Accept', 'منظور کریں')),
-                                          onPressed: () async {
-                                            await acceptScheduledJob(doc.id);
-                                            if (context.mounted) setState(() {});
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ] else ...[
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.check_circle, color: Color(0xFF0D9488), size: 16),
-                                      const SizedBox(width: 6),
-                                      Text(bilingual(context, 'Schedule approved', 'شیڈول منظور'), style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.w600)),
-                                    ],
                                   ),
                                   const SizedBox(height: 8),
                                   SizedBox(
                                     width: double.infinity,
                                     child: OutlinedButton.icon(
                                       icon: const Icon(Icons.chat_outlined),
-                                      label: Text(bilingual(context, 'Message Worker', 'ورکر کو میسیج کریں')),
+                                      label: Text(
+                                        bilingual(
+                                          context,
+                                          'Message Customer',
+                                          'گاہک کو میسیج کریں',
+                                        ),
+                                      ),
                                       onPressed: () async {
-                                        final workerId = data['workerId']?.toString();
-                                        if (workerId == null || workerId.isEmpty) return;
-                                        final workerName = data['workerName']?.toString() ?? 'Worker';
-                                        final existingId = await findExistingConversation(workerId);
+                                        final customerId = data['customerId']
+                                            ?.toString();
+                                        if (customerId == null ||
+                                            customerId.isEmpty)
+                                          return;
+                                        final customerName =
+                                            data['customerName']?.toString() ??
+                                            'Customer';
+                                        final existingId =
+                                            await findExistingConversation(
+                                              customerId,
+                                            );
                                         if (!context.mounted) return;
                                         if (existingId != null) {
-                                          Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                                            arguments: ConversationArguments(conversationId: existingId, otherName: workerName, otherImage: ''));
+                                          Navigator.pushNamed(
+                                            context,
+                                            AppRoutes.sharedConversation,
+                                            arguments: ConversationArguments(
+                                              conversationId: existingId,
+                                              otherName: customerName,
+                                              otherImage: '',
+                                            ),
+                                          );
                                         } else {
-                                          final newId = await createConversation(otherUserId: workerId, otherUserName: workerName, otherUserImage: '');
+                                          final newId =
+                                              await createConversation(
+                                                otherUserId: customerId,
+                                                otherUserName: customerName,
+                                                otherUserImage: '',
+                                              );
                                           if (context.mounted) {
-                                            Navigator.pushNamed(context, AppRoutes.sharedConversation,
-                                              arguments: ConversationArguments(conversationId: newId, otherName: workerName, otherImage: ''));
+                                            Navigator.pushNamed(
+                                              context,
+                                              AppRoutes.sharedConversation,
+                                              arguments: ConversationArguments(
+                                                conversationId: newId,
+                                                otherName: customerName,
+                                                otherImage: '',
+                                              ),
+                                            );
                                           }
                                         }
+                                      },
+                                    ),
+                                  ),
+                                ] else ...[
+                                  // Customer: Approve / Decline / Message worker
+                                  if (!(data['scheduleConfirmed'] as bool? ??
+                                      false)) ...[
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF3C7),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: const Color(0xFFF59E0B),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.schedule,
+                                            color: Color(0xFFB45309),
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              bilingual(
+                                                context,
+                                                schedTime.isNotEmpty
+                                                    ? 'Worker wants to schedule this work to $schedTime. Accept or Chat?'
+                                                    : 'Worker wants to schedule this work. Accept or Chat?',
+                                                schedTime.isNotEmpty
+                                                    ? 'ورکر اس کام کو $schedTime پر شیڈول کرنا چاہتا ہے۔ منظور کریں یا بات چیت کریں؟'
+                                                    : 'ورکر اس کام کو شیڈول کرنا چاہتا ہے۔ منظور کریں یا بات چیت کریں؟',
+                                              ),
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF92400E),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: const Color(
+                                                0xFF0D9488,
+                                              ),
+                                              side: const BorderSide(
+                                                color: Color(0xFF0D9488),
+                                              ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.chat_outlined,
+                                              size: 16,
+                                            ),
+                                            label: Text(
+                                              bilingual(
+                                                context,
+                                                'Chat',
+                                                'چیٹ کریں',
+                                              ),
+                                            ),
+                                            onPressed: () async {
+                                              final workerId = data['workerId']
+                                                  ?.toString();
+                                              if (workerId == null ||
+                                                  workerId.isEmpty)
+                                                return;
+                                              final workerName =
+                                                  data['workerName']
+                                                      ?.toString() ??
+                                                  'Worker';
+                                              final existingId =
+                                                  await findExistingConversation(
+                                                    workerId,
+                                                  );
+                                              if (!context.mounted) return;
+                                              if (existingId != null) {
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  AppRoutes.sharedConversation,
+                                                  arguments:
+                                                      ConversationArguments(
+                                                        conversationId:
+                                                            existingId,
+                                                        otherName: workerName,
+                                                        otherImage: '',
+                                                      ),
+                                                );
+                                              } else {
+                                                final newId =
+                                                    await createConversation(
+                                                      otherUserId: workerId,
+                                                      otherUserName: workerName,
+                                                      otherUserImage: '',
+                                                    );
+                                                if (context.mounted) {
+                                                  Navigator.pushNamed(
+                                                    context,
+                                                    AppRoutes
+                                                        .sharedConversation,
+                                                    arguments:
+                                                        ConversationArguments(
+                                                          conversationId: newId,
+                                                          otherName: workerName,
+                                                          otherImage: '',
+                                                        ),
+                                                  );
+                                                }
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: FilledButton.icon(
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: const Color(
+                                                0xFF0D9488,
+                                              ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.check_circle_outline,
+                                              size: 16,
+                                            ),
+                                            label: Text(
+                                              bilingual(
+                                                context,
+                                                'Accept',
+                                                'منظور کریں',
+                                              ),
+                                            ),
+                                            onPressed: () async {
+                                              await acceptScheduledJob(doc.id);
+                                              if (context.mounted)
+                                                setState(() {});
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ] else ...[
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.check_circle,
+                                          color: Color(0xFF0D9488),
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          bilingual(
+                                            context,
+                                            'Schedule approved',
+                                            'شیڈول منظور',
+                                          ),
+                                          style: const TextStyle(
+                                            color: Color(0xFF0D9488),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        icon: const Icon(Icons.chat_outlined),
+                                        label: Text(
+                                          bilingual(
+                                            context,
+                                            'Message Worker',
+                                            'ورکر کو میسیج کریں',
+                                          ),
+                                        ),
+                                        onPressed: () async {
+                                          final workerId = data['workerId']
+                                              ?.toString();
+                                          if (workerId == null ||
+                                              workerId.isEmpty)
+                                            return;
+                                          final workerName =
+                                              data['workerName']?.toString() ??
+                                              'Worker';
+                                          final existingId =
+                                              await findExistingConversation(
+                                                workerId,
+                                              );
+                                          if (!context.mounted) return;
+                                          if (existingId != null) {
+                                            Navigator.pushNamed(
+                                              context,
+                                              AppRoutes.sharedConversation,
+                                              arguments: ConversationArguments(
+                                                conversationId: existingId,
+                                                otherName: workerName,
+                                                otherImage: '',
+                                              ),
+                                            );
+                                          } else {
+                                            final newId =
+                                                await createConversation(
+                                                  otherUserId: workerId,
+                                                  otherUserName: workerName,
+                                                  otherUserImage: '',
+                                                );
+                                            if (context.mounted) {
+                                              Navigator.pushNamed(
+                                                context,
+                                                AppRoutes.sharedConversation,
+                                                arguments:
+                                                    ConversationArguments(
+                                                      conversationId: newId,
+                                                      otherName: workerName,
+                                                      otherImage: '',
+                                                    ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ],
+                              // --- Past tab actions (Completed jobs & Ratings) ---
+                              if (_tab == 2 && status == 'completed') ...[
+                                const SizedBox(height: 10),
+                                if (data['reviewed'] == true ||
+                                    data['customerRating'] != null) ...[
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEF3C7),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFFDE68A),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.star_rounded,
+                                              color: Color(0xFFD97706),
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '${bilingual(context, 'Rated', 'درجہ بندی')}: ${(data['customerRating'] as num?)?.toStringAsFixed(1) ?? '5.0'} / 5.0',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                                color: Color(0xFF92400E),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (data['customerReview'] != null &&
+                                            data['customerReview']
+                                                .toString()
+                                                .trim()
+                                                .isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '"${data['customerReview']}"',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                              color: Color(0xFF78350F),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ] else if (AppScope.of(context).role ==
+                                    UserRole.customer) ...[
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      icon: const Icon(
+                                        Icons.star_rounded,
+                                        color: Colors.amber,
+                                        size: 18,
+                                      ),
+                                      label: Text(
+                                        bilingual(
+                                          context,
+                                          'Rate Worker',
+                                          'ورکر کی درجہ بندی کریں',
+                                        ),
+                                      ),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF0D9488,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        final workerId =
+                                            data['workerId']?.toString() ?? '';
+                                        final workerName =
+                                            data['workerName']?.toString() ??
+                                            'Worker';
+                                        final workerCategory =
+                                            data['categoryKey']?.toString() ??
+                                            '';
+                                        WorkerModel? worker;
+                                        if (workerId.isNotEmpty) {
+                                          try {
+                                            final wDoc = await FirebaseFirestore
+                                                .instance
+                                                .collection('users')
+                                                .doc(workerId)
+                                                .get();
+                                            final wData = wDoc.data();
+                                            if (wData != null) {
+                                              worker =
+                                                  WorkerModel.fromFirestore(
+                                                    wData,
+                                                    docId: wDoc.id,
+                                                  );
+                                            }
+                                          } catch (_) {}
+                                        }
+                                        if (!context.mounted) return;
+                                        Navigator.pushNamed(
+                                          context,
+                                          AppRoutes.rating,
+                                          arguments: TrackingArguments(
+                                            jobId: doc.id,
+                                            worker:
+                                                worker ??
+                                                WorkerModel(
+                                                  id: workerId,
+                                                  name: workerName,
+                                                  phone: '',
+                                                  category: workerCategory,
+                                                  rating: 5.0,
+                                                  reviews: 0,
+                                                  image: '',
+                                                ),
+                                          ),
+                                        );
                                       },
                                     ),
                                   ),
                                 ],
                               ],
                             ],
-                            // --- Past tab actions (Completed jobs & Ratings) ---
-                            if (_tab == 2 && status == 'completed') ...[
-                              const SizedBox(height: 10),
-                              if (data['reviewed'] == true || data['customerRating'] != null) ...[
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFEF3C7),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFFDE68A)),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 18),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '${bilingual(context, 'Rated', 'درجہ بندی')}: ${(data['customerRating'] as num?)?.toStringAsFixed(1) ?? '5.0'} / 5.0',
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF92400E)),
-                                          ),
-                                        ],
-                                      ),
-                                      if (data['customerReview'] != null && data['customerReview'].toString().trim().isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '"${data['customerReview']}"',
-                                          style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Color(0xFF78350F)),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ] else if (AppScope.of(context).role == UserRole.customer) ...[
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton.icon(
-                                    icon: const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
-                                    label: Text(bilingual(context, 'Rate Worker', 'ورکر کی درجہ بندی کریں')),
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFF0D9488),
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
-                                    ),
-                                    onPressed: () async {
-                                      final workerId = data['workerId']?.toString() ?? '';
-                                      final workerName = data['workerName']?.toString() ?? 'Worker';
-                                      final workerCategory = data['categoryKey']?.toString() ?? '';
-                                      WorkerModel? worker;
-                                      if (workerId.isNotEmpty) {
-                                        try {
-                                          final wDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
-                                          final wData = wDoc.data();
-                                          if (wData != null) {
-                                            worker = WorkerModel.fromFirestore(wData, docId: wDoc.id);
-                                          }
-                                        } catch (_) {}
-                                      }
-                                      if (!context.mounted) return;
-                                      Navigator.pushNamed(
-                                        context,
-                                        AppRoutes.rating,
-                                        arguments: TrackingArguments(
-                                          jobId: doc.id,
-                                          worker: worker ?? WorkerModel(
-                                            id: workerId,
-                                            name: workerName,
-                                            phone: '',
-                                            category: workerCategory,
-                                            rating: 5.0,
-                                            reviews: 0,
-                                            image: '',
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
+                    );
                   }).toList(),
                 );
               },
             ),
-          )
+          ),
         ],
       ),
     );
@@ -9964,7 +13500,10 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   /// Displays confirmation dialog asking "Want to switch to [Customer/Mazdoor] account, yes or no?"
-  Future<bool> _showSwitchRoleDialog(BuildContext context, {required bool toWorker}) async {
+  Future<bool> _showSwitchRoleDialog(
+    BuildContext context, {
+    required bool toWorker,
+  }) async {
     final targetAccount = toWorker ? 'Mazdoor' : 'Customer';
     final targetAccountUrdu = toWorker ? 'مزدور' : 'کسٹمر';
     final confirmed = await showDialog<bool>(
@@ -9973,7 +13512,11 @@ class SettingsScreen extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.swap_horiz_rounded, color: Color(0xFF0D9488), size: 26),
+            const Icon(
+              Icons.swap_horiz_rounded,
+              color: Color(0xFF0D9488),
+              size: 26,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -9999,7 +13542,9 @@ class SettingsScreen extends StatelessWidget {
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF0D9488),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(bilingual(context, 'Yes', 'ہاں')),
@@ -10011,18 +13556,28 @@ class SettingsScreen extends StatelessWidget {
   }
 
   /// Called when user in Customer mode taps "Switch to Worker Mode"
-  Future<void> _switchToWorkerMode(BuildContext context, Map<String, dynamic> userData) async {
+  Future<void> _switchToWorkerMode(
+    BuildContext context,
+    Map<String, dynamic> userData,
+  ) async {
     final c = AppScope.of(context);
-    final roles = (userData['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
-    final workerStatus = userData['workerStatus']?.toString() ?? userData['status']?.toString();
-    final hasWorkerAccess = roles.contains('worker') || userData['role'] == 'worker';
+    final roles =
+        (userData['roles'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final workerStatus =
+        userData['workerStatus']?.toString() ?? userData['status']?.toString();
+    final hasWorkerAccess =
+        roles.contains('worker') || userData['role'] == 'worker';
 
     if (hasWorkerAccess && workerStatus == 'approved') {
       // Worker mode is already set up and approved — switch directly
       await WorkerPresenceService.instance.setOnline(false);
       c.switchActiveRole(UserRole.worker);
       if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.workerDashboard, (r) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.workerDashboard,
+          (r) => false,
+        );
       }
     } else if (workerStatus == 'pending') {
       // Applied but not yet approved by admin
@@ -10030,19 +13585,31 @@ class SettingsScreen extends StatelessWidget {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: Row(
               children: [
                 const Icon(Icons.pending_actions, color: Color(0xFFF59E0B)),
                 const SizedBox(width: 8),
-                Expanded(child: Text(bilingual(context, 'Application Pending', 'درخواست زیر التواء'))),
+                Expanded(
+                  child: Text(
+                    bilingual(
+                      context,
+                      'Application Pending',
+                      'درخواست زیر التواء',
+                    ),
+                  ),
+                ),
               ],
             ),
-            content: Text(bilingual(
-              context,
-              'Your worker verification request is under admin review. You will be able to access worker mode once approved.',
-              'آپ کی ورکر تصدیقی درخواست ایڈمن کے جائزے میں ہے۔ منظوری پر آپ کو مطلع کیا جائے گا اور آپ ورکر موڈ استعمال کر سکیں گے۔',
-            )),
+            content: Text(
+              bilingual(
+                context,
+                'Your worker verification request is under admin review. You will be able to access worker mode once approved.',
+                'آپ کی ورکر تصدیقی درخواست ایڈمن کے جائزے میں ہے۔ منظوری پر آپ کو مطلع کیا جائے گا اور آپ ورکر موڈ استعمال کر سکیں گے۔',
+              ),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -10054,36 +13621,49 @@ class SettingsScreen extends StatelessWidget {
       }
     } else if (workerStatus == 'rejected') {
       // Previously rejected by admin - allow re-applying with updated verification docs
-      final reason = userData['rejectReason']?.toString() ?? 'Documents not verified';
+      final reason =
+          userData['rejectReason']?.toString() ?? 'Documents not verified';
       if (context.mounted) {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: Row(
               children: [
                 const Icon(Icons.error_outline, color: Color(0xFFEF4444)),
                 const SizedBox(width: 8),
-                Expanded(child: Text(bilingual(context, 'Application Rejected', 'درخواست مسترد'))),
+                Expanded(
+                  child: Text(
+                    bilingual(context, 'Application Rejected', 'درخواست مسترد'),
+                  ),
+                ),
               ],
             ),
-            content: Text(bilingual(
-              context,
-              'Your worker verification application was rejected by admin.\nReason: $reason\n\nPlease update your verification documents and re-apply.',
-              'ایڈمن کی جانب سے آپ کی ورکر تصدیق مسترد ہو گئی ہے۔\nوجہ: $reason\n\nبراہ کرم دستاویزات اپ ڈیٹ کر کے دوبارہ جمع کرائیں۔',
-            )),
+            content: Text(
+              bilingual(
+                context,
+                'Your worker verification application was rejected by admin.\nReason: $reason\n\nPlease update your verification documents and re-apply.',
+                'ایڈمن کی جانب سے آپ کی ورکر تصدیق مسترد ہو گئی ہے۔\nوجہ: $reason\n\nبراہ کرم دستاویزات اپ ڈیٹ کر کے دوبارہ جمع کرائیں۔',
+              ),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: Text(bilingual(context, 'Cancel', 'منسوخ')),
               ),
               FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D9488),
+                ),
                 onPressed: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, AppRoutes.workerVerification);
                 },
-                child: Text(bilingual(context, 'Update & Re-apply', 'دوبارہ درخواست دیں')),
+                child: Text(
+                  bilingual(context, 'Update & Re-apply', 'دوبارہ درخواست دیں'),
+                ),
               ),
             ],
           ),
@@ -10094,24 +13674,38 @@ class SettingsScreen extends StatelessWidget {
       if (context.mounted) {
         showModalBottomSheet(
           context: context,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
           builder: (ctx) => Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 60, height: 60,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
                     color: const Color(0xFF0D9488).withOpacity(0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.verified_user_rounded, size: 32, color: Color(0xFF0D9488)),
+                  child: const Icon(
+                    Icons.verified_user_rounded,
+                    size: 32,
+                    color: Color(0xFF0D9488),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  bilingual(context, 'Worker Verification Required', 'ورکر تصدیق لازمی ہے'),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  bilingual(
+                    context,
+                    'Worker Verification Required',
+                    'ورکر تصدیق لازمی ہے',
+                  ),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -10131,16 +13725,25 @@ class SettingsScreen extends StatelessWidget {
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF0D9488),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     icon: const Icon(Icons.badge_outlined),
                     label: Text(
-                      bilingual(context, 'Complete Worker Verification', 'ورکر تصدیق مکمل کریں'),
+                      bilingual(
+                        context,
+                        'Complete Worker Verification',
+                        'ورکر تصدیق مکمل کریں',
+                      ),
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     onPressed: () {
                       Navigator.pop(ctx);
-                      Navigator.pushNamed(context, AppRoutes.workerVerification);
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.workerVerification,
+                      );
                     },
                   ),
                 ),
@@ -10160,12 +13763,20 @@ class SettingsScreen extends StatelessWidget {
     await WorkerPresenceService.instance.setOnline(false);
     c.switchActiveRole(UserRole.customer);
     if (context.mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.customerHome, (r) => false);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.customerHome,
+        (r) => false,
+      );
     }
   }
 
-  Widget _buildNotificationChannelCard(BuildContext context, Map<String, dynamic>? data) {
-    final currentPref = data?['notificationPreference']?.toString() ??
+  Widget _buildNotificationChannelCard(
+    BuildContext context,
+    Map<String, dynamic>? data,
+  ) {
+    final currentPref =
+        data?['notificationPreference']?.toString() ??
         (data?['otpVerifiedVia'] == 'phone' ? 'phone' : 'email');
     final user = FirebaseAuth.instance.currentUser;
 
@@ -10186,7 +13797,10 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     backgroundColor: const Color(0xFF0D9488).withOpacity(0.12),
-                    child: const Icon(Icons.notifications_active_outlined, color: Color(0xFF0D9488)),
+                    child: const Icon(
+                      Icons.notifications_active_outlined,
+                      color: Color(0xFF0D9488),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -10194,8 +13808,15 @@ class SettingsScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          bilingual(context, 'Notification Channel', 'نوٹیفیکیشن کا ذریعہ'),
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          bilingual(
+                            context,
+                            'Notification Channel',
+                            'نوٹیفیکیشن کا ذریعہ',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           bilingual(
@@ -10203,7 +13824,10 @@ class SettingsScreen extends StatelessWidget {
                             'Choose where you want to receive admin updates & alerts',
                             'ایڈمن منظوری اور الرٹس وصول کرنے کا ذریعہ منتخب کریں',
                           ),
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
                         ),
                       ],
                     ),
@@ -10215,18 +13839,29 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   _buildNotificationChannelChip(
                     context,
-                    label: bilingual(context, 'Number (SMS)', 'موبائل نمبر (SMS)'),
+                    label: bilingual(
+                      context,
+                      'Number (SMS)',
+                      'موبائل نمبر (SMS)',
+                    ),
                     icon: Icons.sms_outlined,
                     selected: currentPref == 'phone',
                     onTap: () async {
                       if (user != null) {
-                        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-                          'notificationPreference': 'phone',
-                        });
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .update({'notificationPreference': 'phone'});
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(bilingual(context, 'Notifications set to Phone Number (SMS)', 'نوٹیفیکیشنز موبائل نمبر پر سیٹ ہو گئیں')),
+                              content: Text(
+                                bilingual(
+                                  context,
+                                  'Notifications set to Phone Number (SMS)',
+                                  'نوٹیفیکیشنز موبائل نمبر پر سیٹ ہو گئیں',
+                                ),
+                              ),
                               backgroundColor: const Color(0xFF0D9488),
                               duration: const Duration(seconds: 2),
                             ),
@@ -10243,13 +13878,20 @@ class SettingsScreen extends StatelessWidget {
                     selected: currentPref == 'email',
                     onTap: () async {
                       if (user != null) {
-                        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-                          'notificationPreference': 'email',
-                        });
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .update({'notificationPreference': 'email'});
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(bilingual(context, 'Notifications set to Email', 'نوٹیفیکیشنز ای میل پر سیٹ ہو گئیں')),
+                              content: Text(
+                                bilingual(
+                                  context,
+                                  'Notifications set to Email',
+                                  'نوٹیفیکیشنز ای میل پر سیٹ ہو گئیں',
+                                ),
+                              ),
                               backgroundColor: const Color(0xFF0D9488),
                               duration: const Duration(seconds: 2),
                             ),
@@ -10266,13 +13908,20 @@ class SettingsScreen extends StatelessWidget {
                     selected: currentPref == 'both',
                     onTap: () async {
                       if (user != null) {
-                        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-                          'notificationPreference': 'both',
-                        });
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .update({'notificationPreference': 'both'});
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(bilingual(context, 'Notifications set to Both (SMS & Email)', 'نوٹیفیکیشنز دونوں پر سیٹ ہو گئیں')),
+                              content: Text(
+                                bilingual(
+                                  context,
+                                  'Notifications set to Both (SMS & Email)',
+                                  'نوٹیفیکیشنز دونوں پر سیٹ ہو گئیں',
+                                ),
+                              ),
                               backgroundColor: const Color(0xFF0D9488),
                               duration: const Duration(seconds: 2),
                             ),
@@ -10308,13 +13957,19 @@ class SettingsScreen extends StatelessWidget {
             color: selected ? const Color(0xFF0D9488) : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected ? const Color(0xFF0D9488) : const Color(0xFFE2E8F0),
+              color: selected
+                  ? const Color(0xFF0D9488)
+                  : const Color(0xFFE2E8F0),
             ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: selected ? Colors.white : Colors.black87),
+              Icon(
+                icon,
+                size: 18,
+                color: selected ? Colors.white : Colors.black87,
+              ),
               const SizedBox(height: 4),
               Text(
                 label,
@@ -10349,7 +14004,10 @@ class SettingsScreen extends StatelessWidget {
             stream: streamCurrentUserData(),
             builder: (context, snapshot) {
               final data = snapshot.data?.data() as Map<String, dynamic>?;
-              final name = data?['name']?.toString() ?? FirebaseAuth.instance.currentUser?.displayName ?? 'User';
+              final name =
+                  data?['name']?.toString() ??
+                  FirebaseAuth.instance.currentUser?.displayName ??
+                  'User';
               final phone = data?['phone']?.toString() ?? '+92 300 1234567';
               final profileImage = data?['profileImage']?.toString() ?? '';
 
@@ -10362,7 +14020,9 @@ class SettingsScreen extends StatelessWidget {
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: const Color(0xFF0D9488).withOpacity(0.3)),
+                      side: BorderSide(
+                        color: const Color(0xFF0D9488).withOpacity(0.3),
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -10372,9 +14032,13 @@ class SettingsScreen extends StatelessWidget {
                           Row(
                             children: [
                               CircleAvatar(
-                                backgroundColor: const Color(0xFF0D9488).withOpacity(0.12),
+                                backgroundColor: const Color(
+                                  0xFF0D9488,
+                                ).withOpacity(0.12),
                                 child: Icon(
-                                  isWorker ? Icons.handyman_rounded : Icons.person_rounded,
+                                  isWorker
+                                      ? Icons.handyman_rounded
+                                      : Icons.person_rounded,
                                   color: const Color(0xFF0D9488),
                                 ),
                               ),
@@ -10383,14 +14047,32 @@ class SettingsScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    bilingual(context, 'Current Mode', 'موجودہ موڈ'),
-                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    bilingual(
+                                      context,
+                                      'Current Mode',
+                                      'موجودہ موڈ',
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                                   Text(
                                     isWorker
-                                        ? bilingual(context, 'Worker Mode', 'ورکر موڈ')
-                                        : bilingual(context, 'Customer Mode', 'کسٹمر موڈ'),
-                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                        ? bilingual(
+                                            context,
+                                            'Worker Mode',
+                                            'ورکر موڈ',
+                                          )
+                                        : bilingual(
+                                            context,
+                                            'Customer Mode',
+                                            'کسٹمر موڈ',
+                                          ),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -10402,23 +14084,45 @@ class SettingsScreen extends StatelessWidget {
                             child: OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFF0D9488),
-                                side: const BorderSide(color: Color(0xFF0D9488)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                side: const BorderSide(
+                                  color: Color(0xFF0D9488),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              icon: Icon(isWorker ? Icons.person_rounded : Icons.handyman_rounded),
+                              icon: Icon(
+                                isWorker
+                                    ? Icons.person_rounded
+                                    : Icons.handyman_rounded,
+                              ),
                               label: Text(
                                 isWorker
-                                    ? bilingual(context, 'Switch to Customer Mode', 'کسٹمر موڈ پر جائیں')
-                                    : bilingual(context, 'Switch to Worker Mode', 'ورکر موڈ پر جائیں'),
+                                    ? bilingual(
+                                        context,
+                                        'Switch to Customer Mode',
+                                        'کسٹمر موڈ پر جائیں',
+                                      )
+                                    : bilingual(
+                                        context,
+                                        'Switch to Worker Mode',
+                                        'ورکر موڈ پر جائیں',
+                                      ),
                               ),
                               onPressed: () async {
                                 if (isWorker) {
-                                  final confirmed = await _showSwitchRoleDialog(context, toWorker: false);
+                                  final confirmed = await _showSwitchRoleDialog(
+                                    context,
+                                    toWorker: false,
+                                  );
                                   if (confirmed && context.mounted) {
                                     _switchToCustomerMode(context);
                                   }
                                 } else {
-                                  final confirmed = await _showSwitchRoleDialog(context, toWorker: true);
+                                  final confirmed = await _showSwitchRoleDialog(
+                                    context,
+                                    toWorker: true,
+                                  );
                                   if (confirmed && context.mounted) {
                                     _switchToWorkerMode(context, data);
                                   }
@@ -10437,8 +14141,12 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   ListTile(
                     leading: CircleAvatar(
-                      backgroundImage: profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
-                      child: profileImage.isEmpty ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?') : null,
+                      backgroundImage: profileImage.isNotEmpty
+                          ? NetworkImage(profileImage)
+                          : null,
+                      child: profileImage.isEmpty
+                          ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?')
+                          : null,
                     ),
                     title: Text(name),
                     subtitle: Text(phone),
@@ -10451,12 +14159,22 @@ class SettingsScreen extends StatelessWidget {
             },
           ),
           GestureDetector(
-            onTap: () => Navigator.pushNamed(context, AppRoutes.profileManagement),
-            child: _SettingsItem(icon: Icons.person, color: Colors.blue, title: bilingual(context, 'Profile', 'پروفائل')),
+            onTap: () =>
+                Navigator.pushNamed(context, AppRoutes.profileManagement),
+            child: _SettingsItem(
+              icon: Icons.person,
+              color: Colors.blue,
+              title: bilingual(context, 'Profile', 'پروفائل'),
+            ),
           ),
           GestureDetector(
-            onTap: () => Navigator.pushNamed(context, AppRoutes.notificationPreferences),
-            child: _SettingsItem(icon: Icons.notifications, color: Colors.amber, title: bilingual(context, 'Notifications', 'نوٹیفیکیشن')),
+            onTap: () =>
+                Navigator.pushNamed(context, AppRoutes.notificationPreferences),
+            child: _SettingsItem(
+              icon: Icons.notifications,
+              color: Colors.amber,
+              title: bilingual(context, 'Notifications', 'نوٹیفیکیشن'),
+            ),
           ),
           _SettingsItem(
             icon: Icons.language,
@@ -10468,18 +14186,31 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: () => Navigator.pushNamed(context, AppRoutes.privacySettings),
-            child: _SettingsItem(icon: Icons.lock, color: Colors.green, title: bilingual(context, 'Privacy', 'پرائیویسی')),
+            onTap: () =>
+                Navigator.pushNamed(context, AppRoutes.privacySettings),
+            child: _SettingsItem(
+              icon: Icons.lock,
+              color: Colors.green,
+              title: bilingual(context, 'Privacy', 'پرائیویسی'),
+            ),
           ),
           if (!isWorker)
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, '/customer/support'),
-              child: _SettingsItem(icon: Icons.help_outline, color: const Color(0xFF0D9488), title: bilingual(context, 'Customer Support', 'کسٹمر سپورٹ')),
+              child: _SettingsItem(
+                icon: Icons.help_outline,
+                color: const Color(0xFF0D9488),
+                title: bilingual(context, 'Customer Support', 'کسٹمر سپورٹ'),
+              ),
             ),
           if (isWorker)
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, '/worker/support'),
-              child: _SettingsItem(icon: Icons.help_outline, color: const Color(0xFF0D9488), title: bilingual(context, 'Worker Support', 'ورکر سپورٹ')),
+              child: _SettingsItem(
+                icon: Icons.help_outline,
+                color: const Color(0xFF0D9488),
+                title: bilingual(context, 'Worker Support', 'ورکر سپورٹ'),
+              ),
             ),
           if (isWorker)
             Padding(
@@ -10493,18 +14224,32 @@ class SettingsScreen extends StatelessWidget {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: const Color(0xFF0D9488).withOpacity(0.15),
-                    child: const Icon(Icons.assignment, color: Color(0xFF0D9488)),
+                    child: const Icon(
+                      Icons.assignment,
+                      color: Color(0xFF0D9488),
+                    ),
                   ),
                   title: Text(
                     bilingual(context, 'My Jobs', 'میرے کام'),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   subtitle: Text(
-                    bilingual(context, 'View Scheduled, Active & Completed work', 'شیڈول، موجودہ اور مکمل شدہ کام دیکھیں'),
+                    bilingual(
+                      context,
+                      'View Scheduled, Active & Completed work',
+                      'شیڈول، موجودہ اور مکمل شدہ کام دیکھیں',
+                    ),
                     style: const TextStyle(fontSize: 12),
                   ),
-                  trailing: const Icon(Icons.chevron_right, color: Color(0xFF0D9488)),
-                  onTap: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: Color(0xFF0D9488),
+                  ),
+                  onTap: () =>
+                      Navigator.pushNamed(context, AppRoutes.sharedHistory),
                 ),
               ),
             ),
@@ -10513,8 +14258,10 @@ class SettingsScreen extends StatelessWidget {
               stream: streamCurrentUserData(),
               builder: (context, userSnap) {
                 final uData = userSnap.data?.data() as Map<String, dynamic>?;
-                final double rating = (uData?['rating'] as num?)?.toDouble() ?? 0.0;
-                final int reviewsCount = (uData?['reviews'] as num?)?.toInt() ?? 0;
+                final double rating =
+                    (uData?['rating'] as num?)?.toDouble() ?? 0.0;
+                final int reviewsCount =
+                    (uData?['reviews'] as num?)?.toInt() ?? 0;
                 final user = FirebaseAuth.instance.currentUser;
 
                 return Padding(
@@ -10523,22 +14270,39 @@ class SettingsScreen extends StatelessWidget {
                     elevation: 1,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(color: Color(0xFFF59E0B), width: 1.2),
+                      side: const BorderSide(
+                        color: Color(0xFFF59E0B),
+                        width: 1.2,
+                      ),
                     ),
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: const Color(0xFFFEF3C7),
-                        child: const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 26),
+                        child: const Icon(
+                          Icons.star_rounded,
+                          color: Color(0xFFD97706),
+                          size: 26,
+                        ),
                       ),
                       title: Row(
                         children: [
                           Text(
-                            bilingual(context, 'My Rating & Feedback', 'میری درجہ بندی اور جائزے'),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            bilingual(
+                              context,
+                              'My Rating & Feedback',
+                              'میری درجہ بندی اور جائزے',
+                            ),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFEF3C7),
                               borderRadius: BorderRadius.circular(6),
@@ -10546,10 +14310,16 @@ class SettingsScreen extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.star, color: Color(0xFFD97706), size: 12),
+                                const Icon(
+                                  Icons.star,
+                                  color: Color(0xFFD97706),
+                                  size: 12,
+                                ),
                                 const SizedBox(width: 2),
                                 Text(
-                                  rating > 0 ? rating.toStringAsFixed(1) : (c.isUrdu ? 'نیا' : 'New'),
+                                  rating > 0
+                                      ? rating.toStringAsFixed(1)
+                                      : (c.isUrdu ? 'نیا' : 'New'),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 11,
@@ -10564,14 +14334,22 @@ class SettingsScreen extends StatelessWidget {
                       subtitle: Text(
                         reviewsCount > 0
                             ? '$reviewsCount ${bilingual(context, 'customer reviews received • Tap to view', 'کسٹمر جائزے موصول ہوئے • دیکھنے کے لیے کلک کریں')}'
-                            : bilingual(context, 'No reviews yet. Complete jobs to get rated!', 'ابھی کوئی جائزہ نہیں ملا۔ درجہ بندی کے لیے کام مکمل کریں!'),
+                            : bilingual(
+                                context,
+                                'No reviews yet. Complete jobs to get rated!',
+                                'ابھی کوئی جائزہ نہیں ملا۔ درجہ بندی کے لیے کام مکمل کریں!',
+                              ),
                         style: const TextStyle(fontSize: 12),
                       ),
                       trailing: Transform.rotate(
                         angle: c.isUrdu ? math.pi : 0,
-                        child: const Icon(Icons.chevron_right, color: Color(0xFFD97706)),
+                        child: const Icon(
+                          Icons.chevron_right,
+                          color: Color(0xFFD97706),
+                        ),
                       ),
-                      onTap: () => showWorkerReviewsSheet(context, user?.uid ?? ''),
+                      onTap: () =>
+                          showWorkerReviewsSheet(context, user?.uid ?? ''),
                     ),
                   ),
                 );
@@ -10579,8 +14357,17 @@ class SettingsScreen extends StatelessWidget {
             ),
           if (isWorker)
             GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRoutes.workerServicesSetup),
-              child: _SettingsItem(icon: Icons.build, color: const Color(0xFF0D9488), title: bilingual(context, 'Skills & Services', 'مہارتیں اور خدمات')),
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.workerServicesSetup),
+              child: _SettingsItem(
+                icon: Icons.build,
+                color: const Color(0xFF0D9488),
+                title: bilingual(
+                  context,
+                  'Skills & Services',
+                  'مہارتیں اور خدمات',
+                ),
+              ),
             ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
@@ -10588,7 +14375,9 @@ class SettingsScreen extends StatelessWidget {
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   title: Row(
                     children: [
                       const Icon(Icons.logout, color: Colors.red),
@@ -10616,7 +14405,9 @@ class SettingsScreen extends StatelessWidget {
                     FilledButton(
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.red,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       onPressed: () => Navigator.pop(ctx, true),
                       child: Text(bilingual(context, 'Yes', 'ہاں')),
@@ -10627,12 +14418,19 @@ class SettingsScreen extends StatelessWidget {
               if (confirmed == true) {
                 await c.logout();
                 if (context.mounted) {
-                  Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (route) => false);
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppRoutes.welcome,
+                    (route) => false,
+                  );
                 }
               }
             },
             icon: const Icon(Icons.logout, color: Colors.red),
-            label: Text(bilingual(context, 'Log Out', 'لاگ آؤٹ'), style: const TextStyle(color: Colors.red)),
+            label: Text(
+              bilingual(context, 'Log Out', 'لاگ آؤٹ'),
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
@@ -10647,7 +14445,7 @@ class SettingsScreen extends StatelessWidget {
               bilingual(context, 'Exit Mazdoorlink', 'Mazdoorlink بند کریں'),
               style: const TextStyle(color: Color(0xFF64748B)),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -10655,7 +14453,12 @@ class SettingsScreen extends StatelessWidget {
 }
 
 class _SettingsItem extends StatelessWidget {
-  const _SettingsItem({required this.icon, required this.color, required this.title, this.trailing});
+  const _SettingsItem({
+    required this.icon,
+    required this.color,
+    required this.title,
+    this.trailing,
+  });
 
   final IconData icon;
   final Color color;
@@ -10668,9 +14471,17 @@ class _SettingsItem extends StatelessWidget {
     final isUrdu = scope.isUrdu;
     return Card(
       child: ListTile(
-        leading: CircleAvatar(backgroundColor: color.withOpacity(0.12), child: Icon(icon, color: color)),
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.12),
+          child: Icon(icon, color: color),
+        ),
         title: Text(title),
-        trailing: trailing ?? Transform.rotate(angle: isUrdu ? math.pi : 0, child: const Icon(Icons.chevron_right)),
+        trailing:
+            trailing ??
+            Transform.rotate(
+              angle: isUrdu ? math.pi : 0,
+              child: const Icon(Icons.chevron_right),
+            ),
       ),
     );
   }
@@ -10758,16 +14569,23 @@ class _PhotoActionCard extends StatelessWidget {
               child: Icon(icon, color: const Color(0xFF0D9488)),
             ),
             const SizedBox(height: 8),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 4),
-            Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black54), textAlign: TextAlign.center),
+            Text(
+              subtitle,
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
     );
   }
 }
-
 
 class FavoriteWorkersScreen extends StatefulWidget {
   const FavoriteWorkersScreen({super.key});
@@ -10792,20 +14610,31 @@ class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
 
   Future<void> _fetchWorkers(List<String> ids) async {
     if (ids.isEmpty) {
-      if (mounted) setState(() { _workers = []; _loading = false; });
+      if (mounted)
+        setState(() {
+          _workers = [];
+          _loading = false;
+        });
       return;
     }
     final workers = <WorkerModel>[];
     for (final id in ids) {
       try {
-        final doc = await FirebaseFirestore.instance.collection('workers').doc(id).get();
+        final doc = await FirebaseFirestore.instance
+            .collection('workers')
+            .doc(id)
+            .get();
         final data = doc.data();
         if (data != null) {
           workers.add(WorkerModel.fromFirestore(data, docId: doc.id));
         }
       } catch (_) {}
     }
-    if (mounted) setState(() { _workers = workers; _loading = false; });
+    if (mounted)
+      setState(() {
+        _workers = workers;
+        _loading = false;
+      });
   }
 
   @override
@@ -10823,69 +14652,98 @@ class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
       child: _loading
           ? const Center(child: CircularProgressIndicator())
           : _workers.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      bilingual(context, 'No favourite workers yet. Tap the heart icon on a worker\'s profile to add them.', 'ابھی تک کوئی پسندیدہ ورکر نہیں۔ ورکر کے پروفائل پر دل کے آئیکن کو تھپتھپا کر شامل کریں۔'),
-                      textAlign: TextAlign.center,
-                    ),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  bilingual(
+                    context,
+                    'No favourite workers yet. Tap the heart icon on a worker\'s profile to add them.',
+                    'ابھی تک کوئی پسندیدہ ورکر نہیں۔ ورکر کے پروفائل پر دل کے آئیکن کو تھپتھپا کر شامل کریں۔',
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: _workers.length,
-                  itemBuilder: (context, i) {
-                    final w = _workers[i];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: w.image.isNotEmpty ? NetworkImage(w.image) : null,
-                        child: w.image.isEmpty ? Text(w.name.isNotEmpty ? w.name[0].toUpperCase() : '?') : null,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _workers.length,
+              itemBuilder: (context, i) {
+                final w = _workers[i];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: w.image.isNotEmpty
+                        ? NetworkImage(w.image)
+                        : null,
+                    child: w.image.isEmpty
+                        ? Text(
+                            w.name.isNotEmpty ? w.name[0].toUpperCase() : '?',
+                          )
+                        : null,
+                  ),
+                  title: Text(
+                    w.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    '${w.category}${w.price.isNotEmpty ? '  •  ${w.price}' : ''}',
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.favorite,
+                          color: Colors.red,
+                          size: 22,
+                        ),
+                        onPressed: () {
+                          final wid = w.id;
+                          if (wid == null) return;
+                          removeFavouriteWorker(wid);
+                          setState(() => _favouriteIds.remove(wid));
+                          _fetchWorkers(_favouriteIds);
+                        },
                       ),
-                      title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('${w.category}${w.price.isNotEmpty ? '  •  ${w.price}' : ''}'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.favorite, color: Colors.red, size: 22),
-                            onPressed: () {
-                              final wid = w.id;
-                              if (wid == null) return;
-                              removeFavouriteWorker(wid);
-                              setState(() => _favouriteIds.remove(wid));
-                              _fetchWorkers(_favouriteIds);
-                            },
-                          ),
-                          IconButton.filledTonal(
-                            onPressed: () {
-                              Navigator.pushNamed(
-                                context, 
-                                AppRoutes.workerProfile,
-                                arguments: ProfileArguments(
-                                  worker: w,
-                                  job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                            color: const Color(0xFF0D9488),
-                          ),
-                        ],
+                      IconButton.filledTonal(
+                        onPressed: () {
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.workerProfile,
+                            arguments: ProfileArguments(
+                              worker: w,
+                              job: JobPostingArguments(
+                                descriptionEn: '',
+                                descriptionUr: '',
+                                price: 0,
+                                categoryKey: '',
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                        color: const Color(0xFF0D9488),
                       ),
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context, 
-                          AppRoutes.workerProfile,
-                          arguments: ProfileArguments(
-                            worker: w,
-                            job: JobPostingArguments(descriptionEn: '', descriptionUr: '', price: 0, categoryKey: ''),
-                          ),
-                        );
-                      },
+                    ],
+                  ),
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.workerProfile,
+                      arguments: ProfileArguments(
+                        worker: w,
+                        job: JobPostingArguments(
+                          descriptionEn: '',
+                          descriptionUr: '',
+                          price: 0,
+                          categoryKey: '',
+                        ),
+                      ),
                     );
                   },
-                ),
+                );
+              },
+            ),
     );
   }
 }

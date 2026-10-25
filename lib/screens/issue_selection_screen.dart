@@ -178,8 +178,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
                 ),
                 const SizedBox(height: 16),
                 _buildPaymentTile('Cash', Icons.money, isUrdu),
-                _buildPaymentTile('Easypaisa', Icons.phone_android, isUrdu),
-                _buildPaymentTile('JazzCash', Icons.account_balance_wallet, isUrdu),
+                _buildPaymentTile('Safepay', Icons.credit_card, isUrdu),
               ],
             ),
           ),
@@ -189,7 +188,12 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
   }
 
   Widget _buildPaymentTile(String method, IconData icon, bool isUrdu) {
-    final title = method == 'Cash' ? (isUrdu ? 'کیش' : 'Cash') : method;
+    String title = method;
+    if (method == 'Cash') {
+      title = isUrdu ? 'کیش (نقد)' : 'Pay in Cash';
+    } else if (method == 'Safepay') {
+      title = isUrdu ? 'سیف پے (آن لائن کارڈ)' : 'Safepay (Online Card)';
+    }
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF0D9488)),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontFamily: AppTheme.fontName)),
@@ -203,8 +207,7 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
 
   Widget _buildPaymentSelectorButton(bool isUrdu) {
     IconData icon = Icons.money;
-    if (_paymentMethod == 'Easypaisa') icon = Icons.phone_android;
-    if (_paymentMethod == 'JazzCash') icon = Icons.account_balance_wallet;
+    if (_paymentMethod == 'Safepay') icon = Icons.credit_card;
 
     return InkWell(
       onTap: () => _showPaymentOptions(isUrdu),

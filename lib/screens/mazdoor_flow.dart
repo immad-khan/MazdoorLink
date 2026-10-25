@@ -8414,12 +8414,12 @@ class EarningsDashboardScreen extends StatefulWidget {
 
 class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
   bool weekly = true;
-  int _topupBalance = 500;
 
   void _showTopUpDialog(BuildContext context, bool isUrdu) {
     String selectedMethod = 'JazzCash';
     final amountController = TextEditingController();
     final phoneController = TextEditingController();
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -8467,20 +8467,72 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                 ),
                 const SizedBox(height: 20),
                 FilledButton(
-                  onPressed: () {
-                    final amount = int.tryParse(amountController.text) ?? 0;
-                    if (amount > 0) {
-                      setState(() {
-                        _topupBalance += amount;
-                      });
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(isUrdu ? 'ٹاپ اپ کامیاب ہو گیا' : 'Top-up Successful!')),
-                      );
+                  onPressed: isSubmitting ? null : () async {
+                    final amount = int.tryParse(amountController.text.trim()) ?? 0;
+                    if (amount <= 0) return;
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null) return;
+
+                    setModalState(() => isSubmitting = true);
+
+                    try {
+                      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+                      final workerName = userDoc.data()?['name']?.toString() ?? user.displayName ?? 'Worker';
+
+                      final depositQuery = await FirebaseFirestore.instance
+                          .collection('security_deposits')
+                          .where('workerId', isEqualTo: user.uid)
+                          .limit(1)
+                          .get();
+
+                      if (depositQuery.docs.isNotEmpty) {
+                        final docId = depositQuery.docs.first.id;
+                        await FirebaseFirestore.instance.collection('security_deposits').doc(docId).update({
+                          'totalDeposited': FieldValue.increment(amount),
+                          'currentBalance': FieldValue.increment(amount),
+                          'status': 'Active',
+                          'lastTopUpAt': FieldValue.serverTimestamp(),
+                          'updatedAt': FieldValue.serverTimestamp(),
+                          'method': selectedMethod,
+                          'accountNumber': phoneController.text.trim(),
+                        });
+                      } else {
+                        await FirebaseFirestore.instance.collection('security_deposits').add({
+                          'workerId': user.uid,
+                          'workerName': workerName,
+                          'totalDeposited': amount.toDouble(),
+                          'currentBalance': amount.toDouble(),
+                          'status': 'Active',
+                          'createdAt': FieldValue.serverTimestamp(),
+                          'updatedAt': FieldValue.serverTimestamp(),
+                          'method': selectedMethod,
+                          'accountNumber': phoneController.text.trim(),
+                        });
+                      }
+
+                      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+                        'topupBalance': FieldValue.increment(amount),
+                      }, SetOptions(merge: true));
+
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(isUrdu ? 'ٹاپ اپ کامیاب ہو گیا' : 'Top-up Successful!')),
+                        );
+                      }
+                    } catch (e) {
+                      setModalState(() => isSubmitting = false);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Top-up failed: $e')),
+                        );
+                      }
                     }
                   },
                   style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                  child: Text(isUrdu ? 'رقم بھیجیں' : 'Send Money'),
+                  child: isSubmitting
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text(isUrdu ? 'رقم بھیجیں' : 'Send Money'),
                 ),
               ],
             ),
@@ -8493,6 +8545,7 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isUrdu = AppScope.of(context).isUrdu;
+    final workerUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return MzScaffold(
       showBottomNav: true,
@@ -8504,7 +8557,7 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
           return StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('jobs')
-                .where('workerId', isEqualTo: FirebaseAuth.instance.currentUser?.uid ?? '')
+                .where('workerId', isEqualTo: workerUid)
                 .where('status', whereIn: ['accepted', 'completed'])
                 .orderBy('createdAt', descending: true)
                 .snapshots(),
@@ -8566,31 +8619,48 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0E7FF),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('security_deposits')
+                          .where('workerId', isEqualTo: workerUid)
+                          .limit(1)
+                          .snapshots(),
+                      builder: (context, depositSnap) {
+                        double topupBalance = 0;
+                        if (depositSnap.hasData && depositSnap.data!.docs.isNotEmpty) {
+                          final depData = depositSnap.data!.docs.first.data() as Map<String, dynamic>;
+                          topupBalance = (depData['currentBalance'] as num?)?.toDouble() ?? 0;
+                        }
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0E7FF),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(isUrdu ? 'ٹاپ اپ بیلنس' : 'Top-up Balance', style: const TextStyle(fontSize: 18)),
-                              const SizedBox(height: 6),
-                              Text(isUrdu ? '$_topupBalance روپے' : 'Rs. $_topupBalance', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(isUrdu ? 'ٹاپ اپ بیلنس' : 'Top-up Balance', style: const TextStyle(fontSize: 18)),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    isUrdu ? '${topupBalance.toStringAsFixed(0)} روپے' : 'Rs. ${topupBalance.toStringAsFixed(0)}',
+                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                                  ),
+                                ],
+                              ),
+                              FilledButton.icon(
+                                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
+                                icon: const Icon(Icons.add_card),
+                                label: Text(isUrdu ? 'ٹاپ اپ کریں' : 'Top-up'),
+                                onPressed: () => _showTopUpDialog(context, isUrdu),
+                              ),
                             ],
                           ),
-                          FilledButton.icon(
-                            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
-                            icon: const Icon(Icons.add_card),
-                            label: Text(isUrdu ? 'ٹاپ اپ کریں' : 'Top-up'),
-                            onPressed: () => _showTopUpDialog(context, isUrdu),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 20),

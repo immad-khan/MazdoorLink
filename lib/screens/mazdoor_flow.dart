@@ -2733,6 +2733,7 @@ final _phone = TextEditingController();
 
   Widget _loginScreen() {
     final selectedRole = AppScope.of(context).role ?? UserRole.customer;
+    final isWorker = selectedRole == UserRole.worker;
     final isUrdu = AppScope.of(context).isUrdu;
     return Column(
       key: const ValueKey('loginScreen'),
@@ -2744,98 +2745,10 @@ final _phone = TextEditingController();
         ),
         const SizedBox(height: 6),
         Text(
-          bilingual(context, 'Login to your MazdoorLink account', 'اپنے مزدور لنک اکاؤنٹ میں لاگ ان کریں'),
+          isWorker
+              ? bilingual(context, 'Login to your Worker account', 'اپنے ورکر اکاؤنٹ میں لاگ ان کریں')
+              : bilingual(context, 'Login to your Customer account', 'اپنے کسٹمر اکاؤنٹ میں لاگ ان کریں'),
           style: const TextStyle(fontSize: 14, color: Colors.black54),
-        ),
-        const SizedBox(height: 16),
-        // Role Selector Toggle (Customer vs Worker)
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    AppScope.of(context).selectRole(UserRole.customer, updateLocale: false);
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: selectedRole == UserRole.customer ? const Color(0xFF0D9488) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: selectedRole == UserRole.customer
-                          ? [BoxShadow(color: const Color(0xFF0D9488).withOpacity(0.25), blurRadius: 4, offset: const Offset(0, 2))]
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.person,
-                          size: 18,
-                          color: selectedRole == UserRole.customer ? Colors.white : Colors.black87,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          bilingual(context, 'Customer Mode', 'گاہک موڈ'),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: selectedRole == UserRole.customer ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    AppScope.of(context).selectRole(UserRole.worker, updateLocale: false);
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: selectedRole == UserRole.worker ? const Color(0xFF0D9488) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: selectedRole == UserRole.worker
-                          ? [BoxShadow(color: const Color(0xFF0D9488).withOpacity(0.25), blurRadius: 4, offset: const Offset(0, 2))]
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.handyman,
-                          size: 18,
-                          color: selectedRole == UserRole.worker ? Colors.white : Colors.black87,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          bilingual(context, 'Worker Mode', 'ورکر موڈ'),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: selectedRole == UserRole.worker ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
         const SizedBox(height: 20),
         const Text(

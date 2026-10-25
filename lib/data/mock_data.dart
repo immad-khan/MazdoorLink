@@ -52,6 +52,8 @@ class WorkerModel {
     this.phone = '',
     this.email = '',
     this.priceValue = 0,
+    this.latitude,
+    this.longitude,
   });
 
   final String? id;
@@ -68,6 +70,46 @@ class WorkerModel {
   final String phone;
   final String email;
   final double priceValue;
+  final double? latitude;
+  final double? longitude;
+
+  WorkerModel copyWith({
+    String? id,
+    String? name,
+    String? category,
+    double? rating,
+    int? reviews,
+    double? distanceKm,
+    String? price,
+    String? image,
+    List<WorkerSkill>? skills,
+    List<String>? skillsEn,
+    List<String>? skillsUr,
+    String? phone,
+    String? email,
+    double? priceValue,
+    double? latitude,
+    double? longitude,
+  }) {
+    return WorkerModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      rating: rating ?? this.rating,
+      reviews: reviews ?? this.reviews,
+      distanceKm: distanceKm ?? this.distanceKm,
+      price: price ?? this.price,
+      image: image ?? this.image,
+      skills: skills ?? this.skills,
+      skillsEn: skillsEn ?? this.skillsEn,
+      skillsUr: skillsUr ?? this.skillsUr,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      priceValue: priceValue ?? this.priceValue,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+    );
+  }
 
   factory WorkerModel.fromFirestore(Map<String, dynamic> data, {String? docId}) {
     final List<dynamic> skillsData = data['skills'] as List<dynamic>? ?? [];
@@ -96,6 +138,9 @@ class WorkerModel {
       return prev == 0 ? p : (p < prev && p > 0 ? p : prev);
     });
 
+    final lat = (data['latitude'] as num?)?.toDouble();
+    final lng = (data['longitude'] as num?)?.toDouble();
+
     return WorkerModel(
       id: docId ?? data['uid']?.toString(),
       name: data['name']?.toString() ?? '',
@@ -111,6 +156,8 @@ class WorkerModel {
       phone: data['phone']?.toString() ?? '',
       email: data['email']?.toString() ?? '',
       priceValue: lowestPrice,
+      latitude: lat,
+      longitude: lng,
     );
   }
 }

@@ -8,6 +8,7 @@ class WorkerSignupData {
   final String idFrontUrl;
   final String idBackUrl;
   final String? certificationUrl;
+  final List<String>? certificates;
 
   WorkerSignupData({
     required this.name,
@@ -19,6 +20,7 @@ class WorkerSignupData {
     required this.idFrontUrl,
     required this.idBackUrl,
     this.certificationUrl,
+    this.certificates,
   });
 }
 

@@ -450,6 +450,95 @@ Future<void> updateJobCompleted(String jobId) async {
   await updateJobStatus(jobId, 'completed');
 }
 
+/// Deducts 2% platform commission from worker's top-up balance when customer pays
+Future<void> deductPlatformCommission({
+  required String jobId,
+  double? amount,
+  String? paymentMethod,
+}) async {
+  try {
+    final jobRef = FirebaseFirestore.instance.collection('jobs').doc(jobId);
+    final jobSnap = await jobRef.get();
+    if (!jobSnap.exists) return;
+
+    final data = jobSnap.data() as Map<String, dynamic>;
+
+    // Idempotency check: don't deduct commission multiple times for the same job
+    if (data['commissionDeducted'] == true) return;
+
+    final workerId = data['workerId']?.toString() ?? '';
+    final workerName = data['workerName']?.toString() ?? 'Worker';
+    final customerId = data['customerId']?.toString() ?? '';
+    final customerName = data['customerName']?.toString() ?? 'Customer';
+    final jobTitle = data['descriptionEn']?.toString() ??
+        data['descriptionUr']?.toString() ??
+        data['categoryKey']?.toString() ??
+        'Service Job';
+    final categoryKey = data['categoryKey']?.toString() ?? 'general';
+
+    final totalPaid = amount ??
+        (data['price'] as num?)?.toDouble() ??
+        0.0;
+    if (totalPaid <= 0) return;
+
+    const commissionRate = 0.02; // 2% fixed platform fee
+    final commissionAmount = double.parse((totalPaid * commissionRate).toStringAsFixed(2));
+    final method = paymentMethod ?? data['paymentMethod']?.toString() ?? 'Cash';
+
+    // 1. Deduct 2% from worker's topup balance in users collection
+    if (workerId.isNotEmpty) {
+      await FirebaseFirestore.instance.collection('users').doc(workerId).set({
+        'topupBalance': FieldValue.increment(-commissionAmount),
+      }, SetOptions(merge: true));
+
+      // Also sync currentBalance in security_deposits
+      final depositQuery = await FirebaseFirestore.instance
+          .collection('security_deposits')
+          .where('workerId', isEqualTo: workerId)
+          .limit(1)
+          .get();
+
+      if (depositQuery.docs.isNotEmpty) {
+        final docId = depositQuery.docs.first.id;
+        await FirebaseFirestore.instance
+            .collection('security_deposits')
+            .doc(docId)
+            .update({
+          'currentBalance': FieldValue.increment(-commissionAmount),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+
+    // 2. Mark job document with commission details
+    await jobRef.set({
+      'commissionDeducted': true,
+      'commissionRate': commissionRate,
+      'commissionAmount': commissionAmount,
+      'commissionDeductedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    // 3. Log to platform_earnings collection
+    await FirebaseFirestore.instance.collection('platform_earnings').add({
+      'jobId': jobId,
+      'workerId': workerId,
+      'workerName': workerName,
+      'customerId': customerId,
+      'customerName': customerName,
+      'jobTitle': jobTitle,
+      'categoryKey': categoryKey,
+      'totalPaid': totalPaid,
+      'commissionRate': commissionRate,
+      'commissionAmount': commissionAmount,
+      'paymentMethod': method,
+      'status': 'Deducted from Top-up Balance',
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    debugPrint('Error deducting platform commission: $e');
+  }
+}
+
 Future<void> submitPaymentComplaint({
   required String jobId,
   required String reason,

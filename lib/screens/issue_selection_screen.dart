@@ -57,25 +57,105 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
   bool _loadingCustomSkills = true;
 
   final List<IssueItem> _electricalIssues = const [
-    IssueItem(titleEn: 'Broken Switch', titleUr: 'خراب سوئچ', price: 300, icon: Icons.toggle_off),
-    IssueItem(titleEn: 'Short Circuit', titleUr: 'شارٹ سرکٹ', price: 400, icon: Icons.flash_on),
-    IssueItem(titleEn: 'Ceiling Fan Installation', titleUr: 'سیلنگ فین انسٹالیشن', price: 500, icon: Icons.ac_unit),
-    IssueItem(titleEn: 'Full Home Wiring Repair', titleUr: 'مکمل گھر کی وائرنگ مرمت', price: 8000, icon: Icons.power),
-    IssueItem(titleEn: 'AC Switch Installation', titleUr: 'اے سی سوئچ لگانا', price: 450, icon: Icons.electrical_services),
-    IssueItem(titleEn: 'UPS Setup & Installation', titleUr: 'یو پی ایس سیٹ اپ', price: 1500, icon: Icons.battery_charging_full),
-    IssueItem(titleEn: 'Generator Repair', titleUr: 'جنریٹر کی مرمت', price: 2000, icon: Icons.settings_input_component),
-    IssueItem(titleEn: 'Bulb or Holder Replacement', titleUr: 'بلب یا ہولڈر تبدیل کرنا', price: 150, icon: Icons.lightbulb_outline),
+    IssueItem(
+      titleEn: 'Broken Switch',
+      titleUr: 'خراب سوئچ',
+      price: 300,
+      icon: Icons.toggle_off,
+    ),
+    IssueItem(
+      titleEn: 'Short Circuit',
+      titleUr: 'شارٹ سرکٹ',
+      price: 400,
+      icon: Icons.flash_on,
+    ),
+    IssueItem(
+      titleEn: 'Ceiling Fan Installation',
+      titleUr: 'سیلنگ فین انسٹالیشن',
+      price: 500,
+      icon: Icons.ac_unit,
+    ),
+    IssueItem(
+      titleEn: 'Full Home Wiring Repair',
+      titleUr: 'مکمل گھر کی وائرنگ مرمت',
+      price: 8000,
+      icon: Icons.power,
+    ),
+    IssueItem(
+      titleEn: 'AC Switch Installation',
+      titleUr: 'اے سی سوئچ لگانا',
+      price: 450,
+      icon: Icons.electrical_services,
+    ),
+    IssueItem(
+      titleEn: 'UPS Setup & Installation',
+      titleUr: 'یو پی ایس سیٹ اپ',
+      price: 1500,
+      icon: Icons.battery_charging_full,
+    ),
+    IssueItem(
+      titleEn: 'Generator Repair',
+      titleUr: 'جنریٹر کی مرمت',
+      price: 2000,
+      icon: Icons.settings_input_component,
+    ),
+    IssueItem(
+      titleEn: 'Bulb or Holder Replacement',
+      titleUr: 'بلب یا ہولڈر تبدیل کرنا',
+      price: 150,
+      icon: Icons.lightbulb_outline,
+    ),
   ];
 
   final List<IssueItem> _PlumberIssues = const [
-    IssueItem(titleEn: 'Water Tap Leakage', titleUr: 'نلکے سے پانی کا رساو', price: 300, icon: Icons.water_drop),
-    IssueItem(titleEn: 'Flush Tank Repair', titleUr: 'فلش ٹینک کی مرمت', price: 600, icon: Icons.wash),
-    IssueItem(titleEn: 'Sink / Wash Basin Installation', titleUr: 'واش بیسن لگانا', price: 1200, icon: Icons.bathroom),
-    IssueItem(titleEn: 'Motor Pump Installation', titleUr: 'پانی کی موٹر لگانا', price: 2500, icon: Icons.plumbing),
-    IssueItem(titleEn: 'Geyser Repair & Service', titleUr: 'گیزر کی سروس اور مرمت', price: 1800, icon: Icons.heat_pump),
-    IssueItem(titleEn: 'Pipeline Leakage Repair', titleUr: 'پائپ لائن لیکیج مرمت', price: 1000, icon: Icons.healing),
-    IssueItem(titleEn: 'Shower Fitting Replacement', titleUr: 'شاور فٹنگ تبدیل کرنا', price: 700, icon: Icons.shower),
-    IssueItem(titleEn: 'Drain Blockage Cleaning', titleUr: 'بند نالی کی صفائی', price: 800, icon: Icons.cleaning_services),
+    IssueItem(
+      titleEn: 'Water Tap Leakage',
+      titleUr: 'نلکے سے پانی کا رساو',
+      price: 300,
+      icon: Icons.water_drop,
+    ),
+    IssueItem(
+      titleEn: 'Flush Tank Repair',
+      titleUr: 'فلش ٹینک کی مرمت',
+      price: 600,
+      icon: Icons.wash,
+    ),
+    IssueItem(
+      titleEn: 'Sink / Wash Basin Installation',
+      titleUr: 'واش بیسن لگانا',
+      price: 1200,
+      icon: Icons.bathroom,
+    ),
+    IssueItem(
+      titleEn: 'Motor Pump Installation',
+      titleUr: 'پانی کی موٹر لگانا',
+      price: 2500,
+      icon: Icons.plumbing,
+    ),
+    IssueItem(
+      titleEn: 'Geyser Repair & Service',
+      titleUr: 'گیزر کی سروس اور مرمت',
+      price: 1800,
+      icon: Icons.heat_pump,
+    ),
+    IssueItem(
+      titleEn: 'Pipeline Leakage Repair',
+      titleUr: 'پائپ لائن لیکیج مرمت',
+      price: 1000,
+      icon: Icons.healing,
+    ),
+    IssueItem(
+      titleEn: 'Shower Fitting Replacement',
+      titleUr: 'شاور فٹنگ تبدیل کرنا',
+      price: 700,
+      icon: Icons.shower,
+    ),
+    IssueItem(
+      titleEn: 'Drain Blockage Cleaning',
+      titleUr: 'بند نالی کی صفائی',
+      price: 800,
+      icon: Icons.cleaning_services,
+    ),
   ];
 
   @override
@@ -93,7 +173,9 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
 
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && _categoryKey.isNotEmpty) {
-        customerHasActiveJobInCategory(user.uid, _categoryKey).then((hasActive) {
+        customerHasActiveJobInCategory(user.uid, _categoryKey).then((
+          hasActive,
+        ) {
           if (hasActive && mounted) {
             showToast(
               bilingual(
@@ -118,9 +200,12 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
 
   String _categoryKeyToName(String key) {
     switch (key.toLowerCase()) {
-      case 'electrician': return 'Electrician';
-      case 'plumber': return 'Plumber';
-      default: return key;
+      case 'electrician':
+        return 'Electrician';
+      case 'plumber':
+        return 'Plumber';
+      default:
+        return key;
     }
   }
 
@@ -145,17 +230,25 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
           final title = map['titleEn']?.toString() ?? '';
           final titleLower = title.toLowerCase();
           // Skip if it matches a predefined issue (case-insensitive)
-          if (title.isNotEmpty && !predefinedTitles.contains(titleLower) && seen.add(titleLower)) {
-            skills.add(IssueItem(
-              titleEn: title,
-              titleUr: map['titleUr']?.toString() ?? title,
-              price: (map['price'] as num?)?.toDouble() ?? 0,
-              icon: Icons.handyman,
-            ));
+          if (title.isNotEmpty &&
+              !predefinedTitles.contains(titleLower) &&
+              seen.add(titleLower)) {
+            skills.add(
+              IssueItem(
+                titleEn: title,
+                titleUr: map['titleUr']?.toString() ?? title,
+                price: (map['price'] as num?)?.toDouble() ?? 0,
+                icon: Icons.handyman,
+              ),
+            );
           }
         }
       }
-      if (mounted) setState(() { _customSkills = skills; _loadingCustomSkills = false; });
+      if (mounted)
+        setState(() {
+          _customSkills = skills;
+          _loadingCustomSkills = false;
+        });
     } catch (_) {
       if (mounted) setState(() => _loadingCustomSkills = false);
     }
@@ -164,7 +257,9 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
   void _showPaymentOptions(bool isUrdu) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
         return SafeArea(
           child: Padding(
@@ -173,8 +268,14 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  isUrdu ? 'ادائیگی کا طریقہ منتخب کریں' : 'Select Payment Method',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: AppTheme.fontName),
+                  isUrdu
+                      ? 'ادائیگی کا طریقہ منتخب کریں'
+                      : 'Select Payment Method',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: AppTheme.fontName,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _buildPaymentTile('Cash', Icons.money, isUrdu),
@@ -196,8 +297,16 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
     }
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF0D9488)),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontFamily: AppTheme.fontName)),
-      trailing: _paymentMethod == method ? const Icon(Icons.check_circle, color: Color(0xFF0D9488)) : null,
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontFamily: AppTheme.fontName,
+        ),
+      ),
+      trailing: _paymentMethod == method
+          ? const Icon(Icons.check_circle, color: Color(0xFF0D9488))
+          : null,
       onTap: () {
         setState(() => _paymentMethod = method);
         Navigator.pop(context);
@@ -255,7 +364,9 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: isSelected ? const Color(0xFF0D9488) : const Color(0xFFE5E7EB),
+            color: isSelected
+                ? const Color(0xFF0D9488)
+                : const Color(0xFFE5E7EB),
             width: isSelected ? 1.8 : 1,
           ),
         ),
@@ -287,7 +398,9 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
                 },
               ),
               CircleAvatar(
-                backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.08),
+                backgroundColor: const Color(
+                  0xFF0D9488,
+                ).withValues(alpha: 0.08),
                 child: Icon(icon, color: const Color(0xFF0D9488)),
               ),
               const SizedBox(width: 14),
@@ -306,7 +419,10 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF0FDFA),
                       borderRadius: BorderRadius.circular(20),
@@ -314,7 +430,11 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
                     ),
                     child: Text(
                       isUrdu ? 'کسٹم' : 'Custom',
-                      style: const TextStyle(fontSize: 10, color: Color(0xFF0D9488), fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF0D9488),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -330,10 +450,16 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
     final controller = AppScope.of(context);
     final isUrdu = controller.isUrdu;
 
-    final issuesList = _categoryKey == 'electrician' ? _electricalIssues : _PlumberIssues;
+    final issuesList = _categoryKey == 'electrician'
+        ? _electricalIssues
+        : _PlumberIssues;
 
-    final titleEn = _categoryKey == 'electrician' ? 'Select Electrician Issue' : 'Select Plumber Issue';
-    final titleUr = _categoryKey == 'electrician' ? 'الیکٹریکل مسئلہ منتخب کریں' : 'پلمبنگ مسئلہ منتخب کریں';
+    final titleEn = _categoryKey == 'electrician'
+        ? 'Select Electrician Issue'
+        : 'Select Plumber Issue';
+    final titleUr = _categoryKey == 'electrician'
+        ? 'الیکٹریکل مسئلہ منتخب کریں'
+        : 'پلمبنگ مسئلہ منتخب کریں';
 
     final hasSelection = _selectedIndices.isNotEmpty;
 
@@ -396,9 +522,13 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
                             children: [
                               const Expanded(child: Divider()),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
                                 child: Text(
-                                  isUrdu ? 'ورکرز کی اضافی خدمات' : 'Additional Worker Services',
+                                  isUrdu
+                                      ? 'ورکرز کی اضافی خدمات'
+                                      : 'Additional Worker Services',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -433,7 +563,9 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.shade200),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
@@ -454,8 +586,13 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
                             child: ElevatedButton(
                               onPressed: hasSelection
                                   ? () {
-                                      final allIssues = [...issuesList, ..._customSkills];
-                                      final selectedIssues = _selectedIndices.map((i) => allIssues[i]).toList();
+                                      final allIssues = [
+                                        ...issuesList,
+                                        ..._customSkills,
+                                      ];
+                                      final selectedIssues = _selectedIndices
+                                          .map((i) => allIssues[i])
+                                          .toList();
                                       Navigator.pushNamed(
                                         context,
                                         AppRoutes.confirmLocation,
@@ -468,20 +605,31 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
                                     }
                                   : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: hasSelection ? const Color(0xFFC0D72F) : Colors.grey.shade200,
-                                foregroundColor: hasSelection ? Colors.black87 : Colors.grey.shade400,
+                                backgroundColor: hasSelection
+                                    ? const Color(0xFFC0D72F)
+                                    : Colors.grey.shade200,
+                                foregroundColor: hasSelection
+                                    ? Colors.black87
+                                    : Colors.grey.shade400,
                                 disabledBackgroundColor: Colors.grey.shade200,
                                 disabledForegroundColor: Colors.grey.shade400,
                                 elevation: hasSelection ? 2 : 0,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   if (hasSelection) ...[
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: Colors.black.withOpacity(0.12),
                                         borderRadius: BorderRadius.circular(20),

@@ -383,6 +383,9 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
         if (_signupData!.certificationUrl != null) {
           userData['certificationUrl'] = _signupData!.certificationUrl;
         }
+        if (_signupData!.certificates != null && _signupData!.certificates!.isNotEmpty) {
+          userData['certificates'] = _signupData!.certificates;
+        }
 
         await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
         await FirebaseAuth.instance.signOut();

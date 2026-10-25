@@ -263,6 +263,18 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                         ),
                                       }, SetOptions(merge: true));
 
+                                  await FirebaseFirestore.instance
+                                      .collection('topup_transactions')
+                                      .add({
+                                        'workerId': user.uid,
+                                        'workerName': workerName,
+                                        'amount': amount.toDouble(),
+                                        'method': 'Safepay',
+                                        'accountNumber': 'Online Card',
+                                        'status': 'Completed',
+                                        'timestamp': FieldValue.serverTimestamp(),
+                                      });
+
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -352,6 +364,18 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                 .set({
                                   'topupBalance': FieldValue.increment(amount),
                                 }, SetOptions(merge: true));
+
+                            await FirebaseFirestore.instance
+                                .collection('topup_transactions')
+                                .add({
+                                  'workerId': user.uid,
+                                  'workerName': workerName,
+                                  'amount': amount.toDouble(),
+                                  'method': 'Cash',
+                                  'accountNumber': 'Cash at Franchise',
+                                  'status': 'Completed',
+                                  'timestamp': FieldValue.serverTimestamp(),
+                                });
 
                             if (ctx.mounted) Navigator.pop(ctx);
                             if (context.mounted) {

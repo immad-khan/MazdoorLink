@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'admin_jobs_screen.dart';
+import 'admin_transactions_screen.dart';
+import 'admin_earnings_screen.dart';
 import 'mazdoor_flow.dart';
 import '../services/smtp_service.dart';
 import '../services/sms_service.dart';
@@ -408,6 +410,32 @@ class _HomeTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
+                _DashboardActionCard(
+                  icon: Icons.receipt_long_rounded,
+                  title: 'Transactions & Payments',
+                  subtitle: 'Customer payments & worker top-ups',
+                  color: const Color(0xFF006B5E),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AdminTransactionsScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _DashboardActionCard(
+                  icon: Icons.monetization_on_rounded,
+                  title: 'Platform Earnings',
+                  subtitle: '2% commission cuts from worker top-ups',
+                  color: const Color(0xFF0D9488),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AdminEarningsScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 StreamBuilder<QuerySnapshot>(
                   stream: streamDamageClaims(),
                   builder: (context, snap) {

@@ -201,9 +201,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
       if (_isWorker &&
           (profilePicUrl == null ||
               idFrontUrl == null ||
-              idBackUrl == null ||
-              policeCertUrl == null)) {
-        _showSnack('Worker profile picture, CNIC images, and police certificate are required.',
+              idBackUrl == null)) {
+        _showSnack('Worker profile picture and CNIC images are required.',
             isError: true);
         setState(() => _isSaving = false);
         return;
@@ -703,10 +702,10 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                       requiredFile: true,
                     ),
                     _documentTile(
-                      title: 'Police Character Certificate',
+                      title: 'Certificate / Experience Letter',
                       keyName: 'policeCertUrl',
                       currentUrl: _policeCertUrl,
-                      requiredFile: true,
+                      requiredFile: false,
                     ),
                   ],
                 ),

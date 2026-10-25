@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:service_frontend/app_theme.dart';
@@ -274,21 +275,45 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     final user = FirebaseAuth.instance.currentUser;
     final isUrdu = AppScope.of(context).isUrdu;
 
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor,
-        title: Text(t.t('booking_history'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        leading: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => Navigator.pop(context),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(padding: EdgeInsets.all(8),
-              child: Icon(Icons.arrow_back, color: Colors.white, size: 24)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(result);
+          return;
+        }
+        final shouldExit = await showExitMazdoorlinkDialog(context);
+        if (shouldExit) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Theme.of(context).primaryColor,
+          title: Text(t.t('booking_history'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          leading: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () async {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  final shouldExit = await showExitMazdoorlinkDialog(context);
+                  if (shouldExit) {
+                    SystemNavigator.pop();
+                  }
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: const Padding(
+                padding: EdgeInsets.all(8),
+                child: Icon(Icons.arrow_back, color: Colors.white, size: 24),
+              ),
+            ),
           ),
         ),
-      ),
       body: user == null
         ? Center(child: Text(isUrdu ? 'براہ کرم لاگ ان کریں' : 'Please log in'))
         : SingleChildScrollView(
@@ -416,6 +441,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
             ),
           ),
         ),
+      ),
     );
   }
 }

@@ -6583,24 +6583,6 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            label: bilingual(context, 'Jobs', 'مکمل کام'),
-                            value: '124+',
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _StatCard(
-                            label: bilingual(context, 'Response', 'جواب'),
-                            value: '<10 min',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
                     TextField(
                       controller: _offerController,
                       keyboardType: TextInputType.number,
@@ -6664,6 +6646,22 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                             child: Row(
                               children: [
                                 _DurationChip(
+                                  label: '1 min',
+                                  minutes: 1,
+                                  selected: _visibilityMinutes == 1,
+                                  onTap: () =>
+                                      setState(() => _visibilityMinutes = 1),
+                                ),
+                                const SizedBox(width: 6),
+                                _DurationChip(
+                                  label: '5 min',
+                                  minutes: 5,
+                                  selected: _visibilityMinutes == 5,
+                                  onTap: () =>
+                                      setState(() => _visibilityMinutes = 5),
+                                ),
+                                const SizedBox(width: 6),
+                                _DurationChip(
                                   label: '10 min',
                                   minutes: 10,
                                   selected: _visibilityMinutes == 10,
@@ -6703,15 +6701,6 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                                   selected: _visibilityMinutes == 1440,
                                   onTap: () =>
                                       setState(() => _visibilityMinutes = 1440),
-                                ),
-                                const SizedBox(width: 6),
-                                _DurationChip(
-                                  label:
-                                      '3 ${bilingual(context, 'days', 'دن')}',
-                                  minutes: 4320,
-                                  selected: _visibilityMinutes == 4320,
-                                  onTap: () =>
-                                      setState(() => _visibilityMinutes = 4320),
                                 ),
                                 const SizedBox(width: 6),
                                 _DurationChip(
@@ -7644,32 +7633,6 @@ class _Tag extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-          ),
-          Text(label),
-        ],
-      ),
-    );
-  }
-}
 
 class ServiceTrackingScreen extends StatefulWidget {
   const ServiceTrackingScreen({super.key});

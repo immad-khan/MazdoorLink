@@ -60,14 +60,12 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
           _status = 4;
         } else if (jobStatus == 'working') {
           _status = 1;
-        } else if (jobStatus == 'worker_completed') {
-          _status = 2;
+        } else if (jobStatus == 'worker_completed' || jobStatus == 'completed') {
+          _status = 3;
         } else if (jobStatus == 'payment_pending') {
           _status = 2;
         } else if (jobStatus == 'worker_payment_pending') {
           _status = 6;
-        } else if (jobStatus == 'completed') {
-          _status = 3;
         } else if (jobStatus == 'arrival_declined') {
           _status = 5;
         } else if (jobStatus == 'scheduled') {
@@ -272,19 +270,14 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
-      final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(widget.jobId).get();
-      final jData = jobDoc.data() ?? {};
-      final customerAlreadyCompleted = jData['customerCompleted'] == true || jData['status'] == 'completed';
-
+      await updateJobCompleted(widget.jobId);
       await FirebaseFirestore.instance.collection('jobs').doc(widget.jobId).update({
         'workerCompleted': true,
         'workerCompletedAt': FieldValue.serverTimestamp(),
-        'status': customerAlreadyCompleted ? 'completed' : 'worker_completed',
-        'statusUpdatedAt': FieldValue.serverTimestamp(),
       });
 
       setState(() {
-        _status = customerAlreadyCompleted ? 3 : 2;
+        _status = 3;
       });
 
       if (mounted) {

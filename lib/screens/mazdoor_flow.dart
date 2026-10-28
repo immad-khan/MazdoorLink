@@ -7719,14 +7719,12 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           _trackingState = 3;
         } else if (status == 'working') {
           _trackingState = 4;
-        } else if (status == 'worker_completed') {
-          _trackingState = 2;
+        } else if (status == 'worker_completed' || status == 'completed') {
+          _trackingState = 5;
         } else if (status == 'payment_pending' ||
             status == 'worker_payment_pending' ||
             status == 'payment_disputed') {
           _trackingState = 6;
-        } else if (status == 'completed') {
-          _trackingState = 5;
         } else if (status == 'arrival_declined') {
           _trackingState = 7;
         } else if (status == 'scheduled') {
@@ -8103,84 +8101,6 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     } catch (_) {}
   }
 
-  Future<void> _onCustomerClickJobCompleted(
-    BuildContext context,
-    String? jobId,
-    TrackingArguments? args,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Color(0xFF0D9488)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                bilingual(context, 'Completed?', 'کیا کام مکمل ہو گیا ہے؟'),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          bilingual(
-            context,
-            'Are you sure the worker has completed the job satisfactorily?',
-            'کیا آپ تصدیق کرتے ہیں کہ ورکر نے تسلی بخش طریقے سے کام مکمل کر لیا ہے؟',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(bilingual(context, 'Cancel', 'منسوخ کریں')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF0D9488),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(bilingual(context, 'Yes', 'ہاں')),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          bilingual(
-            context,
-            'Job confirmed completed!',
-            'کام مکمل ہونے کی تصدیق ہو گئی!',
-          ),
-        ),
-        backgroundColor: const Color(0xFF0D9488),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-
-    if (jobId != null) {
-      try {
-        await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
-          'customerCompleted': true,
-          'customerCompletedAt': FieldValue.serverTimestamp(),
-          'status': 'completed',
-          'completedAt': FieldValue.serverTimestamp(),
-          'statusUpdatedAt': FieldValue.serverTimestamp(),
-        });
-      } catch (e) {
-        debugPrint('Error updating customer completion: $e');
-      }
-    }
-
-    if (!context.mounted) return;
-    Navigator.pushReplacementNamed(context, AppRoutes.rating, arguments: args);
-  }
-
   String _trackingTitle(BuildContext context) {
     switch (_trackingState) {
       case 0:
@@ -8200,11 +8120,8 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         }
         return bilingual(context, 'Worker is on the way', 'ورکر راستے میں ہے');
       case 2:
-        return bilingual(
-          context,
-          'Worker claims job is completed',
-          'ورکر کا دعویٰ ہے کہ کام مکمل ہو گیا',
-        );
+      case 5:
+        return bilingual(context, 'Job completed', 'کام مکمل ہو گیا');
       case 3:
         return bilingual(context, 'Worker has arrived', 'ورکر پہنچ گیا ہے');
       case 4:
@@ -8213,8 +8130,6 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           'Worker is working at your location',
           'ورکر آپ کے مقام پر کام کر رہا ہے',
         );
-      case 5:
-        return bilingual(context, 'Job completed', 'کام مکمل ہو گیا');
       case 6:
         return bilingual(
           context,
@@ -8720,103 +8635,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         ),
                       ],
                     ),
-                  ] else if (_trackingState == 2) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () async {
-                              if (jobId != null) {
-                                await updateJobStatus(jobId, 'working');
-                              }
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    bilingual(
-                                      context,
-                                      'Waiting for worker to finish.',
-                                      'ورکر کا انتظار کیا جا رہا ہے۔',
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Text(bilingual(context, 'No', 'نہیں')),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: () => _onCustomerClickJobCompleted(
-                              context,
-                              jobId,
-                              args,
-                            ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF0D9488),
-                            ),
-                            icon: const Icon(
-                              Icons.check_circle_outline,
-                              size: 18,
-                            ),
-                            label: Text(
-                              bilingual(
-                                context,
-                                'Yes, Completed',
-                                'ہاں، مکمل ہو گیا',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ] else if (_trackingState == 4) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const CancelJobScreen(),
-                              ),
-                            ),
-                            child: Text(
-                              bilingual(
-                                context,
-                                'Cancel Job',
-                                'کام منسوخ کریں',
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: () => _onCustomerClickJobCompleted(
-                              context,
-                              jobId,
-                              args,
-                            ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF0D9488),
-                            ),
-                            icon: const Icon(
-                              Icons.check_circle_outline,
-                              size: 18,
-                            ),
-                            label: Text(
-                              bilingual(
-                                context,
-                                'Job Completed',
-                                'کام مکمل ہو گیا',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ] else if (_trackingState == 5) ...[
+                  ] else if (_trackingState == 2 || _trackingState == 5) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -8854,6 +8673,25 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         ),
                       ],
                     ),
+                  ] else if (_trackingState == 4) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CancelJobScreen(),
+                          ),
+                        ),
+                        child: Text(
+                          bilingual(
+                            context,
+                            'Cancel Job',
+                            'کام منسوخ کریں',
+                          ),
+                        ),
+                      ),
+                    ),
                   ] else if (_trackingState == 6 || _trackingState == 7) ...[
                     const SizedBox(height: 8),
                     SizedBox(
@@ -8864,52 +8702,23 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       ),
                     ),
                   ] else ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const CancelJobScreen(),
-                              ),
-                            ),
-                            child: Text(
-                              bilingual(
-                                context,
-                                'Cancel Job',
-                                'کام منسوخ کریں',
-                              ),
-                            ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CancelJobScreen(),
                           ),
                         ),
-                        if (_trackingState == 1) ...[
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: () => _onCustomerClickJobCompleted(
-                                context,
-                                jobId,
-                                args,
-                              ),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF0D9488),
-                              ),
-                              icon: const Icon(
-                                Icons.check_circle_outline,
-                                size: 18,
-                              ),
-                              label: Text(
-                                bilingual(
-                                  context,
-                                  'Job Completed',
-                                  'کام مکمل ہو گیا',
-                                ),
-                              ),
-                            ),
+                        child: Text(
+                          bilingual(
+                            context,
+                            'Cancel Job',
+                            'کام منسوخ کریں',
                           ),
-                        ],
-                      ],
+                        ),
+                      ),
                     ),
                   ],
                 ],

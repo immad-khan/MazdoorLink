@@ -45,7 +45,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     if ((email == 'admin@mazdoorlink.com' || email == 'admin@mazdoorlink') &&
         password == 'mazdoorlink123') {
       AppScope.of(context).selectRole(UserRole.admin);
-      Navigator.pushReplacementNamed(context, '/admin/dashboard');
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/admin/dashboard',
+        (route) => false,
+      );
       return;
     }
 
@@ -66,7 +70,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       }
       if (!mounted) return;
       AppScope.of(context).selectRole(UserRole.admin);
-      Navigator.pushReplacementNamed(context, '/admin/dashboard');
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/admin/dashboard',
+        (route) => false,
+      );
     } on FirebaseAuthException catch (e) {
       _showMessage(e.message ?? 'Login failed. Check your credentials.');
     } catch (_) {

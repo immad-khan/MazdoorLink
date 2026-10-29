@@ -75,13 +75,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop(result);
-          return;
-        }
         final shouldExit = await showExitMazdoorlinkDialog(context);
         if (shouldExit) {
-          SystemNavigator.pop();
+          await FirebaseAuth.instance.signOut();
+          if (context.mounted) {
+            SystemNavigator.pop();
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/',
+              (route) => false,
+            );
+          }
         }
       },
       child: Scaffold(
@@ -273,41 +277,18 @@ class _HomeTab extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.logout, color: Colors.white),
+                tooltip: 'Exit Mazdoorlink',
                 onPressed: () async {
-                  final shouldLogout = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      title: const Row(
-                        children: [
-                          Icon(Icons.logout, color: Colors.red),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Logout?',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      content: const Text('Are you sure you want to log out?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('No'),
-                        ),
-                        FilledButton(
-                          style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Yes'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (shouldLogout != true) return;
+                  final shouldExit = await showExitMazdoorlinkDialog(context);
+                  if (shouldExit != true) return;
                   await FirebaseAuth.instance.signOut();
                   if (context.mounted) {
-                    Navigator.pushReplacementNamed(context, '/');
+                    SystemNavigator.pop();
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/',
+                      (route) => false,
+                    );
                   }
                 },
               ),

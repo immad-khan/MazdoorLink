@@ -285,7 +285,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         }
         final shouldExit = await showExitMazdoorlinkDialog(context);
         if (shouldExit) {
-          SystemNavigator.pop();
+          await FirebaseAuth.instance.signOut();
+          if (context.mounted) {
+            SystemNavigator.pop();
+            Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+          }
         }
       },
       child: Scaffold(
@@ -302,7 +306,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 } else {
                   final shouldExit = await showExitMazdoorlinkDialog(context);
                   if (shouldExit) {
-                    SystemNavigator.pop();
+                    await FirebaseAuth.instance.signOut();
+                    if (context.mounted) {
+                      SystemNavigator.pop();
+                      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+                    }
                   }
                 }
               },

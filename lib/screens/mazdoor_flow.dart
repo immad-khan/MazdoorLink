@@ -337,6 +337,7 @@ class MzScaffold extends StatelessWidget {
     this.showBottomNav = true,
     this.background,
     this.enableExitPopScope = true,
+    this.actions,
   });
 
   final Widget child;
@@ -346,6 +347,7 @@ class MzScaffold extends StatelessWidget {
   final bool showBottomNav;
   final Color? background;
   final bool enableExitPopScope;
+  final List<Widget>? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -359,6 +361,7 @@ class MzScaffold extends StatelessWidget {
             : AppBar(
                 title: titleWidget ?? Text(title!),
                 centerTitle: true,
+                actions: actions,
                 leading: showBack
                     ? IconButton(
                         onPressed: () async {
@@ -369,7 +372,15 @@ class MzScaffold extends StatelessWidget {
                               context,
                             );
                             if (shouldExit) {
-                              SystemNavigator.pop();
+                              await controller.logout();
+                              if (context.mounted) {
+                                SystemNavigator.pop();
+                                Navigator.pushNamedAndRemoveUntil(
+                                  context,
+                                  AppRoutes.welcome,
+                                  (route) => false,
+                                );
+                              }
                             }
                           }
                         },
@@ -398,13 +409,65 @@ class MzScaffold extends StatelessWidget {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
+
+        final currentRoute = ModalRoute.of(context)?.settings.name ?? '';
+        final isRootDashboard = currentRoute == AppRoutes.customerHome ||
+            currentRoute == AppRoutes.workerDashboard ||
+            currentRoute == AppRoutes.adminDashboard ||
+            currentRoute == '/customer/home' ||
+            currentRoute == '/worker/dashboard' ||
+            currentRoute == '/admin/dashboard';
+
+        final isBottomNavTab = currentRoute == AppRoutes.sharedHistory ||
+            currentRoute == AppRoutes.sharedChat ||
+            currentRoute == AppRoutes.sharedSettings ||
+            currentRoute == AppRoutes.workerEarnings ||
+            currentRoute == '/shared/history' ||
+            currentRoute == '/shared/chat' ||
+            currentRoute == '/shared/settings' ||
+            currentRoute == '/worker/earnings';
+
+        if (isRootDashboard) {
+          final shouldExit = await showExitMazdoorlinkDialog(context);
+          if (shouldExit) {
+            await controller.logout();
+            if (context.mounted) {
+              SystemNavigator.pop();
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.welcome,
+                (route) => false,
+              );
+            }
+          }
+          return;
+        }
+
+        if (isBottomNavTab) {
+          final role = controller.role;
+          final homeRoute = role == UserRole.worker
+              ? AppRoutes.workerDashboard
+              : AppRoutes.customerHome;
+          Navigator.pushReplacementNamed(context, homeRoute);
+          return;
+        }
+
         if (Navigator.of(context).canPop()) {
           Navigator.of(context).pop(result);
           return;
         }
+
         final shouldExit = await showExitMazdoorlinkDialog(context);
         if (shouldExit) {
-          SystemNavigator.pop();
+          await controller.logout();
+          if (context.mounted) {
+            SystemNavigator.pop();
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.welcome,
+              (route) => false,
+            );
+          }
         }
       },
       child: scaffold,
@@ -2543,7 +2606,11 @@ class _AuthScreenState extends State<AuthScreen> {
           // A registered worker CAN login as customer directly!
           if (targetRole == UserRole.customer) {
             AppScope.of(context).selectRole(UserRole.customer);
-            Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.customerHome,
+              (route) => false,
+            );
             return;
           }
 
@@ -2754,14 +2821,16 @@ class _AuthScreenState extends State<AuthScreen> {
             final setupComplete = data['setupComplete'] as bool? ?? false;
             AppScope.of(context).selectRole(UserRole.worker);
             if (!setupComplete) {
-              Navigator.pushReplacementNamed(
+              Navigator.pushNamedAndRemoveUntil(
                 context,
                 AppRoutes.workerServicesSetup,
+                (route) => false,
               );
             } else {
-              Navigator.pushReplacementNamed(
+              Navigator.pushNamedAndRemoveUntil(
                 context,
                 AppRoutes.workerDashboard,
+                (route) => false,
               );
             }
             return;
@@ -2769,7 +2838,11 @@ class _AuthScreenState extends State<AuthScreen> {
         } else if (mounted) {
           // Default fallback
           AppScope.of(context).selectRole(UserRole.customer);
-          Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.customerHome,
+            (route) => false,
+          );
         }
         return;
       } catch (e) {
@@ -4644,6 +4717,37 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         style: const TextStyle(
                           fontSize: 10,
                           color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () async {
+                        final shouldExit =
+                            await showExitMazdoorlinkDialog(context);
+                        if (shouldExit == true) {
+                          await scope.logout();
+                          if (context.mounted) {
+                            SystemNavigator.pop();
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              AppRoutes.welcome,
+                              (route) => false,
+                            );
+                          }
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.22),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.exit_to_app_rounded,
+                          color: Colors.white,
+                          size: 18,
                         ),
                       ),
                     ),
@@ -8236,6 +8340,27 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       showBottomNav: false,
       showBack: true,
       title: bilingual(context, 'Service Tracking', 'سروس ٹریکنگ'),
+      actions: [
+        IconButton(
+          tooltip: bilingual(context, 'Home', 'ہوم'),
+          icon: const Icon(
+            Icons.home_rounded,
+            color: Color(0xFF0D9488),
+            size: 26,
+          ),
+          onPressed: () {
+            final role = AppScope.of(context).role;
+            final homeRoute = role == UserRole.worker
+                ? AppRoutes.workerDashboard
+                : AppRoutes.customerHome;
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              homeRoute,
+              (route) => false,
+            );
+          },
+        ),
+      ],
       child: Stack(
         children: [
           if (_trackingState >= 1)
@@ -9258,15 +9383,45 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                         ),
                       ],
                     ),
-                    trailing: IconButton(
-                      icon: const Icon(
-                        Icons.assignment_outlined,
-                        color: Color(0xFF0D9488),
-                        size: 26,
-                      ),
-                      tooltip: isUrdu ? 'میرے کام' : 'My Jobs',
-                      onPressed: () =>
-                          Navigator.pushNamed(context, AppRoutes.sharedHistory),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.assignment_outlined,
+                            color: Color(0xFF0D9488),
+                            size: 26,
+                          ),
+                          tooltip: isUrdu ? 'میرے کام' : 'My Jobs',
+                          onPressed: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.sharedHistory,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.exit_to_app_rounded,
+                            color: Color(0xFF64748B),
+                            size: 24,
+                          ),
+                          tooltip: isUrdu ? 'باہر نکلیں' : 'Exit Mazdoorlink',
+                          onPressed: () async {
+                            final shouldExit =
+                                await showExitMazdoorlinkDialog(context);
+                            if (shouldExit == true) {
+                              await scope.logout();
+                              if (context.mounted) {
+                                SystemNavigator.pop();
+                                Navigator.pushNamedAndRemoveUntil(
+                                  context,
+                                  AppRoutes.welcome,
+                                  (route) => false,
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ],
                     ),
                   ),
                   ValueListenableBuilder<AppLocation>(
@@ -12737,7 +12892,15 @@ class SettingsScreen extends StatelessWidget {
             onPressed: () async {
               final shouldExit = await showExitMazdoorlinkDialog(context);
               if (shouldExit) {
-                SystemNavigator.pop();
+                await c.logout();
+                if (context.mounted) {
+                  SystemNavigator.pop();
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppRoutes.welcome,
+                    (route) => false,
+                  );
+                }
               }
             },
             icon: const Icon(Icons.exit_to_app, color: Color(0xFF64748B)),

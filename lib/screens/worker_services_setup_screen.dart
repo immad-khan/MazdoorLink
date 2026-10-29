@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../app_state.dart';
 import '../services/skill_deduplicator.dart';
-import '../services/location_service.dart';
 import 'signup_data.dart';
 
 class ServiceItem {
@@ -52,8 +50,8 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
   final Map<int, List<ServiceItem>> _servicesMap = {
     // Plumber
     0: [
-      ServiceItem(titleEn: 'Water Tap Leakage Fix', titleUr: 'نلکے سے پانی کا رساو ٹھیک کرنا', price: 300, isSelected: true),
-      ServiceItem(titleEn: 'Flush Tank Repair', titleUr: 'فلش ٹینک کی مرمت', price: 600, isSelected: true),
+      ServiceItem(titleEn: 'Water Tap Leakage Fix', titleUr: 'نلکے سے پانی کا رساو ٹھیک کرنا', price: 300),
+      ServiceItem(titleEn: 'Flush Tank Repair', titleUr: 'فلش ٹینک کی مرمت', price: 600),
       ServiceItem(titleEn: 'Sink / Wash Basin Installation', titleUr: 'واش بیسن لگانا', price: 1200),
       ServiceItem(titleEn: 'Motor Pump Installation', titleUr: 'پانی کی موٹر لگانا', price: 2500),
       ServiceItem(titleEn: 'Geyser Repair & Service', titleUr: 'گیزر کی سروس اور مرمت', price: 1800),
@@ -64,8 +62,8 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
     ],
     // Electrician
     1: [
-      ServiceItem(titleEn: 'Broken Switch Repair', titleUr: 'خراب سوئچ کی مرمت', price: 300, isSelected: true),
-      ServiceItem(titleEn: 'Short Circuit Fix', titleUr: 'شارٹ سرکٹ ٹھیک کرنا', price: 400, isSelected: true),
+      ServiceItem(titleEn: 'Broken Switch Repair', titleUr: 'خراب سوئچ کی مرمت', price: 300),
+      ServiceItem(titleEn: 'Short Circuit Fix', titleUr: 'شارٹ سرکٹ ٹھیک کرنا', price: 400),
       ServiceItem(titleEn: 'Ceiling Fan Installation', titleUr: 'سیلنگ فین انسٹالیشن', price: 500),
       ServiceItem(titleEn: 'Full Home Wiring Repair', titleUr: 'مکمل گھر کی وائرنگ مرمت', price: 8000),
       ServiceItem(titleEn: 'AC Switch Installation', titleUr: 'اے سی سوئچ لگانا', price: 450),
@@ -124,8 +122,9 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
             titleEn: item.titleEn,
             titleUr: item.titleUr,
             price: item.price,
-            isSelected: item.isSelected,
+            isSelected: false,
           )).toList();
+          _priceControllers.clear();
           for (int i = 0; i < _currentServices.length; i++) {
             _priceControllers[i] = TextEditingController(text: _currentServices[i].price.toStringAsFixed(0));
           }
@@ -134,13 +133,35 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
       }
       return;
     }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
         final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
         if (doc.exists) {
           final data = doc.data()!;
+
+          // 1. Fetch real category from Firestore user record
+          final catEn = (data['categoryNameEn'] ?? data['category'] ?? data['categoryKey'])?.toString().trim() ?? '';
+          if (catEn.isNotEmpty) {
+            int foundIndex = _skillNamesEn.indexWhere((element) =>
+                element.toLowerCase() == catEn.toLowerCase() ||
+                element.toLowerCase() == catEn.toLowerCase().replaceAll('_', '') ||
+                catEn.toLowerCase().contains(element.toLowerCase()));
+            if (foundIndex != -1) {
+              _categoryIndex = foundIndex;
+            } else {
+              final catUr = data['categoryNameUr']?.toString().trim() ?? '';
+              int foundUr = _skillNamesUr.indexWhere((element) => element == catUr);
+              if (foundUr != -1) {
+                _categoryIndex = foundUr;
+              }
+            }
+          }
+
+          final defaults = _servicesMap[_categoryIndex] ?? [];
           final savedSkills = data['skills'] as List<dynamic>?;
+
           if (savedSkills != null && savedSkills.isNotEmpty) {
             final saved = savedSkills.map((s) {
               final m = s as Map<String, dynamic>;
@@ -152,22 +173,54 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
               );
             }).toList();
 
-            final defaults = _servicesMap[_categoryIndex] ?? [];
+            // Match against defaults of the worker's real category
             final merged = defaults.map((d) {
-              final existing = saved.where((s) => s.titleEn == d.titleEn).firstOrNull;
+              final existing = saved.where((s) => s.titleEn.toLowerCase() == d.titleEn.toLowerCase()).firstOrNull;
               return ServiceItem(
                 titleEn: d.titleEn,
                 titleUr: d.titleUr,
                 price: existing?.price ?? d.price,
-                isSelected: existing != null || d.isSelected,
+                isSelected: existing != null,
               );
             }).toList();
 
-            final custom = saved.where((s) => !defaults.any((d) => d.titleEn == s.titleEn)).toList();
+            // Find other categories' default titles so we don't treat wrong-category mock data as custom skills
+            final otherCategoryTitles = _servicesMap.entries
+                .where((e) => e.key != _categoryIndex)
+                .expand((e) => e.value)
+                .map((s) => s.titleEn.toLowerCase())
+                .toSet();
+
+            // Custom skills added by the worker (excluding default skills of this or other categories)
+            final custom = saved.where((s) {
+              final sTitle = s.titleEn.toLowerCase();
+              final isCurrentDefault = defaults.any((d) => d.titleEn.toLowerCase() == sTitle);
+              final isOtherDefault = otherCategoryTitles.contains(sTitle);
+              return !isCurrentDefault && !isOtherDefault;
+            }).toList();
 
             if (mounted) {
               setState(() {
                 _currentServices = [...merged, ...custom];
+                _priceControllers.clear();
+                for (int i = 0; i < _currentServices.length; i++) {
+                  _priceControllers[i] = TextEditingController(text: _currentServices[i].price.toStringAsFixed(0));
+                }
+                _loadedFromFirestore = true;
+              });
+            }
+            return;
+          } else {
+            // User exists in DB but has no saved skills yet: show defaults for their real category unchecked
+            if (mounted) {
+              setState(() {
+                _currentServices = defaults.map((item) => ServiceItem(
+                  titleEn: item.titleEn,
+                  titleUr: item.titleUr,
+                  price: item.price,
+                  isSelected: false,
+                )).toList();
+                _priceControllers.clear();
                 for (int i = 0; i < _currentServices.length; i++) {
                   _priceControllers[i] = TextEditingController(text: _currentServices[i].price.toStringAsFixed(0));
                 }
@@ -177,7 +230,9 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
             return;
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error loading worker skills from Firestore: $e');
+      }
     }
 
     if (mounted) {
@@ -187,8 +242,9 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
           titleEn: item.titleEn,
           titleUr: item.titleUr,
           price: item.price,
-          isSelected: item.isSelected,
+          isSelected: false,
         )).toList();
+        _priceControllers.clear();
         for (int i = 0; i < _currentServices.length; i++) {
           _priceControllers[i] = TextEditingController(text: _currentServices[i].price.toStringAsFixed(0));
         }
@@ -446,8 +502,10 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
       // Existing mode - update current user document
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        final categoryKey = _categoryIndex == 0 ? 'plumber' : 'electrician';
         await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
           'skills': selectedServices,
+          'category': categoryKey,
           'categoryNameEn': _skillNamesEn[_categoryIndex],
           'categoryNameUr': _skillNamesUr[_categoryIndex],
           'setupComplete': true,
@@ -587,8 +645,12 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
             ),
           ],
         ),
-        body: Center(
-          child: Container(
+        body: !_loadedFromFirestore
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFF0D9488)),
+              )
+            : Center(
+                child: Container(
             constraints: const BoxConstraints(maxWidth: 430),
             child: Column(
               children: [

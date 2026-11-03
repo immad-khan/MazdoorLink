@@ -30,6 +30,8 @@ class ChatUnreadController extends ChangeNotifier {
         _total = total;
         notifyListeners();
       }
+    }, onError: (err) {
+      debugPrint('ChatUnreadController stream error: $err');
     });
   }
 

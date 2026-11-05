@@ -296,7 +296,31 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
       title = isUrdu ? 'سیف پے (آن لائن کارڈ)' : 'Safepay (Online Card)';
     }
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF0D9488)),
+      leading: method == 'Cash'
+          ? Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(7),
+                child: Image.asset(
+                  'assets/images/cash_icon.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            )
+          : Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0D9488).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.credit_card, color: Color(0xFF0D9488), size: 24),
+            ),
       title: Text(
         title,
         style: const TextStyle(
@@ -315,15 +339,13 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
   }
 
   Widget _buildPaymentSelectorButton(bool isUrdu) {
-    IconData icon = Icons.money;
-    if (_paymentMethod == 'Safepay') icon = Icons.credit_card;
-
     return InkWell(
       onTap: () => _showPaymentOptions(isUrdu),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         height: 52,
         width: 56,
+        padding: const EdgeInsets.all(8),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.white,
@@ -337,7 +359,17 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
             ),
           ],
         ),
-        child: Icon(icon, color: const Color(0xFF0D9488), size: 28),
+        child: _paymentMethod == 'Cash'
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.asset(
+                  'assets/images/cash_icon.png',
+                  width: 34,
+                  height: 34,
+                  fit: BoxFit.cover,
+                ),
+              )
+            : const Icon(Icons.credit_card, color: Color(0xFF0D9488), size: 28),
       ),
     );
   }

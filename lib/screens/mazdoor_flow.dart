@@ -9235,6 +9235,105 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     return scheduled;
   }
 
+  void _showNegativeDepositDialog(BuildContext context, double balance) {
+    final isUrdu = AppScope.of(context).isUrdu;
+    final absAmount = balance.abs().toStringAsFixed(0);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.red,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                isUrdu ? 'بیلنس منفی ہے' : 'Negative Deposit',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    isUrdu ? 'موجودہ سیکیورٹی ڈپازٹ بیلنس' : 'Current Deposit Balance',
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '-Rs. $absAmount',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              isUrdu
+                  ? 'سابقہ کاموں سے ایڈمن / پلیٹ فارم فیس کٹنے کے بعد آپ کا ڈپازٹ بیلنس منفی ہو گیا ہے۔\n\nنئے کام قبول کرنے کے لیے پہلے اپنے ڈپازٹ اکاؤنٹ میں رقم جمع کروائیں۔'
+                  : 'Your deposit balance is negative due to platform fee deductions from previous jobs.\n\nPlease add funds (top up) to your deposit account before accepting new jobs.',
+              style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              isUrdu ? 'منسوخ' : 'Cancel',
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pushNamed(context, AppRoutes.workerEarnings);
+            },
+            icon: const Icon(Icons.add_card, size: 18),
+            label: Text(
+              isUrdu ? 'رقم جمع کروائیں' : 'Add Deposit / Top Up',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0D9488),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleInstantAcceptJob(
     BuildContext context,
     String jobId,
@@ -9242,6 +9341,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   ) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
+    final depositBalance = await getWorkerDepositBalance(user.uid);
+    if (depositBalance < 0) {
+      if (!mounted) return;
+      _showNegativeDepositDialog(context, depositBalance);
+      return;
+    }
 
     await updateJobStatus(jobId, 'accepted');
     if (!mounted) return;
@@ -9254,6 +9360,16 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
   }
 
   Future<void> _handleScheduleJob(BuildContext context, String jobId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final depositBalance = await getWorkerDepositBalance(user.uid);
+    if (depositBalance < 0) {
+      if (!mounted) return;
+      _showNegativeDepositDialog(context, depositBalance);
+      return;
+    }
+
     final isUrdu = AppScope.of(context).isUrdu;
     final scheduled = await _pickScheduleTime(context);
     if (scheduled == null || !mounted) return;
@@ -9550,6 +9666,77 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                       );
                     },
                   ),
+                  if (((data?['topupBalance'] as num?)?.toDouble() ?? 0.0) < 0) ...[
+                    Builder(
+                      builder: (context) {
+                        final topupBal = (data?['topupBalance'] as num?)!.toDouble();
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade100,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isUrdu ? 'سیکیورٹی ڈپازٹ بیلنس منفی ہے' : 'Deposit Balance Negative',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12.5,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      isUrdu
+                                          ? 'رقم جمع کروائیں تاکہ نوکریاں قبول کر سکیں (-Rs. ${topupBal.abs().toStringAsFixed(0)})'
+                                          : 'Top up deposit to accept jobs (-Rs. ${topupBal.abs().toStringAsFixed(0)})',
+                                      style: const TextStyle(fontSize: 11, color: Colors.black87),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pushNamed(context, AppRoutes.workerEarnings),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(isUrdu ? 'رقم جمع کریں' : 'Top Up'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ],
               );
             },

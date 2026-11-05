@@ -6119,292 +6119,335 @@ class _WorkerRecommendationsScreenState
                 ),
               ),
               const SizedBox(height: 16),
-              for (var i = 0; i < matchedWorkers.length; i++)
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: 1),
-                  duration: Duration(milliseconds: 320 + i * 100),
-                  builder: (_, value, child) => Opacity(
-                    opacity: value,
-                    child: Transform.translate(
-                      offset: Offset(0, (1 - value) * 18),
-                      child: child,
+              for (var i = 0; i < matchedWorkers.length; i++) ...[
+                () {
+                  final worker = matchedWorkers[i];
+                  double workerTotalPrice = 0;
+                  if (selectedIssues.isNotEmpty) {
+                    for (final issue in selectedIssues) {
+                      double price = issue.price;
+                      final matchedWorkerSkill = worker.skills.where((ws) {
+                        final wsTitle = ws.titleEn.toLowerCase().trim();
+                        final issueTitle = issue.titleEn.toLowerCase().trim();
+                        return wsTitle == issueTitle ||
+                            wsTitle.contains(issueTitle) ||
+                            issueTitle.contains(wsTitle);
+                      }).firstOrNull;
+
+                      if (matchedWorkerSkill != null && matchedWorkerSkill.price > 0) {
+                        price = matchedWorkerSkill.price;
+                      }
+                      workerTotalPrice += price;
+                    }
+                  } else {
+                    workerTotalPrice = worker.priceValue;
+                  }
+
+                  final displayPrice = workerTotalPrice > 0
+                      ? 'Rs. ${workerTotalPrice.toStringAsFixed(0)}'
+                      : worker.price;
+
+                  return TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: Duration(milliseconds: 320 + i * 100),
+                    builder: (_, value, child) => Opacity(
+                      opacity: value,
+                      child: Transform.translate(
+                        offset: Offset(0, (1 - value) * 18),
+                        child: child,
+                      ),
                     ),
-                  ),
-                  child: Card(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      side: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (selectedIssues.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0FDFA),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: const Color(0xFF99F6E4),
-                                ),
-                              ),
-                              child: Text(
-                                isUrdu
-                                    ? '📌 ${selectedIssues[i % selectedIssues.length].titleUr}'
-                                    : '📌 ${selectedIssues[i % selectedIssues.length].titleEn}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0D9488),
-                                ),
-                              ),
-                            ),
-                          if (selectedIssues.isNotEmpty)
-                            const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: matchedWorkers[i].image.isNotEmpty
-                                    ? Image.network(
-                                        matchedWorkers[i].image,
-                                        width: 62,
-                                        height: 62,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) =>
-                                            CircleAvatar(
-                                              radius: 31,
-                                              child: Text(
-                                                matchedWorkers[i]
-                                                        .name
-                                                        .isNotEmpty
-                                                    ? matchedWorkers[i].name[0]
-                                                          .toUpperCase()
-                                                    : '?',
-                                              ),
-                                            ),
-                                      )
-                                    : CircleAvatar(
-                                        radius: 31,
-                                        child: Text(
-                                          matchedWorkers[i].name.isNotEmpty
-                                              ? matchedWorkers[i].name[0]
-                                                    .toUpperCase()
-                                              : '?',
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      matchedWorkers[i].name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: AppTheme.darkerText,
+                    child: Card(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (selectedIssues.isNotEmpty) ...[
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: selectedIssues.map((issue) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF0FDFA),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: const Color(0xFF99F6E4),
                                       ),
                                     ),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          matchedWorkers[i].category,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
+                                    child: Text(
+                                      isUrdu ? '📌 ${issue.titleUr}' : '📌 ${issue.titleEn}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0D9488),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: worker.image.isNotEmpty
+                                      ? Image.network(
+                                          worker.image,
+                                          width: 62,
+                                          height: 62,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              CircleAvatar(
+                                                radius: 31,
+                                                child: Text(
+                                                  worker.name.isNotEmpty
+                                                      ? worker.name[0].toUpperCase()
+                                                      : '?',
+                                                ),
+                                              ),
+                                        )
+                                      : CircleAvatar(
+                                          radius: 31,
+                                          child: Text(
+                                            worker.name.isNotEmpty
+                                                ? worker.name[0].toUpperCase()
+                                                : '?',
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF0FDF4),
-                                            borderRadius: BorderRadius.circular(6),
-                                            border: Border.all(
-                                              color: const Color(0xFFBBF7D0),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        worker.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: AppTheme.darkerText,
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            worker.category,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
                                             ),
                                           ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(
-                                                Icons.near_me,
-                                                size: 10,
-                                                color: Color(0xFF16A34A),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF0FDF4),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: const Color(0xFFBBF7D0),
                                               ),
-                                              const SizedBox(width: 3),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  Icons.near_me,
+                                                  size: 10,
+                                                  color: Color(0xFF16A34A),
+                                                ),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  isUrdu
+                                                      ? '${worker.distanceKm.toStringAsFixed(1)} کلومیٹر دور'
+                                                      : '${worker.distanceKm.toStringAsFixed(1)} km away',
+                                                  style: const TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF15803D),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (displayPrice.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              displayPrice,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF0D9488),
+                                              ),
+                                            ),
+                                            if (selectedIssues.length > 1) ...[
+                                              const SizedBox(width: 6),
                                               Text(
                                                 isUrdu
-                                                    ? '${matchedWorkers[i].distanceKm.toStringAsFixed(1)} کلومیٹر دور'
-                                                    : '${matchedWorkers[i].distanceKm.toStringAsFixed(1)} km away',
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF15803D),
+                                                    ? '(${selectedIssues.length} خدمات)'
+                                                    : '(${selectedIssues.length} services)',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.grey.shade600,
                                                 ),
                                               ),
                                             ],
+                                          ],
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    _favouriteIds.contains(worker.id)
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color: _favouriteIds.contains(worker.id)
+                                        ? Colors.red
+                                        : Colors.grey,
+                                    size: 22,
+                                  ),
+                                  onPressed: () async {
+                                    final wid = worker.id;
+                                    if (wid == null) return;
+                                    if (_favouriteIds.contains(wid)) {
+                                      removeFavouriteWorker(wid);
+                                    } else {
+                                      addFavouriteWorker(wid);
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                            if (worker.skillsEn.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: (isUrdu ? worker.skillsUr : worker.skillsEn).map((s) {
+                                  final isSelected = selectedIssues.any((issue) {
+                                    final issueTitle = (isUrdu ? issue.titleUr : issue.titleEn).toLowerCase().trim();
+                                    final sTitle = s.toLowerCase().trim();
+                                    return issueTitle == sTitle || issueTitle.contains(sTitle) || sTitle.contains(issueTitle);
+                                  });
+
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? const Color(0xFFCCFBF1) : const Color(0xFFF3F4F6),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: isSelected ? const Color(0xFF5EEAD4) : Colors.transparent,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isSelected) ...[
+                                          const Icon(Icons.check, size: 12, color: Color(0xFF0F766E)),
+                                          const SizedBox(width: 3),
+                                        ],
+                                        Text(
+                                          s,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                            color: isSelected ? const Color(0xFF0F766E) : Colors.black54,
                                           ),
                                         ),
                                       ],
                                     ),
-                                    if (matchedWorkers[i].price.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        matchedWorkers[i].price,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF0D9488),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  _favouriteIds.contains(matchedWorkers[i].id)
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  color:
-                                      _favouriteIds.contains(
-                                        matchedWorkers[i].id,
-                                      )
-                                      ? Colors.red
-                                      : Colors.grey,
-                                  size: 22,
-                                ),
-                                onPressed: () async {
-                                  final wid = matchedWorkers[i].id;
-                                  if (wid == null) return;
-                                  if (_favouriteIds.contains(wid)) {
-                                    removeFavouriteWorker(wid);
-                                  } else {
-                                    addFavouriteWorker(wid);
-                                  }
-                                },
+                                  );
+                                }).toList(),
                               ),
                             ],
-                          ),
-                          if (matchedWorkers[i].skillsEn.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children:
-                                  (isUrdu
-                                          ? matchedWorkers[i].skillsUr
-                                          : matchedWorkers[i].skillsEn)
-                                      .map(
-                                        (s) => Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF3F4F6),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            s,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.black54,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () {
+                                  final combinedEn = selectedIssues.isNotEmpty
+                                      ? selectedIssues.map((e) => e.titleEn).join(', ')
+                                      : '';
+                                  final combinedUr = selectedIssues.isNotEmpty
+                                      ? selectedIssues.map((e) => e.titleUr).join('، ')
+                                      : '';
+                                  final issueIndex = i % (selectedIssues.isNotEmpty ? selectedIssues.length : 1);
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.workerProfile,
+                                    arguments: ProfileArguments(
+                                      worker: worker,
+                                      selectedIssues: selectedIssues,
+                                      job: JobPostingArguments(
+                                        descriptionEn: combinedEn.isNotEmpty
+                                            ? combinedEn
+                                            : (selectedIssues.isNotEmpty
+                                                ? selectedIssues[issueIndex].titleEn
+                                                : ''),
+                                        descriptionUr: combinedUr.isNotEmpty
+                                            ? combinedUr
+                                            : (selectedIssues.isNotEmpty
+                                                ? selectedIssues[issueIndex].titleUr
+                                                : ''),
+                                        price: workerTotalPrice,
+                                        categoryKey: categoryKey,
+                                        paymentMethod: paymentMethod,
+                                        customerLatitude: customerLatitude,
+                                        customerLongitude: customerLongitude,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.person_outline, size: 16),
+                                label: Text(
+                                  bilingual(
+                                    context,
+                                    'View Profile',
+                                    'پروفائل دیکھیں',
+                                  ),
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0D9488),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              onPressed: () {
-                                final combinedEn = selectedIssues.isNotEmpty
-                                    ? selectedIssues
-                                          .map((e) => e.titleEn)
-                                          .join(', ')
-                                    : '';
-                                final combinedUr = selectedIssues.isNotEmpty
-                                    ? selectedIssues
-                                          .map((e) => e.titleUr)
-                                          .join('، ')
-                                    : '';
-                                final issueIndex =
-                                    i %
-                                    (selectedIssues.isNotEmpty
-                                        ? selectedIssues.length
-                                        : 1);
-                                Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.workerProfile,
-                                  arguments: ProfileArguments(
-                                    worker: matchedWorkers[i],
-                                    selectedIssues: selectedIssues,
-                                    job: JobPostingArguments(
-                                      descriptionEn: combinedEn.isNotEmpty
-                                          ? combinedEn
-                                          : (selectedIssues.isNotEmpty
-                                                ? selectedIssues[issueIndex]
-                                                      .titleEn
-                                                : ''),
-                                      descriptionUr: combinedUr.isNotEmpty
-                                          ? combinedUr
-                                          : (selectedIssues.isNotEmpty
-                                                ? selectedIssues[issueIndex]
-                                                      .titleUr
-                                                : ''),
-                                      price: 0,
-                                      categoryKey: categoryKey,
-                                      paymentMethod: paymentMethod,
-                                      customerLatitude: customerLatitude,
-                                      customerLongitude: customerLongitude,
-                                    ),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.person_outline, size: 16),
-                              label: Text(
-                                bilingual(
-                                  context,
-                                  'View Profile',
-                                  'پروفائل دیکھیں',
-                                ),
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF0D9488),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                }(),
+              ],
             ],
           );
         },

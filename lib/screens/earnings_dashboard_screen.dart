@@ -427,43 +427,63 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
 
     return MzScaffold(
       showBottomNav: true,
-      child: StreamBuilder<double>(
-        stream: streamWorkerEarnings(),
-        builder: (context, earningsSnapshot) {
-          final totalEarnings = earningsSnapshot.data ?? 0;
+      child: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('jobs')
+            .where('workerId', isEqualTo: workerUid)
+            .snapshots(),
+        builder: (context, jobsSnapshot) {
+          if (jobsSnapshot.connectionState == ConnectionState.waiting && !jobsSnapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (jobsSnapshot.hasError) {
+            debugPrint('EarningsDashboard jobs stream error: ${jobsSnapshot.error}');
+          }
 
-          return StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('jobs')
-                .where('workerId', isEqualTo: workerUid)
-                .snapshots(),
-            builder: (context, jobsSnapshot) {
-              if (jobsSnapshot.hasError) {
-                debugPrint('EarningsDashboard jobs stream error: ${jobsSnapshot.error}');
-              }
-              final allDocs = jobsSnapshot.data?.docs ?? [];
-              final jobs = allDocs.where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                final status = data['status']?.toString();
-                return status == 'accepted' || status == 'completed';
-              }).toList();
+          final allDocs = jobsSnapshot.data?.docs ?? [];
 
-              jobs.sort((a, b) {
-                final aData = a.data() as Map<String, dynamic>;
-                final bData = b.data() as Map<String, dynamic>;
-                final aDt = aData['createdAt'] is Timestamp
-                    ? (aData['createdAt'] as Timestamp).toDate()
-                    : (DateTime.tryParse(aData['createdAt']?.toString() ?? '') ?? DateTime(1970));
-                final bDt = bData['createdAt'] is Timestamp
-                    ? (bData['createdAt'] as Timestamp).toDate()
-                    : (DateTime.tryParse(bData['createdAt']?.toString() ?? '') ?? DateTime(1970));
-                return bDt.compareTo(aDt);
-              });
+          // Sort all jobs by createdAt descending
+          final sortedDocs = List<QueryDocumentSnapshot>.from(allDocs);
+          sortedDocs.sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>;
+            final bData = b.data() as Map<String, dynamic>;
+            DateTime parseDate(dynamic d) {
+              if (d is Timestamp) return d.toDate();
+              if (d is DateTime) return d;
+              if (d is String) return DateTime.tryParse(d) ?? DateTime(1970);
+              return DateTime(1970);
+            }
+            return parseDate(bData['createdAt']).compareTo(parseDate(aData['createdAt']));
+          });
 
-              final completedCount = jobs.where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                return data['status'] == 'completed';
-              }).length;
+          // All completed jobs (case-insensitive)
+          final completedDocs = sortedDocs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = (data['status']?.toString() ?? '').toLowerCase().trim();
+            return status == 'completed' || status == 'worker_completed' || status == 'paid';
+          }).toList();
+
+          // Calculate total earnings directly from completed jobs
+          final double totalEarnings = completedDocs.fold<double>(0, (sum, doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final price = data['price'];
+            return sum + ((price as num?)?.toDouble() ?? 0);
+          });
+
+          final int completedCount = completedDocs.length;
+
+          // For recent transactions list, show completed and active jobs
+          final jobs = sortedDocs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = (data['status']?.toString() ?? '').toLowerCase().trim();
+            return status == 'completed' ||
+                status == 'accepted' ||
+                status == 'working' ||
+                status == 'arrival_pending' ||
+                status == 'worker_completed' ||
+                status == 'payment_pending' ||
+                status == 'worker_payment_pending';
+          }).toList();
 
               return ListView(
                 children: [
@@ -630,29 +650,30 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                 data['descriptionUr']?.toString() ??
                                 'Service');
                       final price = (data['price'] as num?)?.toDouble() ?? 0;
-                      final status = data['status']?.toString() ?? '';
+                      final status = (data['status']?.toString() ?? '').toLowerCase().trim();
                       final customer =
                           data['customerName']?.toString() ?? 'Customer';
+                      final isCompleted = status == 'completed' || status == 'worker_completed' || status == 'paid';
                       return ListTile(
                         leading: Icon(
-                          status == 'completed'
+                          isCompleted
                               ? Icons.check_circle
                               : Icons.south_west,
-                          color: status == 'completed'
+                          color: isCompleted
                               ? Colors.green
                               : Colors.orange,
                         ),
                         title: Text(desc),
                         subtitle: Text(
                           isUrdu
-                              ? '$customer • ${status == "completed" ? "مکمل" : "جاری"}'
-                              : '$customer • ${status == "completed" ? "Completed" : "In progress"}',
+                              ? '$customer • ${isCompleted ? "مکمل" : "جاری"}'
+                              : '$customer • ${isCompleted ? "Completed" : "In progress"}',
                           style: const TextStyle(fontSize: 12),
                         ),
                         trailing: Text(
                           '+${price.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            color: Colors.green,
+                          style: TextStyle(
+                            color: isCompleted ? Colors.green : Colors.orange,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -661,9 +682,7 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                 ],
               );
             },
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      }
 }

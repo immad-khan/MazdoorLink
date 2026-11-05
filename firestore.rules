@@ -53,12 +53,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Complaints / damage claims / security deposits: admin-only reads/updates,
-    // signed-in users may create.
+    // Complaints / damage claims / security deposits:
+    // Signed-in users may create complaints and read their own complaints.
+    // Admins may read, update, and delete all complaints.
     match /complaints/{complaintId} {
-      allow read, update: if isAdmin();
+      allow read: if isAdmin() || (isSignedIn() && (
+        resource.data.customerId == request.auth.uid ||
+        resource.data.workerId == request.auth.uid
+      ));
       allow create: if isSignedIn();
-      allow delete: if false;
+      allow update, delete: if isAdmin();
     }
 
     match /damage_claims/{claimId} {

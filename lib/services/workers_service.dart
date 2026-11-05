@@ -560,7 +560,6 @@ Stream<QuerySnapshot> streamWorkerActiveJobs(String workerId) {
       .collection('jobs')
       .where('workerId', isEqualTo: workerId)
       .where('status', whereIn: ['pending', 'accepted', 'arrival_pending', 'working', 'worker_completed', 'payment_pending', 'worker_payment_pending', 'payment_disputed'])
-      .orderBy('createdAt', descending: true)
       .snapshots();
 }
 

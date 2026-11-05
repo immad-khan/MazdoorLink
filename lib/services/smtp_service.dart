@@ -139,6 +139,26 @@ class SmtpService {
     );
   }
 
+  static Future<bool> sendJobCancellationEmail({
+    required String email,
+    required String workerName,
+    required String customerName,
+    required String jobTitle,
+    required String reason,
+  }) {
+    return _send(
+      to: email,
+      subject: 'Job Cancelled: $jobTitle - MazdoorLink',
+      text:
+          'Hello $workerName,\n\n'
+          'The customer $customerName has cancelled the job: "$jobTitle".\n\n'
+          'Cancellation Reason:\n$reason\n\n'
+          'Your status has been updated to available, and you can now accept new job requests in your area.\n\n'
+          'Thank you,\nMazdoorLink Team',
+      logLabel: 'Job Cancellation Notice for $workerName',
+    );
+  }
+
   // ── Private helpers ──────────────────────────────────────────────────────
 
   static String _formatTime(DateTime time) {

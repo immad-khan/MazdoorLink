@@ -72,7 +72,8 @@ service cloud.firestore {
     }
 
     match /security_deposits/{depositId} {
-      allow read, update: if isAdmin();
+      allow read: if isAdmin() || (isSignedIn() && resource.data.workerId == request.auth.uid);
+      allow update: if isAdmin();
       allow create: if isSignedIn();
       allow delete: if false;
     }

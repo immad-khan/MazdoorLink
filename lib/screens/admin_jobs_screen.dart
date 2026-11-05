@@ -12,7 +12,7 @@ class _JobsTabState extends State<JobsTab> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         backgroundColor: const Color(0xFFF1F5FA),
         appBar: AppBar(
@@ -27,6 +27,7 @@ class _JobsTabState extends State<JobsTab> {
               Tab(text: 'Ongoing'),
               Tab(text: 'Scheduled'),
               Tab(text: 'Completed'),
+              Tab(text: 'Cancelled'),
             ],
           ),
         ),
@@ -46,7 +47,11 @@ class _JobsTabState extends State<JobsTab> {
             final ongoingJobs = allDocs.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
               final st = data['status']?.toString();
-              return st != 'completed' && st != 'scheduled' && st != 'rejected';
+              return st != 'completed' &&
+                  st != 'scheduled' &&
+                  st != 'rejected' &&
+                  st != 'cancelled' &&
+                  st != 'arrival_declined';
             }).toList();
             final scheduledJobs = allDocs.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
@@ -56,12 +61,18 @@ class _JobsTabState extends State<JobsTab> {
               final data = doc.data() as Map<String, dynamic>;
               return data['status'] == 'completed';
             }).toList();
+            final cancelledJobs = allDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final st = data['status']?.toString();
+              return st == 'cancelled' || st == 'rejected' || st == 'arrival_declined';
+            }).toList();
 
             return TabBarView(
               children: [
                 _buildJobsList(context, ongoingJobs),
                 _buildJobsList(context, scheduledJobs),
                 _buildJobsList(context, completedJobs),
+                _buildJobsList(context, cancelledJobs),
               ],
             );
           },
@@ -82,6 +93,7 @@ class _JobsTabState extends State<JobsTab> {
         final status = job['status']?.toString() ?? '';
         final isCompleted = status == 'completed';
         final isScheduled = status == 'scheduled';
+        final isCancelled = status == 'cancelled' || status == 'rejected' || status == 'arrival_declined';
         final title = job['descriptionEn']?.toString() ?? job['descriptionUr']?.toString() ?? 'Service';
         final worker = job['workerName']?.toString() ?? 'Unknown';
         final customer = job['customerName']?.toString() ?? 'Unknown';
@@ -95,17 +107,25 @@ class _JobsTabState extends State<JobsTab> {
         final scheduledStr = scheduledDate != null
             ? '\nScheduled: ${scheduledDate.day} ${_monthName(scheduledDate.month)} at ${scheduledDate.hour.toString().padLeft(2, '0')}:${scheduledDate.minute.toString().padLeft(2, '0')}'
             : '';
+        final cancelReason = job['cancelReason']?.toString();
+        final cancelStr = isCancelled && cancelReason != null && cancelReason.isNotEmpty
+            ? '\nReason: $cancelReason'
+            : '';
 
         final badgeColor = isCompleted
             ? Colors.green
             : isScheduled
                 ? Colors.amber.shade800
-                : Colors.orange;
+                : isCancelled
+                    ? Colors.red
+                    : Colors.orange;
         final badgeBg = isCompleted
             ? Colors.green.shade100
             : isScheduled
                 ? Colors.amber.shade100
-                : Colors.orange.shade100;
+                : isCancelled
+                    ? Colors.red.shade100
+                    : Colors.orange.shade100;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -122,12 +142,14 @@ class _JobsTabState extends State<JobsTab> {
                     ? Icons.check_circle
                     : isScheduled
                         ? Icons.calendar_month
-                        : Icons.handyman,
+                        : isCancelled
+                            ? Icons.cancel
+                            : Icons.handyman,
                 color: badgeColor,
               ),
             ),
             title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Worker: $worker • Customer: $customer\nDate: $date$scheduledStr'),
+            subtitle: Text('Worker: $worker • Customer: $customer\nDate: $date$scheduledStr$cancelStr'),
             isThreeLine: true,
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -155,6 +177,8 @@ class _JobsTabState extends State<JobsTab> {
       case 'scheduled': return 'Scheduled';
       case 'pending': return 'Pending';
       case 'rejected': return 'Rejected';
+      case 'cancelled': return 'Cancelled';
+      case 'arrival_declined': return 'Arrival Declined';
       default: return status;
     }
   }

@@ -436,11 +436,30 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
             stream: FirebaseFirestore.instance
                 .collection('jobs')
                 .where('workerId', isEqualTo: workerUid)
-                .where('status', whereIn: ['accepted', 'completed'])
-                .orderBy('createdAt', descending: true)
                 .snapshots(),
             builder: (context, jobsSnapshot) {
-              final jobs = jobsSnapshot.data?.docs ?? [];
+              if (jobsSnapshot.hasError) {
+                debugPrint('EarningsDashboard jobs stream error: ${jobsSnapshot.error}');
+              }
+              final allDocs = jobsSnapshot.data?.docs ?? [];
+              final jobs = allDocs.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final status = data['status']?.toString();
+                return status == 'accepted' || status == 'completed';
+              }).toList();
+
+              jobs.sort((a, b) {
+                final aData = a.data() as Map<String, dynamic>;
+                final bData = b.data() as Map<String, dynamic>;
+                final aDt = aData['createdAt'] is Timestamp
+                    ? (aData['createdAt'] as Timestamp).toDate()
+                    : (DateTime.tryParse(aData['createdAt']?.toString() ?? '') ?? DateTime(1970));
+                final bDt = bData['createdAt'] is Timestamp
+                    ? (bData['createdAt'] as Timestamp).toDate()
+                    : (DateTime.tryParse(bData['createdAt']?.toString() ?? '') ?? DateTime(1970));
+                return bDt.compareTo(aDt);
+              });
+
               final completedCount = jobs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 return data['status'] == 'completed';

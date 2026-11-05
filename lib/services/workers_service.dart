@@ -21,21 +21,6 @@ Future<List<WorkerModel>> getAllApprovedWorkers() async {
   }).toList();
 }
 
-Future<List<WorkerModel>> getWorkersByCategory(String categoryKey) async {
-  final categoryName = _categoryKeyToName(categoryKey);
-  final snapshot = await FirebaseFirestore.instance
-      .collection('users')
-      .where('role', isEqualTo: 'worker')
-      .where('status', isEqualTo: 'approved')
-      .where('isOnline', isEqualTo: true)
-      .where('categoryNameEn', isEqualTo: categoryName)
-      .get();
-
-  return snapshot.docs.map((doc) {
-    return WorkerModel.fromFirestore(doc.data(), docId: doc.id);
-  }).toList();
-}
-
 /// Maximum allowed radius in kilometers for worker matching and job offers
 const double kMaxWorkerDistanceKm = 5.0;
 
@@ -48,8 +33,69 @@ double calculateDistanceKm(double lat1, double lon1, double lat2, double lon2) {
   return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
 }
 
-/// Returns workers in [categoryKey] who have at least one skill matching
-/// any of the [selectedSkillTitles] AND are within [maxDistanceKm] (default 5.0 km) of customer.
+/// Fetches ALL approved + online workers regardless of their primary category,
+/// then filters purely by skill titles in Dart.
+///
+/// This fixes the core matching bug: a worker whose PRIMARY category is "Plumber"
+/// but who also has electrician skills was invisible when a customer selected
+/// an electrician skill, because the old query hard-filtered by `categoryNameEn`.
+/// Now any approved+online worker whose `skills` list contains the requested skill
+/// will appear, even if their primary category differs.
+Future<List<WorkerModel>> _fetchAllOnlineApprovedWorkers() async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('users')
+      .where('role', isEqualTo: 'worker')
+      .where('status', isEqualTo: 'approved')
+      .where('isOnline', isEqualTo: true)
+      .get();
+
+  final workers = <WorkerModel>[];
+  for (final doc in snapshot.docs) {
+    final data = doc.data();
+    final topup = (data['topupBalance'] as num?)?.toDouble() ?? 0.0;
+    // Workers with negative security deposit balance cannot receive new jobs
+    if (topup < 0) continue;
+    workers.add(WorkerModel.fromFirestore(data, docId: doc.id));
+  }
+  return workers;
+}
+
+/// Legacy single-category fetch (kept for admin/stats use).
+/// For customer-facing worker discovery use [getWorkersByCategoryAndSkills] instead.
+Future<List<WorkerModel>> getWorkersByCategory(String categoryKey) async {
+  final categoryName = _categoryKeyToName(categoryKey);
+  final snapshot = await FirebaseFirestore.instance
+      .collection('users')
+      .where('role', isEqualTo: 'worker')
+      .where('status', isEqualTo: 'approved')
+      .where('isOnline', isEqualTo: true)
+      .where('categoryNameEn', isEqualTo: categoryName)
+      .get();
+
+  final workers = <WorkerModel>[];
+  for (final doc in snapshot.docs) {
+    final data = doc.data();
+    final topup = (data['topupBalance'] as num?)?.toDouble() ?? 0.0;
+    if (topup < 0) continue;
+    workers.add(WorkerModel.fromFirestore(data, docId: doc.id));
+  }
+  return workers;
+}
+
+/// Returns workers who have at least one skill matching any of the
+/// [selectedSkillTitles] AND whose primary category OR individual skill
+/// names match the [categoryKey], AND who are within [maxDistanceKm] of
+/// the customer.
+///
+/// ## How matching works
+/// 1. All approved + online workers are fetched (no category filter in Firestore).
+/// 2. We keep a worker if ANY of their saved skill titles matches what the
+///    customer selected – regardless of their primary `categoryNameEn`.
+///    This means a "Plumber" who also has "Short Circuit Fix" listed will
+///    correctly appear when a customer picks that electrical skill.
+/// 3. If [selectedSkillTitles] is empty we fall back to primary-category
+///    matching so the "browse all workers in X category" view still works.
+/// 4. Distance filter applied last.
 Future<List<WorkerModel>> getWorkersByCategoryAndSkills(
   String categoryKey,
   List<String> selectedSkillTitles, {
@@ -57,21 +103,31 @@ Future<List<WorkerModel>> getWorkersByCategoryAndSkills(
   double? customerLongitude,
   double maxDistanceKm = kMaxWorkerDistanceKm,
 }) async {
-  // Fetch all approved workers in the right category first.
-  final allInCategory = await getWorkersByCategory(categoryKey);
+  // Fetch ALL approved+online workers – no category restriction in Firestore.
+  final allWorkers = await _fetchAllOnlineApprovedWorkers();
 
-  List<WorkerModel> matched = allInCategory;
+  List<WorkerModel> matched;
 
   if (selectedSkillTitles.isNotEmpty) {
-    final normalised = selectedSkillTitles
+    // ── Skill-based matching ──────────────────────────────────────────────
+    // A worker matches if ANY of their listed skill titles matches ANY of the
+    // skills the customer selected (case-insensitive).
+    final normalisedRequested = selectedSkillTitles
         .map((t) => t.trim().toLowerCase())
         .toSet();
 
-    matched = matched.where((worker) {
-      final workerSkills = worker.skillsEn
+    matched = allWorkers.where((worker) {
+      final workerSkillTitles = worker.skillsEn
           .map((s) => s.trim().toLowerCase())
           .toSet();
-      return workerSkills.intersection(normalised).isNotEmpty;
+      return workerSkillTitles.intersection(normalisedRequested).isNotEmpty;
+    }).toList();
+  } else {
+    // ── Category-based fallback (no specific skill selected) ──────────────
+    // Match workers whose primary category equals the requested category.
+    final categoryName = _categoryKeyToName(categoryKey).toLowerCase();
+    matched = allWorkers.where((worker) {
+      return worker.category.toLowerCase() == categoryName;
     }).toList();
   }
 
@@ -222,6 +278,14 @@ Future<String?> createJobOffer({
 }) async {
   final customer = FirebaseAuth.instance.currentUser;
   if (customer == null || workerId == null) return null;
+
+  // Deposit check: workers with negative security deposit cannot receive new jobs
+  final depositBalance = await getWorkerDepositBalance(workerId);
+  if (depositBalance < 0) {
+    throw Exception(
+      'Worker has a negative security deposit balance and cannot accept new jobs at this time.',
+    );
+  }
 
   // 5 km Range Verification: enforce request is sent ONLY to worker within 5 km
   double? distanceKm;
@@ -895,6 +959,31 @@ Stream<QuerySnapshot> streamSecurityDeposits() {
       .collection('security_deposits')
       .orderBy('createdAt', descending: true)
       .snapshots();
+}
+
+/// Fetches the current security deposit / topup balance of a worker.
+/// Checks security_deposits collection first, falling back to users.topupBalance.
+Future<double> getWorkerDepositBalance(String workerId) async {
+  if (workerId.isEmpty) return 0.0;
+  try {
+    final depSnap = await FirebaseFirestore.instance
+        .collection('security_deposits')
+        .where('workerId', isEqualTo: workerId)
+        .limit(1)
+        .get();
+    if (depSnap.docs.isNotEmpty) {
+      final balance = (depSnap.docs.first.data()['currentBalance'] as num?)?.toDouble();
+      if (balance != null) return balance;
+    }
+    final uDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
+    if (uDoc.exists) {
+      final topup = (uDoc.data()?['topupBalance'] as num?)?.toDouble();
+      if (topup != null) return topup;
+    }
+  } catch (e) {
+    debugPrint('Error getting worker deposit balance: $e');
+  }
+  return 0.0;
 }
 
 // â”€â”€ Favourite Workers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

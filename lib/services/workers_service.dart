@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../data/mock_data.dart';
 import 'translation_service.dart';
 import 'location_service.dart';
+import 'smtp_service.dart';
+import 'sms_service.dart';
 
 Future<List<WorkerModel>> getAllApprovedWorkers() async {
   final snapshot = await FirebaseFirestore.instance
@@ -704,7 +706,7 @@ Stream<QuerySnapshot> streamUserComplaints({
       .snapshots();
 }
 
-Future<void> cancelJobAndRecordComplaint({
+Future<Map<String, dynamic>> cancelJobAndRecordComplaint({
   required String jobId,
   required String category,
   required String reason,
@@ -717,8 +719,25 @@ Future<void> cancelJobAndRecordComplaint({
   final now = DateTime.now();
   final dateStr = '${now.day}/${now.month}/${now.year}';
 
-  // 1. Update job document in Firestore
+  // 1. Fetch job document if worker or job title needs to be resolved
   final jobRef = FirebaseFirestore.instance.collection('jobs').doc(jobId);
+  Map<String, dynamic>? jobData;
+  try {
+    final jSnap = await jobRef.get();
+    jobData = jSnap.data();
+  } catch (_) {}
+
+  final targetWorkerId = (workerId != null && workerId.isNotEmpty)
+      ? workerId
+      : jobData?['workerId']?.toString();
+  final targetWorkerName = (workerName != null && workerName.isNotEmpty)
+      ? workerName
+      : jobData?['workerName']?.toString();
+  final targetJobTitle = (jobTitle != null && jobTitle.isNotEmpty)
+      ? jobTitle
+      : (jobData?['title'] ?? jobData?['categoryKey'] ?? jobData?['descriptionEn'] ?? 'Service Job').toString();
+
+  // 2. Update job document in Firestore
   await jobRef.update({
     'status': 'cancelled',
     'cancelCategory': category,
@@ -728,7 +747,7 @@ Future<void> cancelJobAndRecordComplaint({
     'cancelledBy': user?.uid ?? '',
   });
 
-  // 2. Fetch customer name if available
+  // 3. Fetch customer name if available
   String customerName = user?.displayName ?? 'Customer';
   if (user != null && (user.displayName == null || user.displayName!.isEmpty)) {
     try {
@@ -739,20 +758,20 @@ Future<void> cancelJobAndRecordComplaint({
     } catch (_) {}
   }
 
-  // 3. Create complaint record in Firestore
+  // 4. Create complaint record in Firestore
   final fullIssue = (message != null && message.trim().isNotEmpty)
       ? '$reason: ${message.trim()}'
       : reason;
 
   await FirebaseFirestore.instance.collection('complaints').add({
     'jobId': jobId,
-    'jobTitle': jobTitle ?? 'Cancelled Job',
+    'jobTitle': targetJobTitle,
     'customerId': user?.uid ?? '',
     'customerName': customerName,
     'user': customerName,
-    'workerId': workerId ?? '',
-    'workerName': workerName ?? '',
-    'worker': workerName ?? '',
+    'workerId': targetWorkerId ?? '',
+    'workerName': targetWorkerName ?? '',
+    'worker': targetWorkerName ?? '',
     'type': 'Job Cancellation ($category)',
     'issue': fullIssue,
     'reason': fullIssue,
@@ -764,6 +783,84 @@ Future<void> cancelJobAndRecordComplaint({
     'date': dateStr,
     'createdAt': FieldValue.serverTimestamp(),
   });
+
+  // 5. Notify worker based on worker's settings (email or sms or both)
+  bool emailSent = false;
+  bool smsSent = false;
+  String notificationMethod = 'none';
+
+  if (targetWorkerId != null && targetWorkerId.isNotEmpty) {
+    try {
+      final workerDoc = await FirebaseFirestore.instance.collection('users').doc(targetWorkerId).get();
+      if (workerDoc.exists) {
+        final wData = workerDoc.data() ?? {};
+        final workerEmail = wData['email']?.toString() ?? '';
+        final workerPhone = wData['phone']?.toString() ?? '';
+        final finalWorkerName = (targetWorkerName != null && targetWorkerName.isNotEmpty)
+            ? targetWorkerName
+            : (wData['name']?.toString() ?? 'Worker');
+        final pref = wData['notificationPreference']?.toString().toLowerCase();
+        final otpVia = wData['otpVerifiedVia']?.toString().toLowerCase();
+
+        bool sendEmail = false;
+        bool sendSms = false;
+
+        if (pref == 'phone' || pref == 'sms') {
+          sendSms = true;
+          notificationMethod = 'sms';
+        } else if (pref == 'email') {
+          sendEmail = true;
+          notificationMethod = 'email';
+        } else if (pref == 'both') {
+          sendEmail = true;
+          sendSms = true;
+          notificationMethod = 'both';
+        } else {
+          // Default fallback based on OTP verification channel or available contact info
+          if (otpVia == 'phone') {
+            sendSms = true;
+            notificationMethod = 'sms';
+            if (workerEmail.isNotEmpty && workerEmail.contains('@') && workerEmail != 'No email') {
+              sendEmail = true;
+              notificationMethod = 'both';
+            }
+          } else {
+            sendEmail = true;
+            notificationMethod = 'email';
+          }
+        }
+
+        if (sendEmail && workerEmail.isNotEmpty && workerEmail.contains('@') && workerEmail != 'No email') {
+          emailSent = await SmtpService.sendJobCancellationEmail(
+            email: workerEmail,
+            workerName: finalWorkerName,
+            customerName: customerName,
+            jobTitle: targetJobTitle,
+            reason: fullIssue,
+          );
+        }
+
+        if (sendSms && workerPhone.isNotEmpty && workerPhone != 'No phone') {
+          smsSent = await SmsService.sendJobCancellationSms(
+            phoneNumber: workerPhone,
+            workerName: finalWorkerName,
+            customerName: customerName,
+            jobTitle: targetJobTitle,
+            reason: fullIssue,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error sending cancellation notification to worker: $e');
+    }
+  }
+
+  return {
+    'success': true,
+    'emailSent': emailSent,
+    'smsSent': smsSent,
+    'notificationMethod': notificationMethod,
+  };
 }
 
 Future<void> resolveComplaint(String complaintId) async {

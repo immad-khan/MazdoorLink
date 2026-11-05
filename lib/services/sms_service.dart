@@ -85,6 +85,19 @@ class SmsService {
     return sendSms(phoneNumber: phoneNumber, message: message);
   }
 
+  /// Sends job cancellation notification to worker via SMS
+  static Future<bool> sendJobCancellationSms({
+    required String phoneNumber,
+    required String workerName,
+    required String customerName,
+    required String jobTitle,
+    required String reason,
+  }) {
+    final message =
+        'MazdoorLink Alert: Hello $workerName, your job "$jobTitle" was cancelled by customer $customerName. Reason: $reason.';
+    return sendSms(phoneNumber: phoneNumber, message: message);
+  }
+
   /// Formats phone number into international E.164 format (e.g. +923038064241)
   static String formatPhoneNumber(String raw) {
     var cleaned = raw.replaceAll(RegExp(r'[^\d+]'), '');

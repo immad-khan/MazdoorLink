@@ -7792,7 +7792,6 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   int _trackingState = 0;
   StreamSubscription<DocumentSnapshot>? _jobSub;
   LatLng? _customerLocation;
-  String _pin = '';
   Set<Marker> _markers = {};
   GoogleMapController? _mapController;
   DateTime? _scheduledTime;
@@ -7891,7 +7890,6 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           _trackingState = 0;
         }
         if (lat != null && lng != null) _customerLocation = LatLng(lat, lng);
-        _pin = data['pin']?.toString() ?? '';
         _markers = {
           Marker(
             markerId: const MarkerId('customer'),
@@ -8524,35 +8522,6 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
-                ),
-              ),
-            ),
-          if (_trackingState == 0 || _trackingState == 1)
-            Positioned(
-              top: 20,
-              left: 20,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.lock, color: Colors.white, size: 16),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${bilingual(context, 'PIN', 'پِن')}: $_pin',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),

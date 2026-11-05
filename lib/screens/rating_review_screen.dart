@@ -564,7 +564,12 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
         ),
         const SizedBox(height: 24),
         ListTile(
-          leading: const Icon(Icons.money, size: 36, color: Colors.green),
+          leading: Image.asset(
+            'assets/images/cash_icon.png',
+            width: 36,
+            height: 36,
+            fit: BoxFit.contain,
+          ),
           title: Text(bilingual(context, 'Cash by Hand', 'نقد ادا کریں')),
           subtitle: Text(
             bilingual(
@@ -927,7 +932,12 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
           onPressed: () {
             _showCashPaidDialog(context, amount);
           },
-          icon: const Icon(Icons.money, color: Colors.green),
+          icon: Image.asset(
+            'assets/images/cash_icon.png',
+            width: 24,
+            height: 24,
+            fit: BoxFit.contain,
+          ),
           label: Text(
             bilingual(context, 'Pay in Cash to Worker', 'ورکر کو نقد ادا کریں'),
             style: const TextStyle(

@@ -20,7 +20,6 @@ class WorkerTrackingScreen extends StatefulWidget {
 class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   int _status = 0; // 0: en route, 1: working, 2: waiting completion, 3: completed, 4: waiting arrival, 5: arrival declined, 6: confirm payment
   LatLng? _customerLocation;
-  String _pin = '';
   Set<Marker> _markers = {};
   GoogleMapController? _mapController;
   StreamSubscription<DocumentSnapshot>? _jobSub;
@@ -83,7 +82,6 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
           _status = 0;
         }
         if (lat != null && lng != null) _customerLocation = LatLng(lat, lng);
-        _pin = data['pin']?.toString() ?? '';
         _customerName = data['customerName']?.toString() ?? 'Customer';
         _customerPhone = phone;
         _paymentMethod = data['paymentMethod']?.toString() ?? 'Cash';
@@ -270,63 +268,6 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
     _jobSub?.cancel();
     _mapController?.dispose();
     super.dispose();
-  }
-
-  void _onArrived() {
-    final isUrdu = AppScope.of(context).isUrdu;
-    final otpController = TextEditingController();
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Text(isUrdu ? 'گاہک سے تصدیق' : 'Customer Verification'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(isUrdu ? 'کام شروع کرنے کے لیے گاہک سے 4 ہندسوں کا پِن طلب کریں:' : 'Ask the customer for the 4-digit PIN to start the service:'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: otpController,
-              keyboardType: TextInputType.number,
-              maxLength: 4,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
-              decoration: InputDecoration(
-                hintText: '----',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(isUrdu ? 'منسوخ' : 'Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (otpController.text == _pin) {
-                Navigator.pop(ctx);
-                setState(() {
-                  _status = 1;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(isUrdu ? 'پِن درست ہے! کام شروع ہو گیا ہے۔' : 'PIN Verified! Job Started.'),
-                  backgroundColor: Colors.green,
-                ));
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(isUrdu ? 'غلط پِن!' : 'Invalid PIN! Please try again.'),
-                  backgroundColor: Colors.red,
-                ));
-              }
-            },
-            child: Text(isUrdu ? 'تصدیق کریں' : 'Verify'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _requestArrivalConfirmation() {
@@ -899,7 +840,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                       ),
                     ),
                   ]
-                  // Status 1: Working (PIN verified)
+                  // Status 1: Working
                   else if (_status == 1) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -913,7 +854,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              isUrdu ? 'پِن تصدیق شدہ — کام جاری ہے' : 'PIN Verified — Work in progress',
+                              isUrdu ? 'کام جاری ہے' : 'Work in progress',
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF059669)),
                             ),
                           ),

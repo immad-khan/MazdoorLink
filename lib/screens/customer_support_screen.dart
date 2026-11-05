@@ -373,13 +373,13 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
             stream: FirebaseFirestore.instance
                 .collection('jobs')
                 .where('customerId', isEqualTo: user.uid)
-                .orderBy('createdAt', descending: true)
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
+                debugPrint('CustomerSupportScreen jobs stream error: ${snapshot.error}');
                 return Center(
                   child: Text(
                     isUrdu ? 'لوڈ کرنے میں خرابی' : 'Error loading orders',
@@ -387,7 +387,18 @@ class _CustomerSupportScreenState extends State<CustomerSupportScreen> {
                   ),
                 );
               }
-              final docs = snapshot.data?.docs ?? [];
+              final docs = List<QueryDocumentSnapshot>.from(snapshot.data?.docs ?? []);
+              docs.sort((a, b) {
+                final aData = a.data() as Map<String, dynamic>;
+                final bData = b.data() as Map<String, dynamic>;
+                final aDt = aData['createdAt'] is Timestamp
+                    ? (aData['createdAt'] as Timestamp).toDate()
+                    : (DateTime.tryParse(aData['createdAt']?.toString() ?? '') ?? DateTime(1970));
+                final bDt = bData['createdAt'] is Timestamp
+                    ? (bData['createdAt'] as Timestamp).toDate()
+                    : (DateTime.tryParse(bData['createdAt']?.toString() ?? '') ?? DateTime(1970));
+                return bDt.compareTo(aDt);
+              });
               if (docs.isEmpty) {
                 return Center(
                   child: Padding(

@@ -30,6 +30,10 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   String _paymentMethod = 'Cash';
   DateTime? _scheduledTime;
   bool _scheduleConfirmed = false;
+  String _cancelReason = '';
+  String _cancelMessage = '';
+  String _cancelCategory = '';
+  bool _cancellationAlertShown = false;
 
   @override
   void initState() {
@@ -56,7 +60,12 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
       if (!mounted) return;
       setState(() {
         final jobStatus = data['status']?.toString() ?? 'accepted';
-        if (jobStatus == 'arrival_pending') {
+        if (jobStatus == 'cancelled' || jobStatus == 'canceled') {
+          _status = 8;
+          _cancelReason = data['cancelReason']?.toString() ?? '';
+          _cancelMessage = data['cancelMessage']?.toString() ?? '';
+          _cancelCategory = data['cancelCategory']?.toString() ?? '';
+        } else if (jobStatus == 'arrival_pending') {
           _status = 4;
         } else if (jobStatus == 'working') {
           _status = 1;
@@ -86,7 +95,125 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
         _scheduleConfirmed = data['scheduleConfirmed'] as bool? ?? false;
         _updateMarkers();
       });
+
+      if (_status == 8 && !_cancellationAlertShown) {
+        _cancellationAlertShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _showCancellationDialog(isUrdu);
+          }
+        });
+      }
     });
+  }
+
+  void _showCancellationDialog(bool isUrdu) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEF2F2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.cancel, color: Color(0xFFDC2626), size: 28),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                isUrdu ? 'کام منسوخ کر دیا گیا' : 'Job Cancelled',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isUrdu
+                  ? 'کسٹمر نے یہ سروس آرڈر منسوخ کر دیا ہے۔'
+                  : 'The customer has cancelled this job order.',
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFFEDD5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isUrdu ? 'منسوخی کی وجہ:' : 'Cancellation Reason:',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: Color(0xFFC2410C),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _cancelReason.isNotEmpty
+                        ? _cancelReason
+                        : (isUrdu ? 'کسٹمر کی جانب سے منسوخ' : 'Cancelled by customer'),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  if (_cancelMessage.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      isUrdu ? 'کسٹمر کا پیغام:' : 'Customer message:',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _cancelMessage,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: Color(0xFF334155),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0D9488),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            child: Text(isUrdu ? 'سمجھ گیا / واپس جائیں' : 'OK / Back to Dashboard'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _updateMarkers() {
@@ -901,6 +1028,109 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                           Navigator.pop(context);
                         },
                         child: Text(isUrdu ? 'ڈیش بورڈ پر واپس جائیں' : 'Back to Dashboard'),
+                      ),
+                    ),
+                  ]
+                  // Status 8: Job Cancelled by Customer
+                  else if (_status == 8) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFEF2F2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.cancel_outlined, color: Color(0xFFDC2626), size: 48),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      isUrdu ? 'کسٹمر نے کام منسوخ کر دیا ہے' : 'Job Cancelled by Customer',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      isUrdu
+                          ? 'یہ کام کسٹمر کی درخواست پر منسوخ ہو چکا ہے۔'
+                          : 'This job has been cancelled by the customer.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFFFEDD5)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.info_outline, size: 16, color: Color(0xFFC2410C)),
+                              const SizedBox(width: 6),
+                              Text(
+                                isUrdu ? 'منسوخی کی وجہ:' : 'Cancellation Reason:',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Color(0xFFC2410C),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _cancelReason.isNotEmpty
+                                ? _cancelReason
+                                : (isUrdu ? 'کوئی خاص وجہ فراہم نہیں کی گئی' : 'No specific reason provided'),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                          if (_cancelMessage.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            const Divider(height: 1, color: Color(0xFFFFEDD5)),
+                            const SizedBox(height: 8),
+                            Text(
+                              isUrdu ? 'کسٹمر کا پیغام:' : 'Customer Note:',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _cancelMessage,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                                color: Color(0xFF334155),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildCustomerInfoTile(isUrdu),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        icon: const Icon(Icons.arrow_back),
+                        label: Text(isUrdu ? 'ڈیش بورڈ پر واپس جائیں' : 'Back to Dashboard'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF0D9488),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () => Navigator.pop(context),
                       ),
                     ),
                   ]

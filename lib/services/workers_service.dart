@@ -628,15 +628,54 @@ Future<void> submitPaymentComplaint({
   required String paymentMethod,
 }) async {
   final user = FirebaseAuth.instance.currentUser;
+  String customerName = 'Customer';
+  String workerName = 'Worker';
+  String workerId = '';
+  String jobTitle = 'Payment Dispute';
+
+  try {
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        customerName = userDoc.data()?['name']?.toString() ?? user.displayName ?? 'Customer';
+      }
+    }
+    final jobDoc = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+    if (jobDoc.exists) {
+      final jobData = jobDoc.data() ?? {};
+      workerName = jobData['workerName']?.toString() ?? workerName;
+      workerId = jobData['workerId']?.toString() ?? workerId;
+      jobTitle = jobData['descriptionEn']?.toString() ?? jobData['title']?.toString() ?? jobTitle;
+      if (customerName == 'Customer' && jobData['customerName'] != null) {
+        customerName = jobData['customerName'].toString();
+      }
+    }
+  } catch (e) {
+    debugPrint('Error fetching complaint metadata: $e');
+  }
+
+  final now = DateTime.now();
+  final dateStr = '${now.day}/${now.month}/${now.year}';
+
   await FirebaseFirestore.instance.collection('complaints').add({
     'jobId': jobId,
+    'jobTitle': jobTitle,
     'customerId': user?.uid,
-    'type': 'payment_not_made',
+    'customerName': customerName,
+    'user': customerName,
+    'workerId': workerId,
+    'workerName': workerName,
+    'worker': workerName,
+    'type': 'Payment Dispute',
+    'issue': reason,
     'reason': reason,
     'amount': amount,
+    'claimAmount': amount,
     'paymentMethod': paymentMethod,
+    'priority': 'High',
     'status': 'pending',
     'resolved': false,
+    'date': dateStr,
     'createdAt': FieldValue.serverTimestamp(),
   });
 }
@@ -654,10 +693,87 @@ Stream<QuerySnapshot> streamComplaints() {
       .snapshots();
 }
 
+Stream<QuerySnapshot> streamUserComplaints({
+  required String userId,
+  required bool isWorker,
+}) {
+  final field = isWorker ? 'workerId' : 'customerId';
+  return FirebaseFirestore.instance
+      .collection('complaints')
+      .where(field, isEqualTo: userId)
+      .snapshots();
+}
+
+Future<void> cancelJobAndRecordComplaint({
+  required String jobId,
+  required String category,
+  required String reason,
+  String? message,
+  String? workerId,
+  String? workerName,
+  String? jobTitle,
+}) async {
+  final user = FirebaseAuth.instance.currentUser;
+  final now = DateTime.now();
+  final dateStr = '${now.day}/${now.month}/${now.year}';
+
+  // 1. Update job document in Firestore
+  final jobRef = FirebaseFirestore.instance.collection('jobs').doc(jobId);
+  await jobRef.update({
+    'status': 'cancelled',
+    'cancelCategory': category,
+    'cancelReason': reason,
+    'cancelMessage': message ?? '',
+    'cancelledAt': FieldValue.serverTimestamp(),
+    'cancelledBy': user?.uid ?? '',
+  });
+
+  // 2. Fetch customer name if available
+  String customerName = user?.displayName ?? 'Customer';
+  if (user != null && (user.displayName == null || user.displayName!.isEmpty)) {
+    try {
+      final uDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (uDoc.exists) {
+        customerName = uDoc.data()?['name']?.toString() ?? 'Customer';
+      }
+    } catch (_) {}
+  }
+
+  // 3. Create complaint record in Firestore
+  final fullIssue = (message != null && message.trim().isNotEmpty)
+      ? '$reason: ${message.trim()}'
+      : reason;
+
+  await FirebaseFirestore.instance.collection('complaints').add({
+    'jobId': jobId,
+    'jobTitle': jobTitle ?? 'Cancelled Job',
+    'customerId': user?.uid ?? '',
+    'customerName': customerName,
+    'user': customerName,
+    'workerId': workerId ?? '',
+    'workerName': workerName ?? '',
+    'worker': workerName ?? '',
+    'type': 'Job Cancellation ($category)',
+    'issue': fullIssue,
+    'reason': fullIssue,
+    'category': category,
+    'amount': 0.0,
+    'priority': (category == 'worker_issue' || category == 'price_issue') ? 'High' : 'Medium',
+    'status': 'pending',
+    'resolved': false,
+    'date': dateStr,
+    'createdAt': FieldValue.serverTimestamp(),
+  });
+}
+
 Future<void> resolveComplaint(String complaintId) async {
   await FirebaseFirestore.instance.collection('complaints').doc(complaintId).update({
     'resolved': true,
   });
+}
+
+Future<void> deleteComplaint(String complaintId) async {
+  await FirebaseFirestore.instance.collection('complaints').doc(complaintId).delete();
 }
 
 // â”€â”€ Damage Claims â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -727,21 +843,67 @@ Future<String> createConversation({
 }) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) throw Exception('Not logged in');
+  if (otherUserId.trim().isEmpty) throw Exception('Recipient ID is empty');
   final ids = [user.uid, otherUserId]..sort();
   final convId = 'conv_${ids[0]}_${ids[1]}';
   final ref = FirebaseFirestore.instance.collection('conversations').doc(convId);
+
+  // Retrieve current user display name / profile image if not populated
+  String myName = user.displayName ?? '';
+  String myImage = user.photoURL ?? '';
+  if (myName.isEmpty) {
+    try {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        myName = userDoc.data()?['name']?.toString() ?? '';
+        if (myImage.isEmpty) {
+          myImage = userDoc.data()?['profileImage']?.toString() ?? userDoc.data()?['profilePicUrl']?.toString() ?? '';
+        }
+      }
+    } catch (_) {}
+  }
+  if (myName.isEmpty) myName = 'User';
+
   try {
     await FirebaseFirestore.instance.runTransaction((txn) async {
       final snap = await txn.get(ref);
-      if (snap.exists) return;
+      if (snap.exists) {
+        final data = snap.data();
+        final names = Map<String, dynamic>.from(data?['participantNames'] as Map? ?? {});
+        final images = Map<String, dynamic>.from(data?['participantImages'] as Map? ?? {});
+        var needUpdate = false;
+        if ((names[otherUserId] == null || (names[otherUserId] as String).isEmpty) && otherUserName.isNotEmpty) {
+          names[otherUserId] = otherUserName;
+          needUpdate = true;
+        }
+        if ((names[user.uid] == null || (names[user.uid] as String).isEmpty) && myName.isNotEmpty) {
+          names[user.uid] = myName;
+          needUpdate = true;
+        }
+        if (otherUserImage != null && otherUserImage.isNotEmpty && (images[otherUserId] == null || (images[otherUserId] as String).isEmpty)) {
+          images[otherUserId] = otherUserImage;
+          needUpdate = true;
+        }
+        if (myImage.isNotEmpty && (images[user.uid] == null || (images[user.uid] as String).isEmpty)) {
+          images[user.uid] = myImage;
+          needUpdate = true;
+        }
+        if (needUpdate) {
+          txn.update(ref, {
+            'participantNames': names,
+            'participantImages': images,
+          });
+        }
+        return;
+      }
       txn.set(ref, {
         'participants': [user.uid, otherUserId],
         'participantNames': {
-          user.uid: user.displayName ?? 'User',
+          user.uid: myName,
           otherUserId: otherUserName,
         },
         'participantImages': {
-          user.uid: user.photoURL ?? '',
+          user.uid: myImage,
           otherUserId: otherUserImage ?? '',
         },
         'lastMessage': '',
@@ -754,18 +916,20 @@ Future<String> createConversation({
       });
     });
   } catch (_) {
-    // Already exists (created concurrently) â€” reuse it.
+    // Already exists (created concurrently) — reuse it.
   }
   return convId;
 }
 
+/// Streams all conversations the current user participates in.
+/// Note: Ordering by lastTimestamp is performed client-side to avoid requiring
+/// a composite Firestore index that fails and blanks out conversations.
 Stream<QuerySnapshot> streamConversations() {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return const Stream.empty();
   return FirebaseFirestore.instance
       .collection('conversations')
       .where('participants', arrayContains: user.uid)
-      .orderBy('lastTimestamp', descending: true)
       .snapshots();
 }
 
@@ -782,32 +946,72 @@ Future<void> sendMessage(String conversationId, String text) async {
   final textEn = sourceLang == 'en' ? text : translated;
   final textUr = sourceLang == 'ur' ? text : translated;
   final convRef = FirebaseFirestore.instance.collection('conversations').doc(conversationId);
-  await FirebaseFirestore.instance.runTransaction((tx) async {
-    final snap = await tx.get(convRef);
-    if (!snap.exists) return;
-    final data = snap.data() ?? {};
-    final participants = List<String>.from(data['participants'] ?? []);
-    final otherId = participants.where((p) => p != user.uid).firstOrNull ?? '';
-    tx.set(convRef.collection('messages').doc(), {
-      'senderId': user.uid,
-      'text': text,
-      'textEn': textEn,
-      'textUr': textUr,
-      'timestamp': FieldValue.serverTimestamp(),
-      'readBy': [user.uid],
+  try {
+    await FirebaseFirestore.instance.runTransaction((tx) async {
+      final snap = await tx.get(convRef);
+      if (!snap.exists) {
+        // Ensure conversation document exists even if created while offline or concurrently
+        List<String> parts = [];
+        if (conversationId.startsWith('conv_')) {
+          parts = conversationId.substring(5).split('_');
+        }
+        if (parts.length == 2 && parts.contains(user.uid)) {
+          final other = parts.firstWhere((p) => p != user.uid);
+          tx.set(convRef, {
+            'participants': parts,
+            'participantNames': {
+              user.uid: user.displayName ?? 'User',
+              other: 'User',
+            },
+            'participantImages': {
+              user.uid: user.photoURL ?? '',
+              other: '',
+            },
+            'lastMessage': text,
+            'lastMessageEn': textEn,
+            'lastMessageUr': textUr,
+            'lastTimestamp': FieldValue.serverTimestamp(),
+            'unreadCounts': {user.uid: 0, other: 1},
+            'typing': {},
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+          tx.set(convRef.collection('messages').doc(), {
+            'senderId': user.uid,
+            'text': text,
+            'textEn': textEn,
+            'textUr': textUr,
+            'timestamp': FieldValue.serverTimestamp(),
+            'readBy': [user.uid],
+          });
+        }
+        return;
+      }
+      final data = snap.data() ?? {};
+      final participants = List<String>.from(data['participants'] ?? []);
+      final otherId = participants.where((p) => p != user.uid).firstOrNull ?? '';
+      tx.set(convRef.collection('messages').doc(), {
+        'senderId': user.uid,
+        'text': text,
+        'textEn': textEn,
+        'textUr': textUr,
+        'timestamp': FieldValue.serverTimestamp(),
+        'readBy': [user.uid],
+      });
+      final unread = Map<String, dynamic>.from(data['unreadCounts'] as Map? ?? {});
+      if (otherId.isNotEmpty) {
+        unread[otherId] = ((unread[otherId] as num?)?.toInt() ?? 0) + 1;
+      }
+      tx.update(convRef, {
+        'lastMessage': text,
+        'lastMessageEn': textEn,
+        'lastMessageUr': textUr,
+        'lastTimestamp': FieldValue.serverTimestamp(),
+        'unreadCounts': unread,
+      });
     });
-    final unread = Map<String, dynamic>.from(data['unreadCounts'] as Map? ?? {});
-    if (otherId.isNotEmpty) {
-      unread[otherId] = ((unread[otherId] as num?)?.toInt() ?? 0) + 1;
-    }
-    tx.update(convRef, {
-      'lastMessage': text,
-      'lastMessageEn': textEn,
-      'lastMessageUr': textUr,
-      'lastTimestamp': FieldValue.serverTimestamp(),
-      'unreadCounts': unread,
-    });
-  });
+  } catch (e) {
+    debugPrint('Error sending message: $e');
+  }
 }
 
 /// Marks the current user's incoming messages in [conversationId] as read and
@@ -827,19 +1031,21 @@ Future<void> markConversationRead(String conversationId) async {
   } catch (_) {
     // Conversation may have been deleted or field already matches.
   }
-  final snap = await convRef.collection('messages')
-      .where('senderId', isNotEqualTo: user.uid)
-      .get();
-  final batch = FirebaseFirestore.instance.batch();
-  var changed = false;
-  for (final doc in snap.docs) {
-    final readBy = List<String>.from(doc['readBy'] as List? ?? []);
-    if (!readBy.contains(user.uid)) {
-      batch.update(doc.reference, {'readBy': FieldValue.arrayUnion([user.uid])});
-      changed = true;
+  try {
+    final snap = await convRef.collection('messages').limit(50).get();
+    final batch = FirebaseFirestore.instance.batch();
+    var changed = false;
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      if (data['senderId'] == user.uid) continue;
+      final readBy = List<String>.from(data['readBy'] as List? ?? []);
+      if (!readBy.contains(user.uid)) {
+        batch.update(doc.reference, {'readBy': FieldValue.arrayUnion([user.uid])});
+        changed = true;
+      }
     }
-  }
-  if (changed) await batch.commit();
+    if (changed) await batch.commit();
+  } catch (_) {}
 }
 
 /// Publishes a typing heartbeat for the current user on [conversationId].
@@ -875,21 +1081,29 @@ Stream<QuerySnapshot> streamMessages(String conversationId) {
       .collection('conversations')
       .doc(conversationId)
       .collection('messages')
-      .orderBy('timestamp', descending: false)
       .snapshots();
 }
 
 Future<String?> findExistingConversation(String otherUserId) async {
   final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return null;
-  final snapshot = await FirebaseFirestore.instance
-      .collection('conversations')
-      .where('participants', arrayContains: user.uid)
-      .get();
-  for (final doc in snapshot.docs) {
-    final participants = List<String>.from(doc['participants'] ?? []);
-    if (participants.contains(otherUserId)) return doc.id;
-  }
+  if (user == null || otherUserId.trim().isEmpty) return null;
+  final ids = [user.uid, otherUserId]..sort();
+  final convId = 'conv_${ids[0]}_${ids[1]}';
+  try {
+    final doc = await FirebaseFirestore.instance.collection('conversations').doc(convId).get();
+    if (doc.exists) return convId;
+  } catch (_) {}
+
+  try {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('conversations')
+        .where('participants', arrayContains: user.uid)
+        .get();
+    for (final doc in snapshot.docs) {
+      final participants = List<String>.from(doc['participants'] ?? []);
+      if (participants.contains(otherUserId)) return doc.id;
+    }
+  } catch (_) {}
   return null;
 }
 

@@ -8805,7 +8805,12 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const CancelJobScreen(),
+                            builder: (_) => CancelJobScreen(
+                              jobId: jobId,
+                              workerId: worker.id,
+                              workerName: worker.name,
+                              jobTitle: job?.categoryKey ?? worker.category,
+                            ),
                           ),
                         ),
                         child: Text(
@@ -8833,7 +8838,12 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const CancelJobScreen(),
+                            builder: (_) => CancelJobScreen(
+                              jobId: jobId,
+                              workerId: worker.id,
+                              workerName: worker.name,
+                              jobTitle: job?.categoryKey ?? worker.category,
+                            ),
                           ),
                         ),
                         child: Text(
@@ -10318,7 +10328,40 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final conversations = snapshot.data?.docs ?? [];
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: Colors.amber),
+                    const SizedBox(height: 12),
+                    Text(
+                      bilingual(
+                        context,
+                        'Could not load conversations. Please try again.',
+                        'گفتگو لوڈ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          final rawDocs = snapshot.data?.docs ?? [];
+          final conversations = rawDocs.toList()
+            ..sort((a, b) {
+              final aData = a.data() as Map<String, dynamic>?;
+              final bData = b.data() as Map<String, dynamic>?;
+              final aTime = aData?['lastTimestamp'] as Timestamp? ?? aData?['createdAt'] as Timestamp?;
+              final bTime = bData?['lastTimestamp'] as Timestamp? ?? bData?['createdAt'] as Timestamp?;
+              if (aTime == null && bTime == null) return 0;
+              if (aTime == null) return 1;
+              if (bTime == null) return -1;
+              return bTime.compareTo(aTime);
+            });
           if (conversations.isEmpty) {
             return Center(
               child: Padding(
@@ -10351,7 +10394,10 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
               final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
               final otherId =
                   participants.where((p) => p != currentUid).firstOrNull ?? '';
-              final otherName = participantNames?[otherId] as String? ?? '';
+              var otherName = participantNames?[otherId] as String? ?? '';
+              if (otherName.isEmpty) {
+                otherName = bilingual(context, 'User', 'صارف');
+              }
               final otherImage = participantImages?[otherId] as String? ?? '';
               final unreadCounts =
                   data['unreadCounts'] as Map<String, dynamic>?;
@@ -10449,7 +10495,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _otherTyping = false;
   bool _isTyping = false;
   bool _sending = false;
-  late bool _showUrdu;
+  bool? _showUrduOverride;
+  bool get _showUrdu => _showUrduOverride ?? AppScope.of(context).isUrdu;
   int _lastMsgCount = 0;
 
   StreamSubscription<DocumentSnapshot>? _convSub;
@@ -10462,7 +10509,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   void initState() {
     super.initState();
-    _showUrdu = AppScope.of(context).isUrdu;
     setPresence(online: true);
     _presenceHeartbeat = Timer.periodic(
       const Duration(seconds: 30),
@@ -10946,7 +10992,34 @@ class _ConversationScreenState extends State<ConversationScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final docs = snapshot.data?.docs ?? [];
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(
+                bilingual(
+                  context,
+                  'Failed to load messages. Please check your connection.',
+                  'پیغامات لوڈ کرنے میں ناکامی۔ براہ کرم اپنا کنکشن چیک کریں۔',
+                ),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          );
+        }
+        final rawDocs = snapshot.data?.docs ?? [];
+        final docs = rawDocs.toList()
+          ..sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>?;
+            final bData = b.data() as Map<String, dynamic>?;
+            final aTime = aData?['timestamp'] as Timestamp?;
+            final bTime = bData?['timestamp'] as Timestamp?;
+            if (aTime == null && bTime == null) return 0;
+            if (aTime == null) return 1;
+            if (bTime == null) return -1;
+            return aTime.compareTo(bTime);
+          });
         _onMessagesChanged(docs.length);
         if (docs.isEmpty) {
           return Center(
@@ -11072,7 +11145,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => setState(() => _showUrdu = !_showUrdu),
+            onTap: () => setState(() => _showUrduOverride = !_showUrdu),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               margin: const EdgeInsets.only(right: 8),

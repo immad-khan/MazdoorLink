@@ -29,7 +29,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   ];
 
   static const List<String> _completedStatuses = [
-    'completed', 'rejected', 'cancelled',
+    'completed',
+  ];
+
+  static const List<String> _cancelledStatuses = [
+    'cancelled', 'rejected', 'arrival_declined',
   ];
 
   @override
@@ -371,12 +375,27 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                             padding: EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: _selectedTab == 1 ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.only(topRight: Radius.circular(11), bottomRight: Radius.circular(11)),
                               border: _selectedTab == 1 ? Border.all(color: AppTheme.spacer) : null,
                             ),
                             child: Center(child: Text(isUrdu ? 'مکمل' : 'Completed',
                               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
                                 color: _selectedTab == 1 ? Theme.of(context).primaryColor : AppTheme.lightText))),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedTab = 2),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _selectedTab == 2 ? Colors.white : Colors.transparent,
+                              borderRadius: BorderRadius.only(topRight: Radius.circular(11), bottomRight: Radius.circular(11)),
+                              border: _selectedTab == 2 ? Border.all(color: AppTheme.spacer) : null,
+                            ),
+                            child: Center(child: Text(isUrdu ? 'منسوخ' : 'Cancelled',
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+                                color: _selectedTab == 2 ? Theme.of(context).primaryColor : AppTheme.lightText))),
                           ),
                         ),
                       ),
@@ -389,8 +408,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                       .collection('jobs')
                       .where(
                         AppScope.of(context).role == UserRole.worker
-                            ? 'workerId'
-                            : 'customerId',
+                             ? 'workerId'
+                             : 'customerId',
                         isEqualTo: user.uid,
                       )
                       .orderBy('createdAt', descending: true)
@@ -408,6 +427,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                       final data = doc.data() as Map<String, dynamic>;
                       final status = (data['status']?.toString() ?? '').toLowerCase();
                       if (_selectedTab == 0) return _activeStatuses.contains(status);
+                      if (_selectedTab == 1) return _completedStatuses.contains(status);
+                      return _cancelledStatuses.contains(status);
                       return _completedStatuses.contains(status);
                     }).toList();
                     final filteredDocs = _searchQuery.isEmpty ? filteredByStatus : filteredByStatus.where((doc) {

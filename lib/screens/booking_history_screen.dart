@@ -387,7 +387,12 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
                       .collection('jobs')
-                      .where('workerId', isEqualTo: user.uid)
+                      .where(
+                        AppScope.of(context).role == UserRole.worker
+                            ? 'workerId'
+                            : 'customerId',
+                        isEqualTo: user.uid,
+                      )
                       .orderBy('createdAt', descending: true)
                       .snapshots(),
                   builder: (context, snapshot) {

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:service_frontend/app_theme.dart';
 import '../services/workers_service.dart';
 
@@ -21,6 +23,7 @@ class CancelJobScreen extends StatefulWidget {
   final String? jobId;
   final String? workerId;
   final String? workerName;
+  final String? workerPhone;
   final String? jobTitle;
 
   const CancelJobScreen({
@@ -28,6 +31,7 @@ class CancelJobScreen extends StatefulWidget {
     this.jobId,
     this.workerId,
     this.workerName,
+    this.workerPhone,
     this.jobTitle,
   });
 
@@ -42,6 +46,10 @@ class _CancelJobScreenState extends State<CancelJobScreen>
   String? _selectedReason;
   final TextEditingController _customMessage = TextEditingController();
   bool _submitting = false;
+
+  String? _workerPhone;
+  String? _workerName;
+  String? _workerNotificationPreference;
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -133,6 +141,8 @@ class _CancelJobScreenState extends State<CancelJobScreen>
   @override
   void initState() {
     super.initState();
+    _workerPhone = widget.workerPhone;
+    _workerName = widget.workerName;
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 350),
       vsync: this,
@@ -142,6 +152,27 @@ class _CancelJobScreenState extends State<CancelJobScreen>
       curve: Curves.easeOut,
     );
     Future.delayed(const Duration(milliseconds: 80), _fadeController.forward);
+    _loadWorkerInfo();
+  }
+
+  void _loadWorkerInfo() async {
+    final wId = widget.workerId;
+    if (wId != null && wId.isNotEmpty) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(wId).get();
+        if (doc.exists && mounted) {
+          final data = doc.data() ?? {};
+          setState(() {
+            _workerPhone ??= data['phone']?.toString();
+            _workerName ??= data['name']?.toString();
+            _workerNotificationPreference = data['notificationPreference']?.toString() ??
+                (data['otpVerifiedVia'] == 'phone' ? 'phone' : 'email');
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading worker info for cancel screen: $e');
+      }
+    }
   }
 
   @override
@@ -196,15 +227,16 @@ class _CancelJobScreenState extends State<CancelJobScreen>
               Navigator.pop(ctx);
               setState(() => _submitting = true);
 
+              Map<String, dynamic> cancelResult = {};
               try {
                 if (widget.jobId != null && widget.jobId!.isNotEmpty) {
-                  await cancelJobAndRecordComplaint(
+                  cancelResult = await cancelJobAndRecordComplaint(
                     jobId: widget.jobId!,
                     category: _selectedCategory ?? 'other',
                     reason: _selectedReason ?? 'Cancelled by customer',
                     message: _customMessage.text.trim(),
                     workerId: widget.workerId,
-                    workerName: widget.workerName,
+                    workerName: _workerName ?? widget.workerName,
                     jobTitle: widget.jobTitle,
                   );
                 }
@@ -214,6 +246,36 @@ class _CancelJobScreenState extends State<CancelJobScreen>
 
               if (!mounted) return;
               setState(() => _submitting = false);
+
+              final emailSent = cancelResult['emailSent'] == true;
+              final smsSent = cancelResult['smsSent'] == true;
+              String notifDetail = '';
+
+              if (emailSent && smsSent) {
+                notifDetail = _bilingual(
+                  context,
+                  'Worker has been notified via Email & SMS.',
+                  'ورکر کو ای میل اور ایس ایم ایس سے مطلع کر دیا گیا ہے۔',
+                );
+              } else if (smsSent) {
+                notifDetail = _bilingual(
+                  context,
+                  'Worker has been notified via SMS.',
+                  'ورکر کو ایس ایم ایس سے مطلع کر دیا گیا ہے۔',
+                );
+              } else if (emailSent) {
+                notifDetail = _bilingual(
+                  context,
+                  'Worker has been notified via Email.',
+                  'ورکر کو ای میل سے مطلع کر دیا گیا ہے۔',
+                );
+              } else {
+                notifDetail = _bilingual(
+                  context,
+                  'Worker notification processed.',
+                  'ورکر نوٹیفکیشن بھیج دیا گیا ہے۔',
+                );
+              }
               
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -221,8 +283,11 @@ class _CancelJobScreenState extends State<CancelJobScreen>
                     children: [
                       const Icon(Icons.check_circle, color: Colors.white, size: 20),
                       const SizedBox(width: 12),
-                      Text(_bilingual(context,
-                          'Job cancelled successfully.', 'کام کامیابی سے منسوخ ہو گیا۔')),
+                      Expanded(
+                        child: Text(
+                          '${_bilingual(context, "Job cancelled successfully.", "کام کامیابی سے منسوخ ہو گیا۔")} $notifDetail',
+                        ),
+                      ),
                     ],
                   ),
                   backgroundColor: const Color(0xFF059669),
@@ -242,6 +307,121 @@ class _CancelJobScreenState extends State<CancelJobScreen>
           )
         ],
       )
+    );
+  }
+
+  Widget _buildWorkerNotificationCard(BuildContext context, bool isUrdu) {
+    final name = _workerName ?? widget.workerName ?? 'Assigned Worker';
+    final title = widget.jobTitle ?? 'Service Job';
+    final phone = _workerPhone ?? widget.workerPhone ?? '';
+    final pref = _workerNotificationPreference?.toLowerCase() ?? 'email';
+
+    String prefText;
+    IconData prefIcon;
+    if (pref == 'phone' || pref == 'sms') {
+      prefText = isUrdu
+          ? 'ورکر کو SMS پر نوٹیفکیشن موصول ہوگا'
+          : 'Worker will receive SMS notification';
+      prefIcon = Icons.sms_outlined;
+    } else if (pref == 'both') {
+      prefText = isUrdu
+          ? 'ورکر کو Email اور SMS پر نوٹیفکیشن موصول ہوگا'
+          : 'Worker will receive Email & SMS notification';
+      prefIcon = Icons.all_inclusive;
+    } else {
+      prefText = isUrdu
+          ? 'ورکر کو Email پر نوٹیفکیشن موصول ہوگا'
+          : 'Worker will receive Email notification';
+      prefIcon = Icons.email_outlined;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: const Color(0xFF0D9488).withOpacity(0.12),
+                child: const Icon(Icons.person, color: Color(0xFF0D9488), size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (phone.isNotEmpty)
+                FilledButton.tonalIcon(
+                  onPressed: () async {
+                    final uri = Uri(scheme: 'tel', path: phone);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    }
+                  },
+                  icon: const Icon(Icons.call, size: 16),
+                  label: Text(_bilingual(context, 'Call', 'کال کریں')),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9488).withOpacity(0.12),
+                    foregroundColor: const Color(0xFF0D9488),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(prefIcon, size: 16, color: const Color(0xFF0D9488)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  prefText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF0D9488),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -330,6 +510,9 @@ class _CancelJobScreenState extends State<CancelJobScreen>
                 ),
               ),
               const SizedBox(height: 24),
+
+              // ── Worker & Notification preference banner ──────────────────
+              _buildWorkerNotificationCard(context, isUrdu),
 
               // ── Section label ────────────────────────────────────────────
               Text(

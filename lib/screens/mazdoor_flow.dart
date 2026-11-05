@@ -9842,8 +9842,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                         Text(
                           bilingual(
                             context,
-                            'Active, Scheduled & Past jobs',
-                            'ایکٹو، شیڈول اور پچھلے کام',
+                            'Ongoing, Scheduled, Completed & Cancelled',
+                            'جاری، شیڈول، مکمل اور منسوخ کام',
                           ),
                           style: const TextStyle(
                             fontSize: 12,
@@ -11402,8 +11402,119 @@ class BookingHistoryScreen extends StatefulWidget {
 }
 
 class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
-  // 0 = Active, 1 = Scheduled, 2 = Past
+  // 0 = Ongoing/Active, 1 = Scheduled, 2 = Completed, 3 = Cancelled
   int _tab = 0;
+
+  void _showCancelledJobDialog(BuildContext context, Map<String, dynamic> data) {
+    final isUrdu = AppScope.of(context).isUrdu;
+    final descEn = data['descriptionEn']?.toString() ?? 'Service';
+    final descUr = data['descriptionUr']?.toString() ?? 'سروس';
+    final price = data['price'];
+    final priceStr = price != null ? 'Rs. ${(price as num).toStringAsFixed(0)}' : '';
+    final reason = data['cancelReason']?.toString() ?? (isUrdu ? 'کوئی وجہ فراہم نہیں کی گئی' : 'No reason provided');
+    final role = AppScope.of(context).role;
+    final otherPerson = role == UserRole.worker
+        ? (data['customerName']?.toString() ?? 'Customer')
+        : (data['workerName']?.toString() ?? 'Worker');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.cancel, color: Colors.red, size: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                bilingual(context, 'Cancelled Job Details', 'منسوخ شدہ کام کی تفصیلات'),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isUrdu ? descUr : descEn,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            if (priceStr.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                priceStr,
+                style: const TextStyle(
+                  color: Color(0xFF0D9488),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  role == UserRole.worker ? Icons.person_outline : Icons.handyman_outlined,
+                  size: 16,
+                  color: Colors.black54,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  role == UserRole.worker
+                      ? '${bilingual(context, 'Customer:', 'گاہک:')} $otherPerson'
+                      : '${bilingual(context, 'Worker:', 'ورکر:')} $otherPerson',
+                  style: const TextStyle(fontSize: 13, color: Colors.black87),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    bilingual(context, 'Cancellation Reason', 'منسوخی کی وجہ'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11.5,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    reason,
+                    style: const TextStyle(fontSize: 12.5, color: Colors.black87),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(bilingual(context, 'Close', 'بند کریں')),
+          ),
+        ],
+      ),
+    );
+  }
 
   String _bookingStatusLabel(BuildContext context, String status) {
     switch (status) {
@@ -11447,6 +11558,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
         return bilingual(context, 'Arrival declined', 'آمد مسترد');
       case 'rejected':
         return bilingual(context, 'Rejected', 'مسترد');
+      case 'cancelled':
+        return bilingual(context, 'Cancelled', 'منسوخ شدہ');
       default:
         return status;
     }
@@ -11465,8 +11578,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
 
   static const List<String> _scheduledStatuses = ['scheduled'];
 
-  static const List<String> _pastStatuses = [
-    'completed',
+  static const List<String> _completedStatuses = ['completed'];
+
+  static const List<String> _cancelledStatuses = [
+    'cancelled',
     'rejected',
     'arrival_declined',
   ];
@@ -11493,33 +11608,37 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
           : bilingual(context, 'My Bookings', 'میری بکنگز'),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
-                Expanded(
-                  child: ChoiceChip(
-                    label: Text(bilingual(context, 'Active', 'ایکٹو')),
-                    selected: _tab == 0,
-                    onSelected: (_) => setState(() => _tab = 0),
-                  ),
+                ChoiceChip(
+                  label: Text(bilingual(context, 'Ongoing', 'جاری')),
+                  selected: _tab == 0,
+                  selectedColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                  onSelected: (_) => setState(() => _tab = 0),
                 ),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: ChoiceChip(
-                    label: Text(bilingual(context, 'Scheduled', 'شیڈول')),
-                    selected: _tab == 1,
-                    selectedColor: Colors.amber.shade100,
-                    onSelected: (_) => setState(() => _tab = 1),
-                  ),
+                ChoiceChip(
+                  label: Text(bilingual(context, 'Scheduled', 'شیڈول')),
+                  selected: _tab == 1,
+                  selectedColor: Colors.amber.shade100,
+                  onSelected: (_) => setState(() => _tab = 1),
                 ),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: ChoiceChip(
-                    label: Text(bilingual(context, 'Completed', 'مکمل')),
-                    selected: _tab == 2,
-                    onSelected: (_) => setState(() => _tab = 2),
-                  ),
+                ChoiceChip(
+                  label: Text(bilingual(context, 'Completed', 'مکمل')),
+                  selected: _tab == 2,
+                  selectedColor: Colors.green.shade100,
+                  onSelected: (_) => setState(() => _tab = 2),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Text(bilingual(context, 'Cancelled', 'منسوخ')),
+                  selected: _tab == 3,
+                  selectedColor: Colors.red.shade100,
+                  onSelected: (_) => setState(() => _tab = 3),
                 ),
               ],
             ),
@@ -11552,7 +11671,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                     ? _activeStatuses
                     : _tab == 1
                     ? _scheduledStatuses
-                    : _pastStatuses;
+                    : _tab == 2
+                    ? _completedStatuses
+                    : _cancelledStatuses;
                 final filtered =
                     docs.where((doc) {
                       final status =
@@ -11575,12 +11696,39 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                     });
 
                 if (filtered.isEmpty) {
+                  final emptyText = _tab == 0
+                      ? bilingual(context, 'No ongoing jobs', 'کوئی جاری کام نہیں')
+                      : _tab == 1
+                      ? bilingual(context, 'No scheduled jobs', 'کوئی شیڈول کام نہیں')
+                      : _tab == 2
+                      ? bilingual(context, 'No completed jobs', 'کوئی مکمل کام نہیں')
+                      : bilingual(context, 'No cancelled jobs', 'کوئی منسوخ شدہ کام نہیں');
                   return Center(
-                    child: Text(
-                      bilingual(
-                        context,
-                        'No bookings yet',
-                        'ابھی کوئی بکنگ نہیں',
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _tab == 3
+                                ? Icons.cancel_outlined
+                                : _tab == 2
+                                ? Icons.task_alt
+                                : _tab == 1
+                                ? Icons.calendar_month_outlined
+                                : Icons.assignment_outlined,
+                            size: 48,
+                            color: Colors.black26,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            emptyText,
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -11623,6 +11771,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
                         onTap: () async {
+                          if (_tab == 3) {
+                            _showCancelledJobDialog(context, data);
+                            return;
+                          }
                           if (_tab != 2 &&
                               AppScope.of(context).role == UserRole.worker) {
                             Navigator.push(
@@ -11688,12 +11840,20 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                         ? Icons.check_circle
                                         : status == 'scheduled'
                                         ? Icons.calendar_month
-                                        : Icons.schedule,
+                                        : (status == 'cancelled' ||
+                                                status == 'rejected' ||
+                                                status == 'arrival_declined')
+                                            ? Icons.cancel
+                                            : Icons.schedule,
                                     color: status == 'completed'
                                         ? Colors.green
                                         : status == 'scheduled'
                                         ? Colors.amber.shade700
-                                        : const Color(0xFF0D9488),
+                                        : (status == 'cancelled' ||
+                                                status == 'rejected' ||
+                                                status == 'arrival_declined')
+                                            ? Colors.red
+                                            : const Color(0xFF0D9488),
                                     size: 18,
                                   ),
                                   const SizedBox(width: 8),
@@ -11723,6 +11883,66 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                   color: Colors.black54,
                                 ),
                               ),
+                              if (status == 'cancelled' ||
+                                  status == 'rejected' ||
+                                  status == 'arrival_declined') ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFFFCA5A5),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.cancel_outlined,
+                                            size: 14,
+                                            color: Colors.red,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            bilingual(
+                                              context,
+                                              'Cancelled Job',
+                                              'منسوخ شدہ کام',
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (data['cancelReason'] != null &&
+                                          data['cancelReason']
+                                              .toString()
+                                              .isNotEmpty) ...[
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          '${bilingual(context, 'Reason:', 'وجہ:')} ${data['cancelReason']}',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            color: Colors.red.shade900,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
                               if (reminderLine != null) ...[
                                 const SizedBox(height: 4),
                                 Text(
@@ -12956,8 +13176,8 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: Text(
                     bilingual(
                       context,
-                      'View Scheduled, Active & Completed work',
-                      'شیڈول، موجودہ اور مکمل شدہ کام دیکھیں',
+                      'View Ongoing, Scheduled, Completed & Cancelled work',
+                      'جاری، شیڈول، مکمل اور منسوخ شدہ کام دیکھیں',
                     ),
                     style: const TextStyle(fontSize: 12),
                   ),

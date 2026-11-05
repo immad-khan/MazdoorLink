@@ -7829,6 +7829,17 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       final data = snapshot.data() as Map<String, dynamic>?;
       if (data == null) return;
       final status = data['status']?.toString() ?? 'pending';
+      if (status == 'cancelled') {
+        showToast(
+          bilingual(
+            context,
+            'Job has been cancelled.',
+            'کام منسوخ کر دیا گیا ہے۔',
+          ),
+        );
+        Navigator.pop(context);
+        return;
+      }
       if (status == 'rejected') {
         final wasScheduled = data['scheduleDeclined'] as bool? ?? false;
         showToast(

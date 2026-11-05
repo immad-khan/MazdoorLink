@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:service_frontend/app_theme.dart';
+import '../services/workers_service.dart';
 
 /// Call this from ServiceTrackingScreen instead of directly navigating.
 /// Replace the Cancel Job button's onPressed with:
@@ -17,7 +18,18 @@ String _bilingual(BuildContext context, String en, String ur) {
 }
 
 class CancelJobScreen extends StatefulWidget {
-  const CancelJobScreen({super.key});
+  final String? jobId;
+  final String? workerId;
+  final String? workerName;
+  final String? jobTitle;
+
+  const CancelJobScreen({
+    super.key,
+    this.jobId,
+    this.workerId,
+    this.workerName,
+    this.jobTitle,
+  });
 
   @override
   State<CancelJobScreen> createState() => _CancelJobScreenState();
@@ -161,14 +173,7 @@ class _CancelJobScreenState extends State<CancelJobScreen>
   }
 
   Future<void> _submitCancellation() async {
-    setState(() => _submitting = true);
-
-    // TODO: wire up to your real backend / API call here.
-    await Future.delayed(const Duration(milliseconds: 1200));
-
-    if (!mounted) return;
-
-    // Show cancel confirmation with penalty details
+    // Show cancel confirmation with penalty details first
     final penaltyMessage = _bilingual(
       context, 
       'Note: Cancelling after the worker is en route may apply a small cancellation fee to your next bill.',
@@ -187,8 +192,28 @@ class _CancelJobScreenState extends State<CancelJobScreen>
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             icon: const Icon(Icons.close),
             label: Text(_bilingual(context, 'Confirm & Cancel', 'منسوخ کریں')),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
+              setState(() => _submitting = true);
+
+              try {
+                if (widget.jobId != null && widget.jobId!.isNotEmpty) {
+                  await cancelJobAndRecordComplaint(
+                    jobId: widget.jobId!,
+                    category: _selectedCategory ?? 'other',
+                    reason: _selectedReason ?? 'Cancelled by customer',
+                    message: _customMessage.text.trim(),
+                    workerId: widget.workerId,
+                    workerName: widget.workerName,
+                    jobTitle: widget.jobTitle,
+                  );
+                }
+              } catch (e) {
+                debugPrint('Error recording cancellation complaint: $e');
+              }
+
+              if (!mounted) return;
+              setState(() => _submitting = false);
               
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -207,7 +232,7 @@ class _CancelJobScreenState extends State<CancelJobScreen>
                 ),
               );
 
-              // Pop back to customer home (adjust route name to match your AppRoutes).
+              // Pop back to customer home
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/customer/home',

@@ -210,16 +210,24 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
   }
 
   Future<void> _loadCustomSkills() async {
+    // Collect all predefined skill titles for this category so we don't
+    // show duplicates of built-in skills.
+    final predefinedTitles = _categoryKey == 'electrician'
+        ? _electricalIssues.map((e) => e.titleEn.toLowerCase()).toSet()
+        : _PlumberIssues.map((e) => e.titleEn.toLowerCase()).toSet();
+
     try {
+      // ── Fetch ALL approved workers (no category filter) ──────────────────
+      // We previously filtered by categoryNameEn which prevented workers with
+      // multiple skills (e.g. a Plumber who also does electrical work) from
+      // being discovered. Now we scan all workers and collect any custom skill
+      // title that isn't already in the predefined list for this category.
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('role', isEqualTo: 'worker')
           .where('status', isEqualTo: 'approved')
-          .where('categoryNameEn', isEqualTo: _categoryKeyToName(_categoryKey))
           .get();
-      final predefinedTitles = _categoryKey == 'electrician'
-          ? _electricalIssues.map((e) => e.titleEn.toLowerCase()).toSet()
-          : _PlumberIssues.map((e) => e.titleEn.toLowerCase()).toSet();
+
       final seen = <String>{};
       final skills = <IssueItem>[];
       for (final doc in snapshot.docs) {
@@ -229,7 +237,9 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
           final map = s as Map<String, dynamic>;
           final title = map['titleEn']?.toString() ?? '';
           final titleLower = title.toLowerCase();
-          // Skip if it matches a predefined issue (case-insensitive)
+          // Only add skills that:
+          //   1. Are not already a predefined issue for this category, AND
+          //   2. Have not been added yet (dedup by title)
           if (title.isNotEmpty &&
               !predefinedTitles.contains(titleLower) &&
               seen.add(titleLower)) {

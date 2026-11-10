@@ -738,47 +738,6 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           if (isWorker)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Card(
-                elevation: 1,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: Color(0xFF0D9488), width: 1.5),
-                ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFF0D9488).withOpacity(0.15),
-                    child: const Icon(
-                      Icons.assignment,
-                      color: Color(0xFF0D9488),
-                    ),
-                  ),
-                  title: Text(
-                    bilingual(context, 'My Jobs', 'میرے کام'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  subtitle: Text(
-                    bilingual(
-                      context,
-                      'View Ongoing, Scheduled, Completed & Cancelled work',
-                      'جاری، شیڈول، مکمل اور منسوخ شدہ کام دیکھیں',
-                    ),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: Color(0xFF0D9488),
-                  ),
-                  onTap: () =>
-                      Navigator.pushNamed(context, AppRoutes.sharedHistory),
-                ),
-              ),
-            ),
-          if (isWorker)
             StreamBuilder<DocumentSnapshot>(
               stream: streamCurrentUserData(),
               builder: (context, userSnap) {

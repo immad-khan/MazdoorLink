@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../app_state.dart';
 import '../services/safepay_service.dart';
 import '../services/workers_service.dart';
-import 'mazdoor_flow.dart' show bilingual, MzScaffold;
+import 'mazdoor_flow.dart' show bilingual, MzScaffold, AppRoutes;
 
 class _ColorStatCard extends StatelessWidget {
   const _ColorStatCard({
@@ -553,6 +553,55 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                       ],
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: InkWell(
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.workerIncome),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E1E),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFBEF264).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.bar_chart_rounded, color: Color(0xFFBEF264), size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isUrdu ? 'روزانہ، ہفتہ وار اور ماہانہ آمدنی' : 'Daily, Weekly & Monthly Income',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isUrdu ? 'تفصیلی گراف اور ہدف دیکھیں' : 'View income plan and breakdown',
+                                    style: const TextStyle(color: Colors.white60, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: StreamBuilder<QuerySnapshot>(

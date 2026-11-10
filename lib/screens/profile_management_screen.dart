@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:cross_file/cross_file.dart';
 
@@ -9,6 +10,8 @@ import 'package:service_frontend/app_theme.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/cloudinary_service.dart';
+import '../services/sms_service.dart';
+import '../services/smtp_service.dart';
 
 class ProfileManagementScreen extends StatefulWidget {
   const ProfileManagementScreen({super.key});
@@ -43,6 +46,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
   int _jobsCompleted = 0;
   bool _isLoading = true;
   bool _isSaving = false;
+  String _notificationPreference = 'email';
 
   static const _categories = ['Select a category', 'Plumber', 'Electrician'];
 
@@ -67,6 +71,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
       if (data != null && mounted) {
         final role = data['role']?.toString() ?? 'customer';
         _isWorker = role == 'worker';
+        _notificationPreference = data['notificationPreference']?.toString() ??
+            (data['otpVerifiedVia'] == 'phone' ? 'phone' : 'email');
         _nameController.text = data['name']?.toString() ?? '';
         _phoneController.text = data['phone']?.toString() ?? '';
         _emailController.text = data['email']?.toString() ?? user.email ?? '';
@@ -377,7 +383,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                 const SizedBox(height: 4),
                 Text(
                   _isWorker
-                      ? 'Worker${_status.isNotEmpty ? ' - ${_status.toUpperCase()}' : ''}'
+                       ? 'Worker${_status.isNotEmpty ? ' - ${_status.toUpperCase()}' : ''}'
                       : 'Customer',
                   style: const TextStyle(color: Colors.black54, fontSize: 13),
                 ),
@@ -499,19 +505,675 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
     }
   }
 
-  Future<void> _sendPasswordReset() async {
+  String _getChannelSubtitle() {
+    final pref = _notificationPreference.toLowerCase();
+    final phone = _phoneController.text.trim();
     final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      _showSnack('No email address found for this account.', isError: true);
+
+    if (pref == 'phone' || pref == 'sms') {
+      return phone.isNotEmpty
+          ? 'Reset via SMS OTP sent to $phone'
+          : 'Reset via SMS OTP to phone';
+    } else if (pref == 'both') {
+      return 'Reset via OTP to both Phone (SMS) & Email';
+    } else {
+      return email.isNotEmpty
+          ? 'Reset via OTP / link sent to $email'
+          : 'Reset via link sent to email';
+    }
+  }
+
+  Future<bool> _sendOtpToDestination({
+    required String channel,
+    required String otp,
+    required String phone,
+    required String email,
+  }) async {
+    final norm = channel.toLowerCase();
+    bool success = false;
+
+    if (norm == 'phone' || norm == 'sms') {
+      if (phone.isEmpty) return false;
+      success = await SmsService.sendOtp(phone, otp);
+    } else if (norm == 'both') {
+      bool sentSms = false;
+      bool sentEmail = false;
+      if (phone.isNotEmpty) {
+        sentSms = await SmsService.sendOtp(phone, otp);
+      }
+      if (email.isNotEmpty) {
+        sentEmail = await SmtpService.sendPasswordResetOTP(email, otp);
+        try {
+          await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+        } catch (_) {}
+      }
+      success = sentSms || sentEmail;
+    } else {
+      if (email.isEmpty) return false;
+      success = await SmtpService.sendPasswordResetOTP(email, otp);
+      try {
+        await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+        success = true;
+      } catch (_) {}
+    }
+
+    return success;
+  }
+
+  Future<void> _startPasswordResetFlow() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showSnack('Please log in again to change your password.', isError: true);
       return;
     }
 
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      _showSnack('Password reset email sent.');
-    } catch (e) {
-      _showSnack('Unable to send password reset email: $e', isError: true);
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        final data = doc.data() ?? {};
+        setState(() {
+          _notificationPreference = data['notificationPreference']?.toString() ??
+              (data['otpVerifiedVia'] == 'phone' ? 'phone' : _notificationPreference);
+        });
+      }
+    } catch (_) {}
+
+    final phone = _phoneController.text.trim();
+    final email = _emailController.text.trim().isNotEmpty
+        ? _emailController.text.trim()
+        : (user.email ?? '');
+
+    final currentChannel = _notificationPreference.toLowerCase();
+    if ((currentChannel == 'phone' || currentChannel == 'sms') && phone.isEmpty) {
+      _showSnack('Please add and save a phone number to receive reset OTP via SMS.', isError: true);
+      return;
     }
+    if (currentChannel == 'email' && email.isEmpty) {
+      _showSnack('No email address found for this account.', isError: true);
+      return;
+    }
+
+    final random = math.Random();
+    final activeOtp = (1000 + random.nextInt(9000)).toString();
+
+    _showSnack(
+      currentChannel == 'phone' || currentChannel == 'sms'
+          ? 'Sending password reset OTP via SMS to $phone...'
+          : currentChannel == 'both'
+              ? 'Sending password reset OTP to both phone & email...'
+              : 'Sending password reset OTP to $email...',
+    );
+
+    final sent = await _sendOtpToDestination(
+      channel: currentChannel,
+      otp: activeOtp,
+      phone: phone,
+      email: email,
+    );
+
+    if (!sent && mounted) {
+      _showSnack(
+        'Failed to deliver OTP. Please check your contact details and try again.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    _showChangePasswordModal(initialOtp: activeOtp, initialChannel: currentChannel);
+  }
+
+  void _showChangePasswordModal({
+    required String initialOtp,
+    required String initialChannel,
+  }) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final phone = _phoneController.text.trim();
+    final email = _emailController.text.trim().isNotEmpty
+        ? _emailController.text.trim()
+        : (user.email ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) {
+        String activeOtp = initialOtp;
+        String activeChannel = initialChannel;
+        final otpController = TextEditingController();
+        final newPasswordController = TextEditingController();
+        final confirmPasswordController = TextEditingController();
+        final currentPasswordController = TextEditingController();
+
+        bool obscureNew = true;
+        bool obscureConfirm = true;
+        bool obscureCurrent = true;
+        bool showCurrentPasswordField = false;
+        bool isSubmitting = false;
+        bool isResending = false;
+        String? modalError;
+        String? modalSuccess;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            String channelBannerText() {
+              if (activeChannel == 'phone' || activeChannel == 'sms') {
+                return 'A 4-digit password reset OTP has been sent via SMS to $phone';
+              } else if (activeChannel == 'both') {
+                return 'A 4-digit password reset OTP has been sent to $phone (SMS) and $email (Email)';
+              } else {
+                return 'A 4-digit password reset OTP and link have been sent to $email';
+              }
+            }
+
+            Widget channelChip({
+              required String label,
+              required IconData icon,
+              required String value,
+            }) {
+              final isSelected = activeChannel == value;
+              final primary = Theme.of(context).primaryColor;
+              return Expanded(
+                child: InkWell(
+                  onTap: isSubmitting || isResending
+                      ? null
+                      : () async {
+                          if (activeChannel == value) return;
+                          setModalState(() {
+                            activeChannel = value;
+                            isResending = true;
+                            modalError = null;
+                            modalSuccess = null;
+                          });
+
+                          // Update Firestore notification preference
+                          try {
+                            await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(user.uid)
+                                .update({'notificationPreference': value});
+                            if (mounted) {
+                              setState(() => _notificationPreference = value);
+                            }
+                          } catch (_) {}
+
+                          final random = math.Random();
+                          final newOtp = (1000 + random.nextInt(9000)).toString();
+                          final sent = await _sendOtpToDestination(
+                            channel: value,
+                            otp: newOtp,
+                            phone: phone,
+                            email: email,
+                          );
+
+                          setModalState(() {
+                            isResending = false;
+                            if (sent) {
+                              activeOtp = newOtp;
+                              otpController.clear();
+                              modalSuccess = 'New OTP sent via ${value == 'phone' ? 'SMS' : value == 'both' ? 'Both SMS & Email' : 'Email'}';
+                            } else {
+                              modalError = 'Failed to deliver OTP to selected channel.';
+                            }
+                          });
+                        },
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? primary : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected ? primary : const Color(0xFFCBD5E1),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 18, color: isSelected ? Colors.white : AppTheme.darkerText),
+                        const SizedBox(height: 4),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected ? Colors.white : AppTheme.darkerText,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                12,
+                20,
+                MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.lock_reset,
+                            color: Theme.of(context).primaryColor,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Change Password',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.darkerText,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(bottomSheetContext),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Delivery channel selector
+                    const Text(
+                      'Delivery Channel:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.lightText,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        channelChip(
+                          label: 'Number (SMS)',
+                          icon: Icons.sms_outlined,
+                          value: 'phone',
+                        ),
+                        const SizedBox(width: 8),
+                        channelChip(
+                          label: 'Email',
+                          icon: Icons.email_outlined,
+                          value: 'email',
+                        ),
+                        const SizedBox(width: 8),
+                        channelChip(
+                          label: 'Both',
+                          icon: Icons.all_inclusive,
+                          value: 'both',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Informational banner
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            activeChannel == 'phone' || activeChannel == 'sms'
+                                ? Icons.sms_outlined
+                                : activeChannel == 'both'
+                                    ? Icons.all_inclusive
+                                    : Icons.email_outlined,
+                            color: const Color(0xFF16A34A),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              channelBannerText(),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF166534),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // OTP input
+                    TextField(
+                      controller: otpController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 4,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 8,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Enter 4-Digit OTP',
+                        counterText: '',
+                        prefixIcon: const Icon(Icons.pin_outlined),
+                        suffixIcon: TextButton(
+                          onPressed: isResending
+                              ? null
+                              : () async {
+                                  setModalState(() {
+                                    isResending = true;
+                                    modalError = null;
+                                    modalSuccess = null;
+                                  });
+                                  final random = math.Random();
+                                  final newOtp = (1000 + random.nextInt(9000)).toString();
+                                  final sent = await _sendOtpToDestination(
+                                    channel: activeChannel,
+                                    otp: newOtp,
+                                    phone: phone,
+                                    email: email,
+                                  );
+                                  setModalState(() {
+                                    isResending = false;
+                                    if (sent) {
+                                      activeOtp = newOtp;
+                                      modalSuccess = 'Verification code resent successfully!';
+                                    } else {
+                                      modalError = 'Failed to resend code. Please try again.';
+                                    }
+                                  });
+                                },
+                          child: isResending
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('Resend'),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // New Password field
+                    TextField(
+                      controller: newPasswordController,
+                      obscureText: obscureNew,
+                      decoration: InputDecoration(
+                        labelText: 'New Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () => setModalState(() => obscureNew = !obscureNew),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Confirm New Password field
+                    TextField(
+                      controller: confirmPasswordController,
+                      obscureText: obscureConfirm,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm New Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscureConfirm ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () => setModalState(() => obscureConfirm = !obscureConfirm),
+                        ),
+                      ),
+                    ),
+
+                    if (showCurrentPasswordField) ...[
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: currentPasswordController,
+                        obscureText: obscureCurrent,
+                        decoration: InputDecoration(
+                          labelText: 'Current Password (Required for confirmation)',
+                          prefixIcon: const Icon(Icons.security),
+                          suffixIcon: IconButton(
+                            icon: Icon(obscureCurrent ? Icons.visibility_off : Icons.visibility),
+                            onPressed: () => setModalState(() => obscureCurrent = !obscureCurrent),
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    if (modalError != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                modalError!,
+                                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    if (modalSuccess != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_outline, color: Color(0xFF16A34A), size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                modalSuccess!,
+                                style: const TextStyle(color: Color(0xFF166534), fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                final enteredOtp = otpController.text.trim();
+                                if (enteredOtp.length != 4) {
+                                  setModalState(() {
+                                    modalError = 'Please enter the 4-digit verification code.';
+                                  });
+                                  return;
+                                }
+
+                                if (enteredOtp != activeOtp) {
+                                  setModalState(() {
+                                    modalError = 'Invalid verification code. Please check your SMS/email.';
+                                  });
+                                  return;
+                                }
+
+                                final newPass = newPasswordController.text;
+                                final confirmPass = confirmPasswordController.text;
+
+                                if (newPass.length < 6) {
+                                  setModalState(() {
+                                    modalError = 'New password must be at least 6 characters.';
+                                  });
+                                  return;
+                                }
+
+                                if (newPass != confirmPass) {
+                                  setModalState(() {
+                                    modalError = 'Passwords do not match.';
+                                  });
+                                  return;
+                                }
+
+                                setModalState(() {
+                                  isSubmitting = true;
+                                  modalError = null;
+                                  modalSuccess = null;
+                                });
+
+                                try {
+                                  if (showCurrentPasswordField && currentPasswordController.text.isNotEmpty) {
+                                    final emailForAuth = user.email ?? email;
+                                    if (emailForAuth.isNotEmpty) {
+                                      final cred = EmailAuthProvider.credential(
+                                        email: emailForAuth,
+                                        password: currentPasswordController.text.trim(),
+                                      );
+                                      await user.reauthenticateWithCredential(cred);
+                                    }
+                                  }
+
+                                  await user.updatePassword(newPass);
+
+                                  if (bottomSheetContext.mounted) {
+                                    Navigator.pop(bottomSheetContext);
+                                  }
+                                  _showSnack('Password updated successfully!');
+                                } on FirebaseAuthException catch (e) {
+                                  if (e.code == 'requires-recent-login') {
+                                    setModalState(() {
+                                      isSubmitting = false;
+                                      showCurrentPasswordField = true;
+                                      modalError = 'Recent login required. Please enter your current password to confirm.';
+                                    });
+                                  } else {
+                                    setModalState(() {
+                                      isSubmitting = false;
+                                      modalError = e.message ?? 'Failed to update password.';
+                                    });
+                                  }
+                                } catch (e) {
+                                  setModalState(() {
+                                    isSubmitting = false;
+                                    modalError = 'Error updating password: $e';
+                                  });
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Update Password',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+                    Center(
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.mail_outline, size: 16),
+                        label: const Text(
+                          'Send password reset link to email instead',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        onPressed: () async {
+                          if (email.isEmpty) {
+                            setModalState(() {
+                              modalError = 'No email associated with this account.';
+                            });
+                            return;
+                          }
+                          try {
+                            await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                            if (bottomSheetContext.mounted) {
+                              Navigator.pop(bottomSheetContext);
+                            }
+                            _showSnack('Password reset email sent to $email');
+                          } catch (e) {
+                            setModalState(() {
+                              modalError = 'Error sending email: $e';
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -717,9 +1379,49 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
                   ListTile(
                     leading: Icon(Icons.lock_reset, color: Theme.of(context).primaryColor),
                     title: const Text('Change Password'),
-                    subtitle: const Text('Send a password reset link to your email'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: _sendPasswordReset,
+                    subtitle: Text(_getChannelSubtitle()),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _notificationPreference == 'phone' || _notificationPreference == 'sms'
+                                    ? Icons.sms_outlined
+                                    : _notificationPreference == 'both'
+                                        ? Icons.all_inclusive
+                                        : Icons.email_outlined,
+                                size: 14,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _notificationPreference == 'phone' || _notificationPreference == 'sms'
+                                    ? 'SMS'
+                                    : _notificationPreference == 'both'
+                                        ? 'Both'
+                                        : 'Email',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                    onTap: _startPasswordResetFlow,
                   ),
                 ],
               ),

@@ -10,6 +10,7 @@ import '../services/location_service.dart';
 import '../services/smtp_service.dart';
 import '../services/workers_service.dart';
 import 'worker_tracking_screen.dart';
+import '../widgets/worker_todays_income_card.dart';
 import 'mazdoor_flow.dart'
     show
         bilingual,
@@ -717,6 +718,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          const WorkerTodaysIncomeCard(),
           const SizedBox(height: 12),
           InkWell(
             onTap: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),

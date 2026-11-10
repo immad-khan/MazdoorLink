@@ -26,6 +26,7 @@ import 'mazdoor_flow.dart'
         TrackingArguments,
         LocationPickArguments,
         ConversationArguments;
+
 class _FlowDisplayedSkill {
   final String titleEn;
   final String titleUr;
@@ -139,8 +140,17 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
       (sum, item) => sum + item.price,
     );
 
-    if (!_initializedOffer && grandTotal > 0) {
-      _offerController.text = grandTotal.toStringAsFixed(0);
+    final double workerBasePrice = grandTotal > 0
+        ? grandTotal
+        : (worker.priceValue > 0
+            ? worker.priceValue
+            : (double.tryParse(worker.price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 300.0));
+
+    final double minAllowedPrice = (workerBasePrice * 0.90).roundToDouble();
+    final double maxAllowedPrice = (workerBasePrice * 1.10).roundToDouble();
+
+    if (!_initializedOffer && workerBasePrice > 0) {
+      _offerController.text = workerBasePrice.toStringAsFixed(0);
       _initializedOffer = true;
     }
 
@@ -300,40 +310,133 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    TextField(
-                      controller: _offerController,
-                      keyboardType: TextInputType.number,
-                      textDirection: TextDirection.ltr,
-                      decoration: InputDecoration(
-                        prefixIcon: Container(
-                          width: 48,
-                          alignment: Alignment.center,
-                          child: const Text(
-                            'PKR',
+                    () {
+                      final enteredPrice = double.tryParse(_offerController.text.trim());
+                      final isBelowMin = enteredPrice != null && enteredPrice < minAllowedPrice;
+                      final isAboveMax = enteredPrice != null && enteredPrice > maxAllowedPrice;
+                      final isOutOfRange = isBelowMin || isAboveMax;
+
+                      Widget buildOfferChip({
+                        required String label,
+                        required double targetAmount,
+                      }) {
+                        final currentText = _offerController.text.trim();
+                        final currentVal = double.tryParse(currentText);
+                        final isSelected = currentVal != null && (currentVal - targetAmount).abs() < 1;
+
+                        return ActionChip(
+                          label: Text(
+                            label,
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0D9488),
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected ? Colors.white : const Color(0xFF0F766E),
                             ),
                           ),
-                        ),
-                        hintText: isUrdu ? 'مثلاً 500' : 'E.g., 500',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF0D9488),
-                            width: 2,
+                          backgroundColor: isSelected ? const Color(0xFF0D9488) : const Color(0xFFF0FDFA),
+                          side: BorderSide(
+                            color: isSelected ? const Color(0xFF0D9488) : const Color(0xFF99F6E4),
                           ),
-                        ),
-                        labelText: isUrdu
-                            ? 'اپنی پیشکش درج کریں (Rs)'
-                            : 'Enter Your Offer (Rs)',
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
-                    ),
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () {
+                            setState(() {
+                              _offerController.text = targetAmount.toStringAsFixed(0);
+                            });
+                          },
+                        );
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextField(
+                            controller: _offerController,
+                            keyboardType: TextInputType.number,
+                            textDirection: TextDirection.ltr,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              prefixIcon: Container(
+                                width: 48,
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  'PKR',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0D9488),
+                                  ),
+                                ),
+                              ),
+                              hintText: isUrdu
+                                  ? 'مثلاً ${workerBasePrice.toStringAsFixed(0)}'
+                                  : 'E.g., ${workerBasePrice.toStringAsFixed(0)}',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(
+                                  color: isOutOfRange ? Colors.red : const Color(0xFF0D9488),
+                                  width: 2,
+                                ),
+                              ),
+                              labelText: isUrdu
+                                  ? 'اپنی پیشکش درج کریں (Rs)'
+                                  : 'Enter Your Offer (Rs)',
+                              helperText: isOutOfRange
+                                  ? null
+                                  : (isUrdu
+                                      ? 'ورکر کی اصل قیمت: ${workerBasePrice.toStringAsFixed(0)} روپے • مجاز پیشکش: ${minAllowedPrice.toStringAsFixed(0)} تا ${maxAllowedPrice.toStringAsFixed(0)} روپے (±10%)'
+                                      : 'Worker Price: Rs. ${workerBasePrice.toStringAsFixed(0)} • Allowed range: Rs. ${minAllowedPrice.toStringAsFixed(0)} - Rs. ${maxAllowedPrice.toStringAsFixed(0)} (±10%)'),
+                              helperMaxLines: 2,
+                              errorText: isBelowMin
+                                  ? (isUrdu
+                                      ? 'پیشکش ${minAllowedPrice.toStringAsFixed(0)} روپے سے کم نہیں ہو سکتی (ورکر قیمت کا -10%)'
+                                      : 'Offer cannot be less than Rs. ${minAllowedPrice.toStringAsFixed(0)} (-10% of worker price)')
+                                  : (isAboveMax
+                                      ? (isUrdu
+                                          ? 'پیشکش ${maxAllowedPrice.toStringAsFixed(0)} روپے سے زیادہ نہیں ہو سکتی (ورکر قیمت کا +10%)'
+                                          : 'Offer cannot be more than Rs. ${maxAllowedPrice.toStringAsFixed(0)} (+10% of worker price)')
+                                      : null),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                buildOfferChip(
+                                  label: '-10% (Rs. ${minAllowedPrice.toStringAsFixed(0)})',
+                                  targetAmount: minAllowedPrice,
+                                ),
+                                const SizedBox(width: 6),
+                                buildOfferChip(
+                                  label: '-5% (Rs. ${(workerBasePrice * 0.95).round()})',
+                                  targetAmount: (workerBasePrice * 0.95).roundToDouble(),
+                                ),
+                                const SizedBox(width: 6),
+                                buildOfferChip(
+                                  label: '${isUrdu ? 'اصل' : 'Actual'} (Rs. ${workerBasePrice.toStringAsFixed(0)})',
+                                  targetAmount: workerBasePrice,
+                                ),
+                                const SizedBox(width: 6),
+                                buildOfferChip(
+                                  label: '+5% (Rs. ${(workerBasePrice * 1.05).round()})',
+                                  targetAmount: (workerBasePrice * 1.05).roundToDouble(),
+                                ),
+                                const SizedBox(width: 6),
+                                buildOfferChip(
+                                  label: '+10% (Rs. ${maxAllowedPrice.toStringAsFixed(0)})',
+                                  targetAmount: maxAllowedPrice,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }(),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -797,6 +900,36 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                             );
                             return;
                           }
+                          if (offerPrice < minAllowedPrice) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  bilingual(
+                                    context,
+                                    'Offer cannot be less than Rs. ${minAllowedPrice.toStringAsFixed(0)} (10% less than worker price Rs. ${workerBasePrice.toStringAsFixed(0)}).',
+                                    'پیشکش ورکر کی قیمت (${workerBasePrice.toStringAsFixed(0)} روپے) سے 10% کم یعنی ${minAllowedPrice.toStringAsFixed(0)} روپے سے کم نہیں ہو سکتی۔',
+                                  ),
+                                ),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                            return;
+                          }
+                          if (offerPrice > maxAllowedPrice) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  bilingual(
+                                    context,
+                                    'Offer cannot be more than Rs. ${maxAllowedPrice.toStringAsFixed(0)} (10% more than worker price Rs. ${workerBasePrice.toStringAsFixed(0)}).',
+                                    'پیشکش ورکر کی قیمت (${workerBasePrice.toStringAsFixed(0)} روپے) سے 10% زیادہ یعنی ${maxAllowedPrice.toStringAsFixed(0)} روپے سے زیادہ نہیں ہو سکتی۔',
+                                  ),
+                                ),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                            return;
+                          }
                           final jobDesc =
                               args?.job ??
                               JobPostingArguments(
@@ -862,6 +995,7 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                               customerLatitude: latitude,
                               customerLongitude: longitude,
                               visibilityDurationMinutes: _visibilityMinutes,
+                              workerBasePrice: workerBasePrice,
                             );
                             if (context.mounted) {
                               Navigator.pushReplacementNamed(
@@ -912,6 +1046,36 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                                 context,
                                 'Please enter a valid amount to make an offer.',
                                 'براہ کرم پیشکش کرنے کے لئے ایک درست رقم درج کریں۔',
+                              ),
+                            ),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                        return;
+                      }
+                      if (offerPrice < minAllowedPrice) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              bilingual(
+                                context,
+                                'Offer cannot be less than Rs. ${minAllowedPrice.toStringAsFixed(0)} (10% less than worker price Rs. ${workerBasePrice.toStringAsFixed(0)}).',
+                                'پیشکش ورکر کی قیمت (${workerBasePrice.toStringAsFixed(0)} روپے) سے 10% کم یعنی ${minAllowedPrice.toStringAsFixed(0)} روپے سے کم نہیں ہو سکتی۔',
+                              ),
+                            ),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                        return;
+                      }
+                      if (offerPrice > maxAllowedPrice) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              bilingual(
+                                context,
+                                'Offer cannot be more than Rs. ${maxAllowedPrice.toStringAsFixed(0)} (10% more than worker price Rs. ${workerBasePrice.toStringAsFixed(0)}).',
+                                'پیشکش ورکر کی قیمت (${workerBasePrice.toStringAsFixed(0)} روپے) سے 10% زیادہ یعنی ${maxAllowedPrice.toStringAsFixed(0)} روپے سے زیادہ نہیں ہو سکتی۔',
                               ),
                             ),
                             backgroundColor: Colors.redAccent,
@@ -981,6 +1145,7 @@ class _FlowWorkerProfileScreenState extends State<FlowWorkerProfileScreen> {
                           customerLatitude: latitude,
                           customerLongitude: longitude,
                           visibilityDurationMinutes: _visibilityMinutes,
+                          workerBasePrice: workerBasePrice,
                         );
                         if (context.mounted) {
                           Navigator.pushReplacementNamed(
@@ -1389,4 +1554,3 @@ class _Tag extends StatelessWidget {
     );
   }
 }
-

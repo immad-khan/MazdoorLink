@@ -43,6 +43,8 @@ import 'worker_tracking_screen.dart';
 import '../services/safepay_service.dart';
 import 'earnings_dashboard_screen.dart';
 export 'earnings_dashboard_screen.dart';
+import 'worker_income_screen.dart';
+export 'worker_income_screen.dart';
 import 'rating_review_screen.dart';
 export 'rating_review_screen.dart';
 
@@ -205,6 +207,7 @@ class AppRoutes {
   static const workerDashboard = '/worker/dashboard';
   static const workerServicesSetup = '/worker/services-setup';
   static const workerEarnings = '/worker/earnings';
+  static const workerIncome = '/worker/income';
   static const priceEstimation = '/shared/price-estimation';
   static const documentUpload = '/worker/document-upload';
   static const biometricVerification = '/worker/biometric-verification';
@@ -257,6 +260,8 @@ Route<dynamic> buildRoute(RouteSettings settings) {
       return _page(const WorkerServicesSetupScreen(), settings);
     case AppRoutes.workerEarnings:
       return _page(const EarningsDashboardScreen(), settings);
+    case AppRoutes.workerIncome:
+      return _page(const WorkerIncomeScreen(), settings);
     case AppRoutes.priceEstimation:
       return _page(PriceEstimationScreen(), settings);
     case AppRoutes.documentUpload:

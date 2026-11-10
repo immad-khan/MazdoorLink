@@ -274,6 +274,7 @@ Future<String?> createJobOffer({
   double? customerLatitude,
   double? customerLongitude,
   int visibilityDurationMinutes = 10,
+  double? workerBasePrice,
   double maxDistanceKm = kMaxWorkerDistanceKm,
 }) async {
   final customer = FirebaseAuth.instance.currentUser;
@@ -319,6 +320,16 @@ Future<String?> createJobOffer({
   final customerDoc = await FirebaseFirestore.instance.collection('users').doc(customer.uid).get();
   final customerName = customerDoc.data()?['name']?.toString() ?? customer.displayName ?? 'Customer';
 
+  if (workerBasePrice != null && workerBasePrice > 0) {
+    final minAllowed = (workerBasePrice * 0.90).roundToDouble();
+    final maxAllowed = (workerBasePrice * 1.10).roundToDouble();
+    if (price < minAllowed || price > maxAllowed) {
+      throw Exception(
+        'Offer price (Rs. ${price.toStringAsFixed(0)}) must be within ±10% of worker price (Rs. ${minAllowed.toStringAsFixed(0)} - Rs. ${maxAllowed.toStringAsFixed(0)}).',
+      );
+    }
+  }
+
   final pin = '${1000 + Random().nextInt(9000)}';
   final expiresAt = DateTime.now().add(Duration(minutes: visibilityDurationMinutes));
 
@@ -329,6 +340,7 @@ Future<String?> createJobOffer({
     'workerName': workerName,
     'descriptionEn': descriptionEn,
     'descriptionUr': descriptionUr,
+    if (workerBasePrice != null) 'workerBasePrice': workerBasePrice,
     'price': price,
     'categoryKey': categoryKey,
     'paymentMethod': paymentMethod,

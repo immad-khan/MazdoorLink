@@ -373,6 +373,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
+                    onTap: () =>
+                        Navigator.pushNamed(context, AppRoutes.profileManagement),
                     leading: CircleAvatar(
                       backgroundImage: profileImage.isNotEmpty
                           ? NetworkImage(profileImage)

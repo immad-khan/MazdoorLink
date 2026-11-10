@@ -4,6 +4,7 @@ import 'package:service_frontend/app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/location_service.dart';
 import '../services/workers_service.dart';
+import '../widgets/worker_todays_income_card.dart';
 
 class WorkerHome extends StatefulWidget {
   @override
@@ -286,6 +287,14 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
               ),
             ),
           ),
+        ),
+
+        SizedBox(height: 20),
+
+        // Today's Income Card
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: WorkerTodaysIncomeCard(),
         ),
 
         SizedBox(height: 20),

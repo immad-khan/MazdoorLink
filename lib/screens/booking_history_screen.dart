@@ -1,530 +1,1058 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:service_frontend/app_theme.dart';
-import 'package:intl/intl.dart';
-import '../l10n/app_localizations.dart';
-import '../widgets/icon_helper.dart';
-import '../app_state.dart';
-import 'mazdoor_flow.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 
+import '../app_state.dart';
+import '../services/workers_service.dart';
+import '../data/mock_data.dart';
+import 'issue_selection_screen.dart';
+import 'worker_tracking_screen.dart';
+import 'mazdoor_flow.dart'
+    show
+        bilingual,
+        showToast,
+        showExitMazdoorlinkDialog,
+        MzScaffold,
+        AppRoutes,
+        TrackingArguments,
+        ConversationArguments,
+        ProfileArguments;
 class BookingHistoryScreen extends StatefulWidget {
+  const BookingHistoryScreen({super.key});
+
   @override
   State<BookingHistoryScreen> createState() => _BookingHistoryScreenState();
 }
 
-class _BookingHistoryScreenState extends State<BookingHistoryScreen>
-    with TickerProviderStateMixin {
-  final _searchController = TextEditingController();
-  int _selectedTab = 0;
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
-  String _searchQuery = '';
+class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
+  // 0 = Ongoing/Active, 1 = Scheduled, 2 = Completed, 3 = Cancelled
+  int _tab = 0;
 
-  static const List<String> _activeStatuses = [
-    'pending', 'accepted', 'arrival_pending', 'working',
-    'worker_completed', 'payment_pending', 'worker_payment_pending',
-    'payment_disputed', 'scheduled',
-  ];
-
-  static const List<String> _completedStatuses = [
-    'completed',
-  ];
-
-  static const List<String> _cancelledStatuses = [
-    'cancelled', 'rejected', 'arrival_declined',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _fadeController = AnimationController(duration: Duration(milliseconds: 300), vsync: this);
-    _slideController = AnimationController(duration: Duration(milliseconds: 400), vsync: this);
-    Future.delayed(Duration(milliseconds: 100), () {
-      _fadeController.forward();
-      _slideController.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _fadeController.dispose();
-    _slideController.dispose();
-    super.dispose();
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed': return Color(0xFF059669);
-      case 'working':
-      case 'arrival_pending':
-      case 'accepted': return Color(0xFFF59E0B);
-      case 'pending':
-      case 'scheduled': return Color(0xFF3B82F6);
-      case 'rejected':
-      case 'cancelled': return Color(0xFFEF4444);
-      default: return AppTheme.lightText;
-    }
-  }
-
-  String _getDisplayStatus(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed': return 'Completed';
-      case 'working': return 'In Progress';
-      case 'arrival_pending': return 'Arrival Pending';
-      case 'accepted': return 'Accepted';
-      case 'pending': return 'Pending';
-      case 'scheduled': return 'Scheduled';
-      case 'rejected': return 'Rejected';
-      case 'cancelled': return 'Cancelled';
-      case 'worker_completed': return 'Work Done';
-      case 'payment_pending':
-      case 'worker_payment_pending': return 'Payment Pending';
-      case 'payment_disputed': return 'Disputed';
-      default: return status;
-    }
-  }
-
-  IconData _getCategoryIcon(String? categoryKey) {
-    if (categoryKey == null) return Icons.work;
-    switch (categoryKey.toLowerCase()) {
-      case 'plumber': return IconHelper.Plumber;
-      case 'electrician': return IconHelper.electrician;
-      case 'carpenter':
-      case 'carpentry': return IconHelper.carpentry;
-      case 'ac_mechanic':
-      case 'ac': return IconHelper.ac;
-      default: return Icons.work;
-    }
-  }
-
-  String _formatDate(dynamic timestamp) {
-    if (timestamp == null) return '';
-    DateTime? dt;
-    if (timestamp is Timestamp) {
-      dt = timestamp.toDate();
-    } else if (timestamp is String) {
-      dt = DateTime.tryParse(timestamp);
-    }
-    if (dt == null) return '';
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inDays == 0) {
-      if (diff.inHours == 0) return '${diff.inMinutes} min ago';
-      return '${diff.inHours}h ago';
-    } else if (diff.inDays == 1) {
-      return 'Yesterday';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays} days ago';
-    } else {
-      return DateFormat('MMM d, y').format(dt);
-    }
-  }
-
-  Widget _buildBookingCard(QueryDocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    final title = data['descriptionEn']?.toString() ?? 'Service';
-    final categoryKey = data['categoryKey']?.toString() ?? '';
-    final status = data['status']?.toString() ?? 'pending';
-    final amount = (data['price'] as num?)?.toDouble() ?? 0;
-    final createdAt = data['createdAt'];
-    final jobId = doc.id;
+  void _showCancelledJobDialog(BuildContext context, Map<String, dynamic> data) {
     final isUrdu = AppScope.of(context).isUrdu;
-    final displayStatus = _getDisplayStatus(status);
+    final descEn = data['descriptionEn']?.toString() ?? 'Service';
+    final descUr = data['descriptionUr']?.toString() ?? 'سروس';
+    final price = data['price'];
+    final priceStr = price != null ? 'Rs. ${(price as num).toStringAsFixed(0)}' : '';
+    final reason = data['cancelReason']?.toString() ?? (isUrdu ? 'کوئی وجہ فراہم نہیں کی گئی' : 'No reason provided');
+    final role = AppScope.of(context).role;
+    final otherPerson = role == UserRole.worker
+        ? (data['customerName']?.toString() ?? 'Customer')
+        : (data['workerName']?.toString() ?? 'Worker');
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.spacer),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Job ID: $jobId')),
-              );
-            },
-            child: Padding(
-              padding: EdgeInsets.all(16),
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.cancel, color: Colors.red, size: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                bilingual(context, 'Cancelled Job Details', 'منسوخ شدہ کام کی تفصیلات'),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isUrdu ? descUr : descEn,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            if (priceStr.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                priceStr,
+                style: const TextStyle(
+                  color: Color(0xFF0D9488),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  role == UserRole.worker ? Icons.person_outline : Icons.handyman_outlined,
+                  size: 16,
+                  color: Colors.black54,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  role == UserRole.worker
+                      ? '${bilingual(context, 'Customer:', 'گاہک:')} $otherPerson'
+                      : '${bilingual(context, 'Worker:', 'ورکر:')} $otherPerson',
+                  style: const TextStyle(fontSize: 13, color: Colors.black87),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppTheme.notWhite,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(_getCategoryIcon(categoryKey),
-                            color: Theme.of(context).primaryColor, size: 24),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.darkerText)),
-                            SizedBox(height: 4),
-                            Text(_formatDate(createdAt),
-                              style: TextStyle(fontSize: 12, color: AppTheme.deactivatedText)),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(status).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: _getStatusColor(status).withValues(alpha: 0.3)),
-                        ),
-                        child: Text(displayStatus,
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _getStatusColor(status))),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12),
-                  Divider(color: AppTheme.notWhite, height: 0),
-                  SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(isUrdu ? 'رقم' : 'Amount', style: TextStyle(fontSize: 12, color: AppTheme.lightText)),
-                      Text('Rs ${amount.toStringAsFixed(0)}',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.darkerText)),
-                    ],
-                  ),
-                  if (status == 'cancelled') ...[
-                    SizedBox(height: 10),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Color(0xFFFCA5A5)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.cancel_outlined, size: 14, color: Color(0xFFDC2626)),
-                              SizedBox(width: 4),
-                              Text(
-                                isUrdu ? 'منسوخی کی وجہ:' : 'Cancellation Reason:',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 3),
-                          Text(
-                            data['cancelReason']?.toString() ?? (isUrdu ? 'کسٹمر کی جانب سے منسوخ' : 'Cancelled by customer'),
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
-                          ),
-                          if (data['cancelMessage'] != null && data['cancelMessage'].toString().trim().isNotEmpty) ...[
-                            SizedBox(height: 4),
-                            Text(
-                              '"${data['cancelMessage']}"',
-                              style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFF475569)),
-                            ),
-                          ],
-                        ],
-                      ),
+                  Text(
+                    bilingual(context, 'Cancellation Reason', 'منسوخی کی وجہ'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11.5,
+                      color: Colors.red,
                     ),
-                  ],
-                  if (status == 'completed') ...[
-                    SizedBox(height: 10),
-                    if (data['reviewed'] == true || data['customerRating'] != null) ...[
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Color(0xFFFDE68A)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 16),
-                            SizedBox(width: 4),
-                            Text(
-                              '${isUrdu ? 'درجہ بندی' : 'Rated'}: ${(data['customerRating'] as num?)?.toStringAsFixed(1) ?? '5.0'} / 5.0',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
-                            ),
-                            if (data['customerReview'] != null && data['customerReview'].toString().trim().isNotEmpty) ...[
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  '"${data['customerReview']}"',
-                                  style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFF78350F)),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ] else ...[
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          icon: Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                          label: Text(isUrdu ? 'ورکر کی درجہ بندی کریں' : 'Rate Worker'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Color(0xFF0D9488),
-                            padding: EdgeInsets.symmetric(vertical: 8),
-                          ),
-                          onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              AppRoutes.rating,
-                              arguments: TrackingArguments(jobId: jobId),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    reason,
+                    style: const TextStyle(fontSize: 12.5, color: Colors.black87),
+                  ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(bilingual(context, 'Close', 'بند کریں')),
+          ),
+        ],
       ),
     );
   }
 
+  String _bookingStatusLabel(BuildContext context, String status) {
+    switch (status) {
+      case 'pending':
+        return bilingual(context, 'Pending', 'زیر التوا');
+      case 'scheduled':
+        return bilingual(context, 'Scheduled', 'شیڈول');
+      case 'accepted':
+        return bilingual(context, 'Worker on the way', 'ورکر راستے میں ہے');
+      case 'arrival_pending':
+        return bilingual(
+          context,
+          'Arrival confirmation pending',
+          'آمد کی تصدیق باقی ہے',
+        );
+      case 'working':
+        return bilingual(
+          context,
+          'Working at customer',
+          'کسٹمر کے مقام پر کام جاری ہے',
+        );
+      case 'worker_completed':
+        return bilingual(
+          context,
+          'Customer completion pending',
+          'کسٹمر کی تکمیل تصدیق باقی ہے',
+        );
+      case 'payment_pending':
+        return bilingual(context, 'Payment pending', 'ادائیگی زیر التوا');
+      case 'worker_payment_pending':
+        return bilingual(
+          context,
+          'Awaiting payment confirmation',
+          'ادائیگی کی تصدیق زیر التوا',
+        );
+      case 'payment_disputed':
+        return bilingual(context, 'Payment disputed', 'ادائیگی کا تنازع');
+      case 'completed':
+        return bilingual(context, 'Completed', 'مکمل');
+      case 'arrival_declined':
+        return bilingual(context, 'Arrival declined', 'آمد مسترد');
+      case 'rejected':
+        return bilingual(context, 'Rejected', 'مسترد');
+      case 'cancelled':
+        return bilingual(context, 'Cancelled', 'منسوخ شدہ');
+      default:
+        return status;
+    }
+  }
+
+  static const List<String> _activeStatuses = [
+    'pending',
+    'accepted',
+    'arrival_pending',
+    'working',
+    'worker_completed',
+    'payment_pending',
+    'worker_payment_pending',
+    'payment_disputed',
+  ];
+
+  static const List<String> _scheduledStatuses = ['scheduled'];
+
+  static const List<String> _completedStatuses = ['completed'];
+
+  static const List<String> _cancelledStatuses = [
+    'cancelled',
+    'rejected',
+    'arrival_declined',
+  ];
+
+  Stream<QuerySnapshot> _buildStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Stream.empty();
+    final role = AppScope.of(context).role;
+    final uidField = role == UserRole.worker ? 'workerId' : 'customerId';
+    return FirebaseFirestore.instance
+        .collection('jobs')
+        .where(uidField, isEqualTo: user.uid)
+        .snapshots();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    final user = FirebaseAuth.instance.currentUser;
     final isUrdu = AppScope.of(context).isUrdu;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop(result);
-          return;
-        }
-        final shouldExit = await showExitMazdoorlinkDialog(context);
-        if (shouldExit) {
-          await FirebaseAuth.instance.signOut();
-          if (context.mounted) {
-            SystemNavigator.pop();
-            Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-          }
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Theme.of(context).primaryColor,
-          title: Text(t.t('booking_history'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          leading: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () async {
-                if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                } else {
-                  final shouldExit = await showExitMazdoorlinkDialog(context);
-                  if (shouldExit) {
-                    await FirebaseAuth.instance.signOut();
-                    if (context.mounted) {
-                      SystemNavigator.pop();
-                      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-                    }
-                  }
-                }
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: const Padding(
-                padding: EdgeInsets.all(8),
-                child: Icon(Icons.arrow_back, color: Colors.white, size: 24),
-              ),
-            ),
-          ),
-        ),
-      body: user == null
-        ? Center(child: Text(isUrdu ? 'براہ کرم لاگ ان کریں' : 'Please log in'))
-        : SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: FadeTransition(
-            opacity: _fadeController,
-            child: Column(
+    return MzScaffold(
+      showBottomNav: true,
+      title: AppScope.of(context).role == UserRole.worker
+          ? bilingual(context, 'My Jobs', 'میرے کام')
+          : bilingual(context, 'My Bookings', 'میری بکنگز'),
+      child: Column(
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
               children: [
-                TextField(
-                  controller: _searchController,
-                  onChanged: (val) => setState(() => _searchQuery = val),
-                  decoration: InputDecoration(
-                    prefixIcon: Icon(IconHelper.search, color: AppTheme.deactivatedText, size: 20),
-                    hintText: t.t('search_booking_history'),
-                    hintStyle: TextStyle(color: AppTheme.deactivatedText),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.spacer)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.spacer)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  ),
+                ChoiceChip(
+                  label: Text(bilingual(context, 'Ongoing', 'جاری')),
+                  selected: _tab == 0,
+                  selectedColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
+                  onSelected: (_) => setState(() => _tab = 0),
                 ),
-                SizedBox(height: 20),
-                Container(
-                  decoration: BoxDecoration(color: AppTheme.notWhite, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.spacer)),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedTab = 0),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _selectedTab == 0 ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.only(topLeft: Radius.circular(11), bottomLeft: Radius.circular(11)),
-                              border: _selectedTab == 0 ? Border.all(color: AppTheme.spacer) : null,
-                            ),
-                            child: Center(child: Text(isUrdu ? 'فعال' : 'Active',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
-                                color: _selectedTab == 0 ? Theme.of(context).primaryColor : AppTheme.lightText))),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedTab = 1),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _selectedTab == 1 ? Colors.white : Colors.transparent,
-                              border: _selectedTab == 1 ? Border.all(color: AppTheme.spacer) : null,
-                            ),
-                            child: Center(child: Text(isUrdu ? 'مکمل' : 'Completed',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
-                                color: _selectedTab == 1 ? Theme.of(context).primaryColor : AppTheme.lightText))),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedTab = 2),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _selectedTab == 2 ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.only(topRight: Radius.circular(11), bottomRight: Radius.circular(11)),
-                              border: _selectedTab == 2 ? Border.all(color: AppTheme.spacer) : null,
-                            ),
-                            child: Center(child: Text(isUrdu ? 'منسوخ' : 'Cancelled',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
-                                color: _selectedTab == 2 ? Theme.of(context).primaryColor : AppTheme.lightText))),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Text(bilingual(context, 'Scheduled', 'شیڈول')),
+                  selected: _tab == 1,
+                  selectedColor: Colors.amber.shade100,
+                  onSelected: (_) => setState(() => _tab = 1),
                 ),
-                SizedBox(height: 20),
-                StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('jobs')
-                      .where(
-                        AppScope.of(context).role == UserRole.worker
-                             ? 'workerId'
-                             : 'customerId',
-                        isEqualTo: user.uid,
-                      )
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 40), child: CircularProgressIndicator()));
-                    }
-                    if (snapshot.hasError) {
-                      debugPrint('BookingHistory jobs stream error: ${snapshot.error}');
-                      return Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Text(isUrdu ? 'لوڈ کرنے میں خرابی' : 'Error loading jobs', style: TextStyle(color: Colors.red))));
-                    }
-                    final allDocs = List<QueryDocumentSnapshot>.from(snapshot.data?.docs ?? []);
-                    allDocs.sort((a, b) {
-                      final aData = a.data() as Map<String, dynamic>;
-                      final bData = b.data() as Map<String, dynamic>;
-                      final aDt = aData['createdAt'] is Timestamp
-                          ? (aData['createdAt'] as Timestamp).toDate()
-                          : (DateTime.tryParse(aData['createdAt']?.toString() ?? '') ?? DateTime(1970));
-                      final bDt = bData['createdAt'] is Timestamp
-                          ? (bData['createdAt'] as Timestamp).toDate()
-                          : (DateTime.tryParse(bData['createdAt']?.toString() ?? '') ?? DateTime(1970));
-                      return bDt.compareTo(aDt);
-                    });
-                    final filteredByStatus = allDocs.where((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      final status = (data['status']?.toString() ?? '').toLowerCase();
-                      if (_selectedTab == 0) return _activeStatuses.contains(status);
-                      if (_selectedTab == 1) return _completedStatuses.contains(status);
-                      return _cancelledStatuses.contains(status);
-                      return _completedStatuses.contains(status);
-                    }).toList();
-                    final filteredDocs = _searchQuery.isEmpty ? filteredByStatus : filteredByStatus.where((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      final title = (data['descriptionEn']?.toString() ?? '').toLowerCase();
-                      final category = (data['categoryKey']?.toString() ?? '').toLowerCase();
-                      return title.contains(_searchQuery.toLowerCase()) || category.contains(_searchQuery.toLowerCase());
-                    }).toList();
-
-                    if (filteredDocs.isEmpty) {
-                      return Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Column(
-                          children: [
-                            Icon(Icons.inbox_outlined, size: 48, color: AppTheme.deactivatedText),
-                            SizedBox(height: 16),
-                            Text(isUrdu ? 'کوئی کام نہیں ملا' : 'No jobs found',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.lightText)),
-                            SizedBox(height: 8),
-                            Text(_selectedTab == 0
-                                ? (isUrdu ? 'کوئی فعال کام نہیں' : 'You have no active jobs')
-                                : (isUrdu ? 'کوئی مکمل کام نہیں' : 'No completed jobs yet'),
-                              style: TextStyle(fontSize: 14, color: AppTheme.deactivatedText)),
-                          ],
-                        )),
-                      );
-                    }
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemCount: filteredDocs.length,
-                      itemBuilder: (context, index) {
-                        return SlideTransition(
-                          position: Tween<Offset>(begin: Offset(1, 0), end: Offset.zero).animate(
-                            CurvedAnimation(parent: _slideController,
-                              curve: Interval((index * 0.1).clamp(0.0, 0.9), (0.7 + index * 0.1).clamp(0.0, 1.0), curve: Curves.easeOut)),
-                          ),
-                          child: _buildBookingCard(filteredDocs[index]),
-                        );
-                      },
-                    );
-                  },
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Text(bilingual(context, 'Completed', 'مکمل')),
+                  selected: _tab == 2,
+                  selectedColor: Colors.green.shade100,
+                  onSelected: (_) => setState(() => _tab = 2),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Text(bilingual(context, 'Cancelled', 'منسوخ')),
+                  selected: _tab == 3,
+                  selectedColor: Colors.red.shade100,
+                  onSelected: (_) => setState(() => _tab = 3),
                 ),
               ],
             ),
           ),
-        ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _buildStream(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        bilingual(
+                          context,
+                          'Failed to load bookings. Please try again.',
+                          'بکنگز لوڈ کرنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔',
+                        ),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                    ),
+                  );
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final docs = snapshot.data!.docs;
+                final List<String> statusFilter = _tab == 0
+                    ? _activeStatuses
+                    : _tab == 1
+                    ? _scheduledStatuses
+                    : _tab == 2
+                    ? _completedStatuses
+                    : _cancelledStatuses;
+                final filtered =
+                    docs.where((doc) {
+                      final status =
+                          (doc.data() as Map<String, dynamic>)['status']
+                              ?.toString() ??
+                          '';
+                      return statusFilter.contains(status);
+                    }).toList()..sort((a, b) {
+                      final aTime =
+                          ((a.data() as Map<String, dynamic>)['createdAt']
+                                  as Timestamp?)
+                              ?.toDate() ??
+                          DateTime(2000);
+                      final bTime =
+                          ((b.data() as Map<String, dynamic>)['createdAt']
+                                  as Timestamp?)
+                              ?.toDate() ??
+                          DateTime(2000);
+                      return bTime.compareTo(aTime);
+                    });
+
+                if (filtered.isEmpty) {
+                  final emptyText = _tab == 0
+                      ? bilingual(context, 'No ongoing jobs', 'کوئی جاری کام نہیں')
+                      : _tab == 1
+                      ? bilingual(context, 'No scheduled jobs', 'کوئی شیڈول کام نہیں')
+                      : _tab == 2
+                      ? bilingual(context, 'No completed jobs', 'کوئی مکمل کام نہیں')
+                      : bilingual(context, 'No cancelled jobs', 'کوئی منسوخ شدہ کام نہیں');
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _tab == 3
+                                ? Icons.cancel_outlined
+                                : _tab == 2
+                                ? Icons.task_alt
+                                : _tab == 1
+                                ? Icons.calendar_month_outlined
+                                : Icons.assignment_outlined,
+                            size: 48,
+                            color: Colors.black26,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            emptyText,
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return ListView(
+                  padding: const EdgeInsets.all(12),
+                  children: filtered.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final status = data['status']?.toString() ?? '';
+                    final descEn = data['descriptionEn']?.toString() ?? '';
+                    final descUr = data['descriptionUr']?.toString() ?? '';
+                    final price = data['price'];
+                    final priceStr = price != null
+                        ? 'Rs. ${(price as num).toStringAsFixed(0)}'
+                        : '';
+                    final createdAt = data['createdAt'] as Timestamp?;
+                    final timeStr = createdAt != null
+                        ? DateFormat('d MMM yyyy').format(createdAt.toDate())
+                        : '';
+
+                    String? reminderLine;
+                    final scheduledRaw = data['scheduledReminderAt'];
+                    final schedTime = scheduledRaw is Timestamp
+                        ? DateFormat('hh:mm a').format(scheduledRaw.toDate())
+                        : '';
+                    if (scheduledRaw is Timestamp) {
+                      final confirmed =
+                          data['scheduleConfirmed'] as bool? ?? false;
+                      reminderLine = confirmed
+                          ? '${bilingual(context, 'Reminder: worker arrives at', 'یاد دہانی: ورکر آئے گا')} $schedTime'
+                          : '${bilingual(context, 'Schedule approval pending', 'شیڈول کی منظوری زیر التوا')} • $schedTime';
+                    }
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () async {
+                          if (_tab == 3) {
+                            _showCancelledJobDialog(context, data);
+                            return;
+                          }
+                          if (_tab != 2 &&
+                              AppScope.of(context).role == UserRole.worker) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => WorkerTrackingScreen(
+                                  jobPrice: (price as num?)?.toDouble() ?? 0,
+                                  jobId: doc.id,
+                                ),
+                              ),
+                            );
+                          } else if (_tab == 0) {
+                            final workerId = data['workerId']?.toString() ?? '';
+                            if (workerId.isNotEmpty) {
+                              final workerDoc = await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(workerId)
+                                  .get();
+                              final workerData = workerDoc.data();
+                              if (workerData != null && context.mounted) {
+                                final worker = WorkerModel.fromFirestore(
+                                  workerData,
+                                  docId: workerDoc.id,
+                                );
+                                final jobArgs = JobPostingArguments(
+                                  descriptionEn: descEn,
+                                  descriptionUr: descUr,
+                                  price: (price as num?)?.toDouble() ?? 0,
+                                  categoryKey:
+                                      data['categoryKey']?.toString() ?? '',
+                                  paymentMethod:
+                                      data['paymentMethod']?.toString() ??
+                                      'Cash',
+                                  customerLatitude:
+                                      (data['customerLatitude'] as num?)
+                                          ?.toDouble(),
+                                  customerLongitude:
+                                      (data['customerLongitude'] as num?)
+                                          ?.toDouble(),
+                                );
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.tracking,
+                                  arguments: TrackingArguments(
+                                    worker: worker,
+                                    job: jobArgs,
+                                    jobId: doc.id,
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    status == 'completed'
+                                        ? Icons.check_circle
+                                        : status == 'scheduled'
+                                        ? Icons.calendar_month
+                                        : (status == 'cancelled' ||
+                                                status == 'rejected' ||
+                                                status == 'arrival_declined')
+                                            ? Icons.cancel
+                                            : Icons.schedule,
+                                    color: status == 'completed'
+                                        ? Colors.green
+                                        : status == 'scheduled'
+                                        ? Colors.amber.shade700
+                                        : (status == 'cancelled' ||
+                                                status == 'rejected' ||
+                                                status == 'arrival_declined')
+                                            ? Colors.red
+                                            : const Color(0xFF0D9488),
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      isUrdu ? descUr : descEn,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    priceStr,
+                                    style: const TextStyle(
+                                      color: Color(0xFF0D9488),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$timeStr • ${_bookingStatusLabel(context, status)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                              if (status == 'cancelled' ||
+                                  status == 'rejected' ||
+                                  status == 'arrival_declined') ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFFFCA5A5),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.cancel_outlined,
+                                            size: 14,
+                                            color: Colors.red,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            bilingual(
+                                              context,
+                                              'Cancelled Job',
+                                              'منسوخ شدہ کام',
+                                            ),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (data['cancelReason'] != null &&
+                                          data['cancelReason']
+                                              .toString()
+                                              .isNotEmpty) ...[
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          '${bilingual(context, 'Reason:', 'وجہ:')} ${data['cancelReason']}',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            color: Colors.red.shade900,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              if (reminderLine != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  reminderLine,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFFB45309),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                              // --- Scheduled tab actions ---
+                              if (_tab == 1) ...[
+                                const SizedBox(height: 12),
+                                if (AppScope.of(context).role ==
+                                    UserRole.worker) ...[
+                                  // Worker: start the job
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      icon: const Icon(Icons.play_arrow),
+                                      label: Text(
+                                        bilingual(
+                                          context,
+                                          'Start Job Now',
+                                          'ابھی کام شروع کریں',
+                                        ),
+                                      ),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF0D9488,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        await startScheduledJob(doc.id);
+                                        if (context.mounted) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  WorkerTrackingScreen(
+                                                    jobPrice:
+                                                        (price as num?)
+                                                            ?.toDouble() ??
+                                                        0,
+                                                    jobId: doc.id,
+                                                  ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      icon: const Icon(Icons.chat_outlined),
+                                      label: Text(
+                                        bilingual(
+                                          context,
+                                          'Message Customer',
+                                          'گاہک کو میسیج کریں',
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        final customerId = data['customerId']
+                                            ?.toString();
+                                        if (customerId == null ||
+                                            customerId.isEmpty)
+                                          return;
+                                        final customerName =
+                                            data['customerName']?.toString() ??
+                                            'Customer';
+                                        final existingId =
+                                            await findExistingConversation(
+                                              customerId,
+                                            );
+                                        if (!context.mounted) return;
+                                        if (existingId != null) {
+                                          Navigator.pushNamed(
+                                            context,
+                                            AppRoutes.sharedConversation,
+                                            arguments: ConversationArguments(
+                                              conversationId: existingId,
+                                              otherName: customerName,
+                                              otherImage: '',
+                                            ),
+                                          );
+                                        } else {
+                                          final newId =
+                                              await createConversation(
+                                                otherUserId: customerId,
+                                                otherUserName: customerName,
+                                                otherUserImage: '',
+                                              );
+                                          if (context.mounted) {
+                                            Navigator.pushNamed(
+                                              context,
+                                              AppRoutes.sharedConversation,
+                                              arguments: ConversationArguments(
+                                                conversationId: newId,
+                                                otherName: customerName,
+                                                otherImage: '',
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ] else ...[
+                                  // Customer: Approve / Decline / Message worker
+                                  if (!(data['scheduleConfirmed'] as bool? ??
+                                      false)) ...[
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF3C7),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: const Color(0xFFF59E0B),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.schedule,
+                                            color: Color(0xFFB45309),
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              bilingual(
+                                                context,
+                                                schedTime.isNotEmpty
+                                                    ? 'Worker wants to schedule this work to $schedTime. Accept or Chat?'
+                                                    : 'Worker wants to schedule this work. Accept or Chat?',
+                                                schedTime.isNotEmpty
+                                                    ? 'ورکر اس کام کو $schedTime پر شیڈول کرنا چاہتا ہے۔ منظور کریں یا بات چیت کریں؟'
+                                                    : 'ورکر اس کام کو شیڈول کرنا چاہتا ہے۔ منظور کریں یا بات چیت کریں؟',
+                                              ),
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF92400E),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: const Color(
+                                                0xFF0D9488,
+                                              ),
+                                              side: const BorderSide(
+                                                color: Color(0xFF0D9488),
+                                              ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.chat_outlined,
+                                              size: 16,
+                                            ),
+                                            label: Text(
+                                              bilingual(
+                                                context,
+                                                'Chat',
+                                                'چیٹ کریں',
+                                              ),
+                                            ),
+                                            onPressed: () async {
+                                              final workerId = data['workerId']
+                                                  ?.toString();
+                                              if (workerId == null ||
+                                                  workerId.isEmpty)
+                                                return;
+                                              final workerName =
+                                                  data['workerName']
+                                                      ?.toString() ??
+                                                  'Worker';
+                                              final existingId =
+                                                  await findExistingConversation(
+                                                    workerId,
+                                                  );
+                                              if (!context.mounted) return;
+                                              if (existingId != null) {
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  AppRoutes.sharedConversation,
+                                                  arguments:
+                                                      ConversationArguments(
+                                                        conversationId:
+                                                            existingId,
+                                                        otherName: workerName,
+                                                        otherImage: '',
+                                                      ),
+                                                );
+                                              } else {
+                                                final newId =
+                                                    await createConversation(
+                                                      otherUserId: workerId,
+                                                      otherUserName: workerName,
+                                                      otherUserImage: '',
+                                                    );
+                                                if (context.mounted) {
+                                                  Navigator.pushNamed(
+                                                    context,
+                                                    AppRoutes
+                                                        .sharedConversation,
+                                                    arguments:
+                                                        ConversationArguments(
+                                                          conversationId: newId,
+                                                          otherName: workerName,
+                                                          otherImage: '',
+                                                        ),
+                                                  );
+                                                }
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: FilledButton.icon(
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: const Color(
+                                                0xFF0D9488,
+                                              ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.check_circle_outline,
+                                              size: 16,
+                                            ),
+                                            label: Text(
+                                              bilingual(
+                                                context,
+                                                'Accept',
+                                                'منظور کریں',
+                                              ),
+                                            ),
+                                            onPressed: () async {
+                                              await acceptScheduledJob(doc.id);
+                                              if (context.mounted)
+                                                setState(() {});
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ] else ...[
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.check_circle,
+                                          color: Color(0xFF0D9488),
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          bilingual(
+                                            context,
+                                            'Schedule approved',
+                                            'شیڈول منظور',
+                                          ),
+                                          style: const TextStyle(
+                                            color: Color(0xFF0D9488),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        icon: const Icon(Icons.chat_outlined),
+                                        label: Text(
+                                          bilingual(
+                                            context,
+                                            'Message Worker',
+                                            'ورکر کو میسیج کریں',
+                                          ),
+                                        ),
+                                        onPressed: () async {
+                                          final workerId = data['workerId']
+                                              ?.toString();
+                                          if (workerId == null ||
+                                              workerId.isEmpty)
+                                            return;
+                                          final workerName =
+                                              data['workerName']?.toString() ??
+                                              'Worker';
+                                          final existingId =
+                                              await findExistingConversation(
+                                                workerId,
+                                              );
+                                          if (!context.mounted) return;
+                                          if (existingId != null) {
+                                            Navigator.pushNamed(
+                                              context,
+                                              AppRoutes.sharedConversation,
+                                              arguments: ConversationArguments(
+                                                conversationId: existingId,
+                                                otherName: workerName,
+                                                otherImage: '',
+                                              ),
+                                            );
+                                          } else {
+                                            final newId =
+                                                await createConversation(
+                                                  otherUserId: workerId,
+                                                  otherUserName: workerName,
+                                                  otherUserImage: '',
+                                                );
+                                            if (context.mounted) {
+                                              Navigator.pushNamed(
+                                                context,
+                                                AppRoutes.sharedConversation,
+                                                arguments:
+                                                    ConversationArguments(
+                                                      conversationId: newId,
+                                                      otherName: workerName,
+                                                      otherImage: '',
+                                                    ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ],
+                              // --- Past tab actions (Completed jobs & Ratings) ---
+                              if (_tab == 2 && status == 'completed') ...[
+                                const SizedBox(height: 10),
+                                if (data['reviewed'] == true ||
+                                    data['customerRating'] != null) ...[
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEF3C7),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFFDE68A),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.star_rounded,
+                                              color: Color(0xFFD97706),
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '${bilingual(context, 'Rated', 'درجہ بندی')}: ${(data['customerRating'] as num?)?.toStringAsFixed(1) ?? '5.0'} / 5.0',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                                color: Color(0xFF92400E),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (data['customerReview'] != null &&
+                                            data['customerReview']
+                                                .toString()
+                                                .trim()
+                                                .isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '"${data['customerReview']}"',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                              color: Color(0xFF78350F),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ] else if (AppScope.of(context).role ==
+                                    UserRole.customer) ...[
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      icon: const Icon(
+                                        Icons.star_rounded,
+                                        color: Colors.amber,
+                                        size: 18,
+                                      ),
+                                      label: Text(
+                                        bilingual(
+                                          context,
+                                          'Rate Worker',
+                                          'ورکر کی درجہ بندی کریں',
+                                        ),
+                                      ),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF0D9488,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        final workerId =
+                                            data['workerId']?.toString() ?? '';
+                                        final workerName =
+                                            data['workerName']?.toString() ??
+                                            'Worker';
+                                        final workerCategory =
+                                            data['categoryKey']?.toString() ??
+                                            '';
+                                        WorkerModel? worker;
+                                        if (workerId.isNotEmpty) {
+                                          try {
+                                            final wDoc = await FirebaseFirestore
+                                                .instance
+                                                .collection('users')
+                                                .doc(workerId)
+                                                .get();
+                                            final wData = wDoc.data();
+                                            if (wData != null) {
+                                              worker =
+                                                  WorkerModel.fromFirestore(
+                                                    wData,
+                                                    docId: wDoc.id,
+                                                  );
+                                            }
+                                          } catch (_) {}
+                                        }
+                                        if (!context.mounted) return;
+                                        Navigator.pushNamed(
+                                          context,
+                                          AppRoutes.rating,
+                                          arguments: TrackingArguments(
+                                            jobId: doc.id,
+                                            worker:
+                                                worker ??
+                                                WorkerModel(
+                                                  id: workerId,
+                                                  name: workerName,
+                                                  phone: '',
+                                                  category: workerCategory,
+                                                  rating: 5.0,
+                                                  reviews: 0,
+                                                  image: '',
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

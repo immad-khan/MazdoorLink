@@ -744,97 +744,45 @@ class SettingsScreen extends StatelessWidget {
                 final uData = userSnap.data?.data() as Map<String, dynamic>?;
                 final double rating =
                     (uData?['rating'] as num?)?.toDouble() ?? 0.0;
-                final int reviewsCount =
-                    (uData?['reviews'] as num?)?.toInt() ?? 0;
                 final user = FirebaseAuth.instance.currentUser;
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Card(
-                    elevation: 1,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(
-                        color: Color(0xFFF59E0B),
-                        width: 1.2,
-                      ),
+                return GestureDetector(
+                  onTap: () =>
+                      showWorkerReviewsSheet(context, user?.uid ?? ''),
+                  child: _SettingsItem(
+                    icon: Icons.star_rounded,
+                    color: Colors.amber,
+                    title: bilingual(
+                      context,
+                      'My Rating & Feedback',
+                      'میری درجہ بندی اور جائزے',
                     ),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: const Color(0xFFFEF3C7),
-                        child: const Icon(
-                          Icons.star_rounded,
-                          color: Color(0xFFD97706),
-                          size: 26,
-                        ),
-                      ),
-                      title: Row(
-                        children: [
-                          Text(
-                            bilingual(
-                              context,
-                              'My Rating & Feedback',
-                              'میری درجہ بندی اور جائزے',
-                            ),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.star,
+                    trailing: rating > 0
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                rating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
                                   color: Color(0xFFD97706),
-                                  size: 12,
                                 ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  rating > 0
-                                      ? rating.toStringAsFixed(1)
-                                      : (c.isUrdu ? 'نیا' : 'New'),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    color: Color(0xFF92400E),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      subtitle: Text(
-                        reviewsCount > 0
-                            ? '$reviewsCount ${bilingual(context, 'customer reviews received • Tap to view', 'کسٹمر جائزے موصول ہوئے • دیکھنے کے لیے کلک کریں')}'
-                            : bilingual(
-                                context,
-                                'No reviews yet. Complete jobs to get rated!',
-                                'ابھی کوئی جائزہ نہیں ملا۔ درجہ بندی کے لیے کام مکمل کریں!',
                               ),
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      trailing: Transform.rotate(
-                        angle: c.isUrdu ? math.pi : 0,
-                        child: const Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFD97706),
-                        ),
-                      ),
-                      onTap: () =>
-                          showWorkerReviewsSheet(context, user?.uid ?? ''),
-                    ),
+                              const SizedBox(width: 2),
+                              const Icon(
+                                Icons.star_rounded,
+                                color: Color(0xFFD97706),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Transform.rotate(
+                                angle: c.isUrdu ? math.pi : 0,
+                                child: const Icon(Icons.chevron_right),
+                              ),
+                            ],
+                          )
+                        : null,
                   ),
                 );
               },

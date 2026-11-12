@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart' hide TextDirection;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_state.dart';
 import 'mazdoor_flow.dart' show AppRoutes;
@@ -24,8 +23,6 @@ class WorkerIncomeScreen extends StatefulWidget {
 class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
   late IncomePeriod _selectedPeriod;
   late DateTime _selectedDate;
-  double _incomeGoal = 0.0;
-  bool _loadingGoal = true;
 
   @override
   void initState() {
@@ -33,74 +30,13 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
     _selectedPeriod = widget.initialPeriod;
     final now = DateTime.now();
     _selectedDate = DateTime(now.year, now.month, now.day);
-    _loadGoal();
-  }
-
-  String get _goalKey {
-    switch (_selectedPeriod) {
-      case IncomePeriod.day:
-        return 'income_goal_day';
-      case IncomePeriod.week:
-        return 'income_goal_week';
-      case IncomePeriod.month:
-        return 'income_goal_month';
-    }
-  }
-
-  Future<void> _loadGoal() async {
-    final prefs = await SharedPreferences.getInstance();
-    final user = FirebaseAuth.instance.currentUser;
-    double? savedGoal;
-
-    if (user != null) {
-      try {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-        final data = doc.data();
-        if (data != null && data[_goalKey] != null) {
-          savedGoal = (data[_goalKey] as num?)?.toDouble();
-        }
-      } catch (e) {
-        debugPrint('Error loading income goal: $e');
-      }
-    }
-
-    savedGoal ??= prefs.getDouble(_goalKey) ?? 0.0;
-
-    if (mounted) {
-      setState(() {
-        _incomeGoal = savedGoal!;
-        _loadingGoal = false;
-      });
-    }
-  }
-
-  Future<void> _saveGoal(double newGoal) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_goalKey, newGoal);
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          _goalKey: newGoal,
-        }, SetOptions(merge: true));
-      } catch (e) {
-        debugPrint('Error saving income goal to Firestore: $e');
-      }
-    }
-
-    if (mounted) {
-      setState(() => _incomeGoal = newGoal);
-    }
   }
 
   void _onPeriodChanged(IncomePeriod period) {
     if (_selectedPeriod != period) {
       setState(() {
         _selectedPeriod = period;
-        _loadingGoal = true;
       });
-      _loadGoal();
     }
   }
 
@@ -187,291 +123,6 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
     return DateTime.now();
   }
 
-  void _showSetGoalBottomSheet(BuildContext context, bool isUrdu) {
-    final textController = TextEditingController(
-      text: _incomeGoal > 0 ? _incomeGoal.toStringAsFixed(0) : '',
-    );
-
-    List<double> presets;
-    switch (_selectedPeriod) {
-      case IncomePeriod.day:
-        presets = [1000, 2000, 3000, 5000];
-        break;
-      case IncomePeriod.week:
-        presets = [7000, 15000, 25000, 40000];
-        break;
-      case IncomePeriod.month:
-        presets = [30000, 50000, 80000, 120000];
-        break;
-    }
-
-    String periodTitle;
-    switch (_selectedPeriod) {
-      case IncomePeriod.day:
-        periodTitle = isUrdu ? 'روزانہ' : 'Daily';
-        break;
-      case IncomePeriod.week:
-        periodTitle = isUrdu ? 'ہفتہ وار' : 'Weekly';
-        break;
-      case IncomePeriod.month:
-        periodTitle = isUrdu ? 'ماہانہ' : 'Monthly';
-        break;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setModalState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                24,
-                24,
-                24,
-                MediaQuery.of(ctx).viewInsets.bottom + 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isUrdu
-                            ? '$periodTitle آمدنی کا ہدف مقرر کریں'
-                            : 'Set $periodTitle Income Plan',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white54),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    isUrdu
-                        ? 'اپنا ٹارگٹ درج کریں تاکہ آپ کی روزانہ کی ترقی کو ٹریک کیا جا سکے۔'
-                        : 'Set a target amount to track your progress and stay motivated.',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: textController,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-                    decoration: InputDecoration(
-                      prefixText: 'PKR ',
-                      prefixStyle: const TextStyle(color: Color(0xFFBEF264), fontSize: 20, fontWeight: FontWeight.bold),
-                      hintText: '0',
-                      hintStyle: const TextStyle(color: Colors.white38),
-                      filled: true,
-                      fillColor: const Color(0xFF2C2C2E),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFBEF264), width: 1.5),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: presets.map((amount) {
-                      return ActionChip(
-                        label: Text(
-                          'PKR ${amount.toStringAsFixed(0)}',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                        ),
-                        backgroundColor: const Color(0xFF2C2C2E),
-                        side: BorderSide(
-                          color: textController.text == amount.toStringAsFixed(0)
-                              ? const Color(0xFFBEF264)
-                              : Colors.white12,
-                        ),
-                        onPressed: () {
-                          setModalState(() {
-                            textController.text = amount.toStringAsFixed(0);
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      final val = double.tryParse(textController.text.trim()) ?? 0.0;
-                      _saveGoal(val);
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: const Color(0xFFBEF264),
-                          content: Text(
-                            isUrdu ? 'ہدف محفوظ ہو گیا!' : 'Income plan updated successfully!',
-                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFBEF264),
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: Text(
-                      isUrdu ? 'ہدف محفوظ کریں' : 'Save Income Plan',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showAchievementsBottomSheet(BuildContext context, bool isUrdu) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        final achievements = [
-          {
-            'icon': Icons.star_rounded,
-            'color': const Color(0xFFF59E0B),
-            'title': isUrdu ? '5 اسٹار سروس' : '5-Star Provider',
-            'desc': isUrdu ? 'بہترین کسٹمر ریٹنگ برقرار رکھیں' : 'Maintain outstanding customer reviews',
-            'unlocked': true,
-          },
-          {
-            'icon': Icons.bolt_rounded,
-            'color': const Color(0xFF3B82F6),
-            'title': isUrdu ? 'فوری رسپانس' : 'Quick Responder',
-            'desc': isUrdu ? '10 منٹ کے اندر جاب قبول کریں' : 'Accept jobs within 10 minutes of request',
-            'unlocked': true,
-          },
-          {
-            'icon': Icons.emoji_events_rounded,
-            'color': const Color(0xFFBEF264),
-            'title': isUrdu ? 'ہدف فاتح' : 'Goal Crusher',
-            'desc': isUrdu ? 'اپنا روزانہ کا آمدنی کا ہدف مکمل کریں' : 'Achieve your daily income plan',
-            'unlocked': _incomeGoal > 0,
-          },
-          {
-            'icon': Icons.military_tech_rounded,
-            'color': const Color(0xFFA855F7),
-            'title': isUrdu ? 'ٹاپ ورکر' : 'Top Earner Club',
-            'desc': isUrdu ? 'مہینے میں 25 سے زائد کام مکمل کریں' : 'Complete over 25 orders in a single month',
-            'unlocked': false,
-          },
-        ];
-
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.flag_rounded, color: Color(0xFFBEF264), size: 24),
-                      const SizedBox(width: 10),
-                      Text(
-                        isUrdu ? 'ورکر کامیابیاں' : 'Achievements',
-                        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white54),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ...achievements.map((item) {
-                final unlocked = item['unlocked'] as bool;
-                final color = item['color'] as Color;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2C2C2E),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: unlocked ? color.withValues(alpha: 0.5) : Colors.transparent,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(item['icon'] as IconData, color: color, size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['title'] as String,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                decoration: unlocked ? null : TextDecoration.none,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              item['desc'] as String,
-                              style: const TextStyle(color: Colors.white54, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (unlocked)
-                        const Icon(Icons.check_circle, color: Color(0xFFBEF264), size: 20)
-                      else
-                        const Icon(Icons.lock_outline, color: Colors.white30, size: 18),
-                    ],
-                  ),
-                );
-              }),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final scope = AppScope.of(context);
@@ -480,14 +131,23 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
     final range = _getDateRange();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
-        elevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)),
           onPressed: () => Navigator.pop(context),
         ),
+        title: Text(
+          isUrdu ? 'آمدنی کا جائزہ' : 'Income Breakdown',
+          style: const TextStyle(
+            color: Color(0xFF1E293B),
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -526,14 +186,14 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
             children: [
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   children: [
                     // Segmented control: Day | Week | Month
                     Center(
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E),
+                          color: const Color(0xFFE2E8F0),
                           borderRadius: BorderRadius.circular(30),
                         ),
                         child: Row(
@@ -544,13 +204,13 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
                               isSelected: _selectedPeriod == IncomePeriod.day,
                               onTap: () => _onPeriodChanged(IncomePeriod.day),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 4),
                             _buildSegmentPill(
                               label: isUrdu ? 'ہفتہ' : 'Week',
                               isSelected: _selectedPeriod == IncomePeriod.week,
                               onTap: () => _onPeriodChanged(IncomePeriod.week),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 4),
                             _buildSegmentPill(
                               label: isUrdu ? 'مہینہ' : 'Month',
                               isSelected: _selectedPeriod == IncomePeriod.month,
@@ -561,14 +221,14 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
                     // Date Navigator: < Date >
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.chevron_left, color: Colors.white70, size: 22),
+                          icon: const Icon(Icons.chevron_left, color: Color(0xFF64748B), size: 24),
                           onPressed: _previousPeriod,
                           splashRadius: 20,
                         ),
@@ -577,127 +237,90 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
                           child: Text(
                             _formatPeriodLabel(isUrdu),
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFF1E293B),
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.chevron_right, color: Colors.white70, size: 22),
+                          icon: const Icon(Icons.chevron_right, color: Color(0xFF64748B), size: 24),
                           onPressed: _nextPeriod,
                           splashRadius: 20,
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
-                    // Large earnings number (e.g. 0.00)
+                    // Large earnings number
                     Center(
-                      child: Text(
-                        totalEarnings.toStringAsFixed(2),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 48,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -1,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // "Set income plan" button (Lime green)
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: () => _showSetGoalBottomSheet(context, isUrdu),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFBEF264),
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                        ),
-                        child: Text(
-                          isUrdu ? 'آمدنی کا منصوبہ بنائیں' : 'Set income plan',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Goal progress indicator (if goal is set)
-                    if (!_loadingGoal && _incomeGoal > 0) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 20),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white10),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  isUrdu ? 'ہدف کی پیش رفت' : 'Plan Progress',
-                                  style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
-                                ),
-                                Text(
-                                  'PKR ${totalEarnings.toStringAsFixed(0)} / ${_incomeGoal.toStringAsFixed(0)} (${((totalEarnings / _incomeGoal) * 100).clamp(0, 100).toStringAsFixed(0)}%)',
-                                  style: const TextStyle(color: Color(0xFFBEF264), fontSize: 12, fontWeight: FontWeight.bold),
-                                ),
-                              ],
+                            Text(
+                              isUrdu ? 'کمائی (روپے)' : 'Total Earnings (PKR)',
+                              style: const TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: LinearProgressIndicator(
-                                value: (_incomeGoal > 0 ? totalEarnings / _incomeGoal : 0.0).clamp(0.0, 1.0),
-                                backgroundColor: const Color(0xFF2C2C2E),
-                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFBEF264)),
-                                minHeight: 6,
+                            const SizedBox(height: 6),
+                            Text(
+                              totalEarnings.toStringAsFixed(2),
+                              style: const TextStyle(
+                                color: Color(0xFF0F172A),
+                                fontSize: 44,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -1,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
+                    ),
 
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 24),
 
                     // Middle illustration or order list
                     if (periodDocs.isEmpty) ...[
+                      const SizedBox(height: 24),
                       Center(
                         child: Column(
                           children: [
                             Container(
-                              width: 80,
-                              height: 80,
+                              width: 76,
+                              height: 76,
                               decoration: const BoxDecoration(
-                                color: Color(0xFF262626),
+                                color: Color(0xFFF1F5F9),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
-                                Icons.home_rounded,
-                                color: Colors.white38,
-                                size: 36,
+                                Icons.receipt_long_outlined,
+                                color: Color(0xFF94A3B8),
+                                size: 34,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
                             Text(
-                              isUrdu ? 'کوئی مکمل شدہ آرڈر نہیں' : 'No completed orders',
+                              isUrdu ? 'اس مدت میں کوئی مکمل شدہ کام نہیں ہے' : 'No completed orders in this period',
                               style: const TextStyle(
-                                color: Colors.white54,
+                                color: Color(0xFF64748B),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -715,16 +338,16 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
                             Text(
                               isUrdu ? 'مکمل شدہ کام (${periodDocs.length})' : 'Completed Orders (${periodDocs.length})',
                               style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 13,
+                                color: Color(0xFF1E293B),
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             Text(
                               'PKR ${totalEarnings.toStringAsFixed(0)}',
                               style: const TextStyle(
-                                color: Color(0xFFBEF264),
-                                fontSize: 13,
+                                color: Color(0xFF0D9488),
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -746,19 +369,26 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E1E1E),
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFBEF264).withValues(alpha: 0.15),
+                                  color: const Color(0xFFF0FDFA),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: const Icon(Icons.check_circle, color: Color(0xFFBEF264), size: 20),
+                                child: const Icon(Icons.check_circle, color: Color(0xFF0D9488), size: 20),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -768,7 +398,7 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
                                     Text(
                                       service.toString(),
                                       style: const TextStyle(
-                                        color: Colors.white,
+                                        color: Color(0xFF1E293B),
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -778,7 +408,7 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       '$customerName • $timeStr',
-                                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
                                     ),
                                   ],
                                 ),
@@ -786,7 +416,7 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
                               Text(
                                 '+PKR ${price.toStringAsFixed(0)}',
                                 style: const TextStyle(
-                                  color: Color(0xFFBEF264),
+                                  color: Color(0xFF0D9488),
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -801,30 +431,19 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
                 ),
               ),
 
-              // Bottom Section: Order History & Achievements
+              // Bottom Section: Order History
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF121212),
+                  color: Colors.white,
                   border: Border(
-                    top: BorderSide(color: Color(0xFF262626), width: 1),
+                    top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
                   ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildBottomActionTile(
-                      icon: Icons.layers_outlined,
-                      title: isUrdu ? 'آرڈر کی تاریخ' : 'Order history',
-                      onTap: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildBottomActionTile(
-                      icon: Icons.outlined_flag,
-                      title: isUrdu ? 'کامیابیاں' : 'Achievements',
-                      onTap: () => _showAchievementsBottomSheet(context, isUrdu),
-                    ),
-                  ],
+                child: _buildBottomActionTile(
+                  icon: Icons.layers_outlined,
+                  title: isUrdu ? 'آرڈر کی مکمل تاریخ' : 'Order history',
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),
                 ),
               ),
             ],
@@ -845,15 +464,15 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
+          color: isSelected ? const Color(0xFF0D9488) : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.black : Colors.white70,
+            color: isSelected ? Colors.white : const Color(0xFF64748B),
             fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
           ),
         ),
       ),
@@ -872,16 +491,26 @@ class _WorkerIncomeScreenState extends State<WorkerIncomeScreen> {
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: 22),
-            const SizedBox(width: 16),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDFA),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: const Color(0xFF0D9488), size: 18),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF1E293B),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
+            const Icon(Icons.chevron_right, color: Color(0xFF94A3B8), size: 20),
           ],
         ),
       ),

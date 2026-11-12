@@ -561,18 +561,26 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFBEF264).withValues(alpha: 0.2),
+                                color: const Color(0xFFF0FDFA),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(Icons.bar_chart_rounded, color: Color(0xFFBEF264), size: 22),
+                              child: const Icon(Icons.bar_chart_rounded, color: Color(0xFF0D9488), size: 22),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -582,7 +590,7 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                   Text(
                                     isUrdu ? 'روزانہ، ہفتہ وار اور ماہانہ آمدنی' : 'Daily, Weekly & Monthly Income',
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Color(0xFF1E293B),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),
@@ -590,12 +598,12 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     isUrdu ? 'تفصیلی گراف اور ہدف دیکھیں' : 'View income plan and breakdown',
-                                    style: const TextStyle(color: Colors.white60, fontSize: 11),
+                                    style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
                                   ),
                                 ],
                               ),
                             ),
-                            const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14),
+                            const Icon(Icons.arrow_forward_ios, color: Color(0xFF94A3B8), size: 14),
                           ],
                         ),
                       ),

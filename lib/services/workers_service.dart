@@ -659,12 +659,30 @@ Future<void> deductPlatformCommission({
 
       if (depositQuery.docs.isNotEmpty) {
         final docId = depositQuery.docs.first.id;
+        final currentBal =
+            (depositQuery.docs.first.data()['currentBalance'] as num?)?.toDouble() ?? 0.0;
+        final updatedBal = currentBal - commissionAmount;
         await FirebaseFirestore.instance
             .collection('security_deposits')
             .doc(docId)
             .update({
           'currentBalance': FieldValue.increment(-commissionAmount),
+          'status': updatedBal < 0 ? 'Negative' : 'Active',
           'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        final workerDoc =
+            await FirebaseFirestore.instance.collection('users').doc(workerId).get();
+        final workerName = workerDoc.data()?['name']?.toString() ?? 'Worker';
+        await FirebaseFirestore.instance.collection('security_deposits').add({
+          'workerId': workerId,
+          'workerName': workerName,
+          'totalDeposited': 0.0,
+          'currentBalance': -commissionAmount,
+          'status': 'Negative',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'method': 'Auto-deduction',
         });
       }
     }
@@ -973,10 +991,15 @@ Stream<QuerySnapshot> streamSecurityDeposits() {
 }
 
 /// Fetches the current security deposit / topup balance of a worker.
-/// Checks security_deposits collection first, falling back to users.topupBalance.
+/// Checks users.topupBalance first, falling back to security_deposits.
 Future<double> getWorkerDepositBalance(String workerId) async {
   if (workerId.isEmpty) return 0.0;
   try {
+    final uDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
+    if (uDoc.exists && uDoc.data()?['topupBalance'] != null) {
+      final topup = (uDoc.data()?['topupBalance'] as num?)?.toDouble();
+      if (topup != null) return topup;
+    }
     final depSnap = await FirebaseFirestore.instance
         .collection('security_deposits')
         .where('workerId', isEqualTo: workerId)
@@ -985,11 +1008,6 @@ Future<double> getWorkerDepositBalance(String workerId) async {
     if (depSnap.docs.isNotEmpty) {
       final balance = (depSnap.docs.first.data()['currentBalance'] as num?)?.toDouble();
       if (balance != null) return balance;
-    }
-    final uDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
-    if (uDoc.exists) {
-      final topup = (uDoc.data()?['topupBalance'] as num?)?.toDouble();
-      if (topup != null) return topup;
     }
   } catch (e) {
     debugPrint('Error getting worker deposit balance: $e');

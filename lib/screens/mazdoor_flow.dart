@@ -47,6 +47,7 @@ import 'worker_income_screen.dart';
 export 'worker_income_screen.dart';
 import 'rating_review_screen.dart';
 export 'rating_review_screen.dart';
+import '../widgets/worker_todays_income_card.dart';
 
 void showToast(String message) {
   rootScaffoldMessengerKey.currentState?.showSnackBar(
@@ -9996,6 +9997,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          const WorkerTodaysIncomeCard(),
           const SizedBox(height: 12),
           InkWell(
             onTap: () => Navigator.pushNamed(context, AppRoutes.sharedHistory),

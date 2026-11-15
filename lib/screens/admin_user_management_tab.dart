@@ -122,14 +122,30 @@ class _AdminUserManagementTabState extends State<AdminUserManagementTab> {
               if (reason.isEmpty) return;
               Navigator.pop(ctx);
 
+              final newBalance = currentBalance - amount;
               if (depositSnap.docs.isNotEmpty) {
                 final docId = depositSnap.docs.first.id;
-                final newBalance = currentBalance - amount;
                 await FirebaseFirestore.instance.collection('security_deposits').doc(docId).update({
                   'currentBalance': newBalance,
+                  'status': newBalance < 0 ? 'Negative' : 'Active',
                   'lastDeductionAt': FieldValue.serverTimestamp(),
                 });
+              } else {
+                await FirebaseFirestore.instance.collection('security_deposits').add({
+                  'workerId': workerId,
+                  'workerName': workerName,
+                  'totalDeposited': 0.0,
+                  'currentBalance': newBalance,
+                  'status': newBalance < 0 ? 'Negative' : 'Active',
+                  'lastDeductionAt': FieldValue.serverTimestamp(),
+                  'createdAt': FieldValue.serverTimestamp(),
+                  'updatedAt': FieldValue.serverTimestamp(),
+                  'method': 'Admin Deduction',
+                });
               }
+              await FirebaseFirestore.instance.collection('users').doc(workerId).set({
+                'topupBalance': FieldValue.increment(-amount),
+              }, SetOptions(merge: true));
               _snack(context, 'Deducted Rs. ${amountController.text} from $workerName');
             },
             child: const Text('Deduct'),

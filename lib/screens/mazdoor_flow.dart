@@ -47,6 +47,8 @@ import 'worker_income_screen.dart';
 export 'worker_income_screen.dart';
 import 'rating_review_screen.dart';
 export 'rating_review_screen.dart';
+import 'worker_public_profile_screen.dart';
+export 'worker_public_profile_screen.dart';
 import '../widgets/worker_todays_income_card.dart';
 
 void showToast(String message) {
@@ -201,6 +203,7 @@ class AppRoutes {
   static const confirmLocation = '/customer/confirm-location';
   static const recommendations = '/customer/recommendations';
   static const workerProfile = '/customer/worker-profile';
+  static const workerPublicProfile = '/customer/worker-public-profile';
   static const tracking = '/customer/tracking';
   static const rating = '/customer/rating';
   static const workerOnboarding = '/worker/onboarding';
@@ -246,8 +249,15 @@ Route<dynamic> buildRoute(RouteSettings settings) {
       return _page(const ConfirmLocationScreen(), settings);
     case AppRoutes.recommendations:
       return _page(const WorkerRecommendationsScreen(), settings);
-    case AppRoutes.workerProfile:
-      return _page(const FlowWorkerProfileScreen(), settings);
+    case AppRoutes.workerProfile: {
+      final args = settings.arguments;
+      if (args is ProfileArguments && args.selectedIssues.isNotEmpty) {
+        return _page(const FlowWorkerProfileScreen(), settings);
+      }
+      return _page(const WorkerPublicProfileScreen(), settings);
+    }
+    case AppRoutes.workerPublicProfile:
+      return _page(const WorkerPublicProfileScreen(), settings);
     case AppRoutes.tracking:
       return _page(const ServiceTrackingScreen(), settings);
     case AppRoutes.rating:
@@ -5075,16 +5085,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => Navigator.pushNamed(
                         context,
-                        AppRoutes.workerProfile,
-                        arguments: ProfileArguments(
-                          worker: w,
-                          job: JobPostingArguments(
-                            descriptionEn: '',
-                            descriptionUr: '',
-                            price: 0,
-                            categoryKey: '',
-                          ),
-                        ),
+                        AppRoutes.workerPublicProfile,
+                        arguments: w,
                       ),
                     ),
                   const SizedBox(height: 10),
@@ -11108,16 +11110,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       final worker = WorkerModel.fromFirestore(data, docId: _otherId);
       Navigator.pushNamed(
         context,
-        AppRoutes.workerProfile,
-        arguments: ProfileArguments(
-          worker: worker,
-          job: JobPostingArguments(
-            descriptionEn: '',
-            descriptionUr: '',
-            price: 0,
-            categoryKey: worker.category,
-          ),
-        ),
+        AppRoutes.workerPublicProfile,
+        arguments: worker,
       );
     } else {
       _showCustomerProfileSheet(context, data);
@@ -14144,16 +14138,8 @@ class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
                         onPressed: () {
                           Navigator.pushNamed(
                             context,
-                            AppRoutes.workerProfile,
-                            arguments: ProfileArguments(
-                              worker: w,
-                              job: JobPostingArguments(
-                                descriptionEn: '',
-                                descriptionUr: '',
-                                price: 0,
-                                categoryKey: '',
-                              ),
-                            ),
+                            AppRoutes.workerPublicProfile,
+                            arguments: w,
                           );
                         },
                         icon: const Icon(Icons.arrow_forward_ios, size: 14),
@@ -14164,16 +14150,8 @@ class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
                   onTap: () {
                     Navigator.pushNamed(
                       context,
-                      AppRoutes.workerProfile,
-                      arguments: ProfileArguments(
-                        worker: w,
-                        job: JobPostingArguments(
-                          descriptionEn: '',
-                          descriptionUr: '',
-                          price: 0,
-                          categoryKey: '',
-                        ),
-                      ),
+                      AppRoutes.workerPublicProfile,
+                      arguments: w,
                     );
                   },
                 );

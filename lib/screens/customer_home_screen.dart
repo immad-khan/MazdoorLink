@@ -16,7 +16,6 @@ import 'mazdoor_flow.dart'
         showExitMazdoorlinkDialog,
         MzScaffold,
         AppRoutes,
-        ProfileArguments,
         TrackingArguments;
 class CustomerHomeScreen extends StatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -615,16 +614,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => Navigator.pushNamed(
                         context,
-                        AppRoutes.workerProfile,
-                        arguments: ProfileArguments(
-                          worker: w,
-                          job: JobPostingArguments(
-                            descriptionEn: '',
-                            descriptionUr: '',
-                            price: 0,
-                            categoryKey: '',
-                          ),
-                        ),
+                        AppRoutes.workerPublicProfile,
+                        arguments: w,
                       ),
                     ),
                   const SizedBox(height: 10),

@@ -19,8 +19,7 @@ import 'mazdoor_flow.dart'
         showToast,
         showExitMazdoorlinkDialog,
         MzScaffold,
-        AppRoutes,
-        ProfileArguments;
+        AppRoutes;
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -1149,16 +1148,8 @@ class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
                         onPressed: () {
                           Navigator.pushNamed(
                             context,
-                            AppRoutes.workerProfile,
-                            arguments: ProfileArguments(
-                              worker: w,
-                              job: JobPostingArguments(
-                                descriptionEn: '',
-                                descriptionUr: '',
-                                price: 0,
-                                categoryKey: '',
-                              ),
-                            ),
+                            AppRoutes.workerPublicProfile,
+                            arguments: w,
                           );
                         },
                         icon: const Icon(Icons.arrow_forward_ios, size: 14),
@@ -1169,16 +1160,8 @@ class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
                   onTap: () {
                     Navigator.pushNamed(
                       context,
-                      AppRoutes.workerProfile,
-                      arguments: ProfileArguments(
-                        worker: w,
-                        job: JobPostingArguments(
-                          descriptionEn: '',
-                          descriptionUr: '',
-                          price: 0,
-                          categoryKey: '',
-                        ),
-                      ),
+                      AppRoutes.workerPublicProfile,
+                      arguments: w,
                     );
                   },
                 );

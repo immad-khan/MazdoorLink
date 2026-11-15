@@ -15,9 +15,7 @@ import 'mazdoor_flow.dart'
         showExitMazdoorlinkDialog,
         MzScaffold,
         AppRoutes,
-        ConversationArguments,
-        ProfileArguments,
-        JobPostingArguments;
+        ConversationArguments;
 
 class ChatHistoryScreen extends StatefulWidget {
   const ChatHistoryScreen({super.key});
@@ -448,16 +446,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       final worker = WorkerModel.fromFirestore(data, docId: _otherId);
       Navigator.pushNamed(
         context,
-        AppRoutes.workerProfile,
-        arguments: ProfileArguments(
-          worker: worker,
-          job: JobPostingArguments(
-            descriptionEn: '',
-            descriptionUr: '',
-            price: 0,
-            categoryKey: worker.category,
-          ),
-        ),
+        AppRoutes.workerPublicProfile,
+        arguments: worker,
       );
     } else {
       _showCustomerProfileSheet(context, data);

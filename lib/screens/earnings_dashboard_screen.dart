@@ -210,6 +210,9 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                       userDoc.data()?['name']?.toString() ??
                                       user.displayName ??
                                       'Worker';
+                                  final currentTopup =
+                                      (userDoc.data()?['topupBalance'] as num?)?.toDouble() ?? 0.0;
+                                  final newBalance = currentTopup + amount;
 
                                   final depositQuery = await FirebaseFirestore
                                       .instance
@@ -228,7 +231,7 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                               FieldValue.increment(amount),
                                           'currentBalance':
                                               FieldValue.increment(amount),
-                                          'status': 'Active',
+                                          'status': newBalance < 0 ? 'Negative' : 'Active',
                                           'lastTopUpAt':
                                               FieldValue.serverTimestamp(),
                                           'updatedAt':
@@ -243,11 +246,13 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                           'workerId': user.uid,
                                           'workerName': workerName,
                                           'totalDeposited': amount.toDouble(),
-                                          'currentBalance': amount.toDouble(),
-                                          'status': 'Active',
+                                          'currentBalance': newBalance,
+                                          'status': newBalance < 0 ? 'Negative' : 'Active',
                                           'createdAt':
                                               FieldValue.serverTimestamp(),
                                           'updatedAt':
+                                              FieldValue.serverTimestamp(),
+                                          'lastTopUpAt':
                                               FieldValue.serverTimestamp(),
                                           'method': 'Safepay',
                                           'accountNumber': 'Online Card',
@@ -316,6 +321,9 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                 userDoc.data()?['name']?.toString() ??
                                 user.displayName ??
                                 'Worker';
+                            final currentTopup =
+                                (userDoc.data()?['topupBalance'] as num?)?.toDouble() ?? 0.0;
+                            final newBalance = currentTopup + amount;
 
                             final depositQuery = await FirebaseFirestore
                                 .instance
@@ -336,7 +344,7 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                     'currentBalance': FieldValue.increment(
                                       amount,
                                     ),
-                                    'status': 'Active',
+                                    'status': newBalance < 0 ? 'Negative' : 'Active',
                                     'lastTopUpAt': FieldValue.serverTimestamp(),
                                     'updatedAt': FieldValue.serverTimestamp(),
                                     'method': 'Cash',
@@ -349,10 +357,11 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                                     'workerId': user.uid,
                                     'workerName': workerName,
                                     'totalDeposited': amount.toDouble(),
-                                    'currentBalance': amount.toDouble(),
-                                    'status': 'Active',
+                                    'currentBalance': newBalance,
+                                    'status': newBalance < 0 ? 'Negative' : 'Active',
                                     'createdAt': FieldValue.serverTimestamp(),
                                     'updatedAt': FieldValue.serverTimestamp(),
+                                    'lastTopUpAt': FieldValue.serverTimestamp(),
                                     'method': 'Cash',
                                     'accountNumber': 'Cash at Franchise',
                                   });
@@ -612,60 +621,123 @@ class _EarningsDashboardScreenState extends State<EarningsDashboardScreen> {
                   const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: StreamBuilder<QuerySnapshot>(
+                    child: StreamBuilder<DocumentSnapshot>(
                       stream: FirebaseFirestore.instance
-                          .collection('security_deposits')
-                          .where('workerId', isEqualTo: workerUid)
-                          .limit(1)
+                          .collection('users')
+                          .doc(workerUid)
                           .snapshots(),
-                      builder: (context, depositSnap) {
-                        double topupBalance = 0;
-                        if (depositSnap.hasData &&
-                            depositSnap.data!.docs.isNotEmpty) {
-                          final depData =
-                              depositSnap.data!.docs.first.data()
-                                  as Map<String, dynamic>;
-                          topupBalance =
-                              (depData['currentBalance'] as num?)?.toDouble() ??
-                              0;
-                        }
+                      builder: (context, userSnap) {
+                        final uData = userSnap.data?.data() as Map<String, dynamic>?;
+                        final double topupBalance =
+                            (uData?['topupBalance'] as num?)?.toDouble() ?? 0.0;
+                        final bool isNegative = topupBalance < 0;
+
                         return Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE0E7FF),
-                            borderRadius: BorderRadius.circular(12),
+                            color: isNegative ? const Color(0xFFFEF2F2) : const Color(0xFFE0E7FF),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isNegative ? const Color(0xFFFCA5A5) : const Color(0xFFC7D2FE),
+                              width: isNegative ? 1.5 : 1.0,
+                            ),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    isUrdu ? 'ٹاپ اپ بیلنس' : 'Top-up Balance',
-                                    style: const TextStyle(fontSize: 18),
+                                  Row(
+                                    children: [
+                                      if (isNegative) ...[
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade100,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.warning_amber_rounded,
+                                            color: Colors.red,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                      ],
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            isUrdu
+                                                ? (isNegative ? 'ڈپازٹ بیلنس (منفی)' : 'ٹاپ اپ بیلنس')
+                                                : (isNegative ? 'Deposit Balance (Negative)' : 'Top-up Balance'),
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: isNegative ? Colors.red.shade800 : const Color(0xFF1E293B),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            isUrdu
+                                                ? (isNegative
+                                                    ? '-Rs. ${topupBalance.abs().toStringAsFixed(0)}'
+                                                    : '${topupBalance.toStringAsFixed(0)} روپے')
+                                                : (isNegative
+                                                    ? '-Rs. ${topupBalance.abs().toStringAsFixed(0)}'
+                                                    : 'Rs. ${topupBalance.toStringAsFixed(0)}'),
+                                            style: TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.w800,
+                                              color: isNegative ? Colors.red.shade700 : const Color(0xFF1E1B4B),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    isUrdu
-                                        ? '${topupBalance.toStringAsFixed(0)} روپے'
-                                        : 'Rs. ${topupBalance.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w700,
+                                  FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: isNegative ? Colors.red : const Color(0xFF4F46E5),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                     ),
+                                    icon: const Icon(Icons.add_card, size: 18),
+                                    label: Text(
+                                      isUrdu
+                                          ? (isNegative ? 'بیلنس کلیئر کریں' : 'ٹاپ اپ کریں')
+                                          : (isNegative ? 'Top Up Now' : 'Top-up'),
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    onPressed: () =>
+                                        _showTopUpDialog(context, isUrdu),
                                   ),
                                 ],
                               ),
-                              FilledButton.icon(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4F46E5),
+                              if (isNegative) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.info_outline, size: 16, color: Colors.red),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          isUrdu
+                                              ? 'پلیٹ فارم فیس کی وجہ سے بیلنس منفی ہے۔ نئے کام قبول کرنے کے لیے ٹاپ اپ کریں۔'
+                                              : 'Deposit balance is negative from job fee deductions. Top up to accept new jobs.',
+                                          style: const TextStyle(fontSize: 11.5, color: Colors.red, fontWeight: FontWeight.w500),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                icon: const Icon(Icons.add_card),
-                                label: Text(isUrdu ? 'ٹاپ اپ کریں' : 'Top-up'),
-                                onPressed: () =>
-                                    _showTopUpDialog(context, isUrdu),
-                              ),
+                              ],
                             ],
                           ),
                         );

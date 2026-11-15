@@ -168,7 +168,9 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
     super.didChangeDependencies();
     if (!_initialized) {
       final args = ModalRoute.of(context)?.settings.arguments as String?;
-      if (args != null) _categoryKey = args;
+      if (args != null && args.trim().isNotEmpty) {
+        _categoryKey = args.trim().toLowerCase();
+      }
       _initialized = true;
 
       final user = FirebaseAuth.instance.currentUser;
@@ -210,38 +212,66 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
   }
 
   Future<void> _loadCustomSkills() async {
-    // Collect all predefined skill titles for this category so we don't
-    // show duplicates of built-in skills.
-    final predefinedTitles = _categoryKey == 'electrician'
-        ? _electricalIssues.map((e) => e.titleEn.toLowerCase()).toSet()
-        : _PlumberIssues.map((e) => e.titleEn.toLowerCase()).toSet();
+    // Collect ALL predefined skill titles across BOTH categories so we can
+    // exclude any of them from the "custom" section (they are built-in skills,
+    // not worker-added custom services).
+    final allPredefinedTitles = <String>{
+      ..._electricalIssues.map((e) => e.titleEn.toLowerCase()),
+      ..._PlumberIssues.map((e) => e.titleEn.toLowerCase()),
+    };
 
     try {
-      // ── Fetch ALL approved workers (no category filter) ──────────────────
-      // We previously filtered by categoryNameEn which prevented workers with
-      // multiple skills (e.g. a Plumber who also does electrical work) from
-      // being discovered. Now we scan all workers and collect any custom skill
-      // title that isn't already in the predefined list for this category.
+      // ── Fetch approved workers ──────────────────────────────────────────
+      // Use standard composite query (role + status) which is guaranteed to be
+      // supported without custom index requirements. We then strictly filter by
+      // category in memory to ensure case-insensitivity and support all field
+      // variants ('category', 'categoryKey', 'categoryNameEn').
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('role', isEqualTo: 'worker')
           .where('status', isEqualTo: 'approved')
           .get();
 
+      final targetKey = _categoryKey.trim().toLowerCase();
+      final targetName = _categoryKeyToName(_categoryKey).trim().toLowerCase();
+
       final seen = <String>{};
       final skills = <IssueItem>[];
       for (final doc in snapshot.docs) {
         final data = doc.data();
+
+        // Strictly verify the worker belongs to the selected category.
+        // When viewing Plumber, only Plumber workers are processed.
+        // When viewing Electrician, only Electrician workers are processed.
+        final cat = (data['category'] ?? data['categoryKey'] ?? '')
+            .toString()
+            .trim()
+            .toLowerCase();
+        final catEn =
+            (data['categoryNameEn'] ?? '').toString().trim().toLowerCase();
+
+        final matchesCategory = cat == targetKey ||
+            cat == targetName ||
+            catEn == targetKey ||
+            catEn == targetName ||
+            (targetKey.contains('plumb') &&
+                (cat.contains('plumb') || catEn.contains('plumb'))) ||
+            (targetKey.contains('elect') &&
+                (cat.contains('elect') || catEn.contains('elect')));
+
+        if (!matchesCategory) continue;
+
         final skillsData = data['skills'] as List<dynamic>? ?? [];
         for (final s in skillsData) {
-          final map = s as Map<String, dynamic>;
+          if (s is! Map<String, dynamic>) continue;
+          final map = s;
           final title = map['titleEn']?.toString() ?? '';
           final titleLower = title.toLowerCase();
           // Only add skills that:
-          //   1. Are not already a predefined issue for this category, AND
+          //   1. Are not a predefined issue for ANY category, AND
           //   2. Have not been added yet (dedup by title)
           if (title.isNotEmpty &&
-              !predefinedTitles.contains(titleLower) &&
+              !allPredefinedTitles.contains(titleLower) &&
               seen.add(titleLower)) {
             skills.add(
               IssueItem(
@@ -254,13 +284,17 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
           }
         }
       }
-      if (mounted)
+      if (mounted) {
         setState(() {
           _customSkills = skills;
           _loadingCustomSkills = false;
         });
-    } catch (_) {
-      if (mounted) setState(() => _loadingCustomSkills = false);
+      }
+    } catch (e) {
+      debugPrint('Error loading custom skills: $e');
+      if (mounted) {
+        setState(() => _loadingCustomSkills = false);
+      }
     }
   }
 
@@ -492,14 +526,13 @@ class _IssueSelectionScreenState extends State<IssueSelectionScreen> {
     final controller = AppScope.of(context);
     final isUrdu = controller.isUrdu;
 
-    final issuesList = _categoryKey == 'electrician'
-        ? _electricalIssues
-        : _PlumberIssues;
+    final isElectrician = _categoryKey.toLowerCase().contains('elect');
+    final issuesList = isElectrician ? _electricalIssues : _PlumberIssues;
 
-    final titleEn = _categoryKey == 'electrician'
+    final titleEn = isElectrician
         ? 'Select Electrician Issue'
         : 'Select Plumber Issue';
-    final titleUr = _categoryKey == 'electrician'
+    final titleUr = isElectrician
         ? 'الیکٹریکل مسئلہ منتخب کریں'
         : 'پلمبنگ مسئلہ منتخب کریں';
 

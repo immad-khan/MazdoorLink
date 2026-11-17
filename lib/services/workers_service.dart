@@ -820,7 +820,6 @@ Stream<DocumentSnapshot> streamJobById(String jobId) {
 Stream<QuerySnapshot> streamComplaints() {
   return FirebaseFirestore.instance
       .collection('complaints')
-      .orderBy('createdAt', descending: true)
       .snapshots();
 }
 

@@ -463,6 +463,14 @@ class CustomerActiveJobInfo {
   final String workerName;
   final String status;
   final double price;
+  final String workerId;
+  final String workerPhone;
+  final String workerImage;
+  final String descriptionEn;
+  final String descriptionUr;
+  final String paymentMethod;
+  final double? customerLat;
+  final double? customerLng;
 
   const CustomerActiveJobInfo({
     required this.jobId,
@@ -470,7 +478,27 @@ class CustomerActiveJobInfo {
     required this.workerName,
     required this.status,
     required this.price,
+    this.workerId = '',
+    this.workerPhone = '',
+    this.workerImage = '',
+    this.descriptionEn = '',
+    this.descriptionUr = '',
+    this.paymentMethod = 'Cash',
+    this.customerLat,
+    this.customerLng,
   });
+
+  WorkerModel toWorkerModel() {
+    return WorkerModel(
+      id: workerId.isNotEmpty ? workerId : null,
+      name: workerName.isNotEmpty ? workerName : 'Worker',
+      category: categoryKey,
+      phone: workerPhone,
+      image: workerImage,
+      priceValue: price,
+      price: price > 0 ? 'Rs. ${price.toStringAsFixed(0)}' : '',
+    );
+  }
 }
 
 Stream<Map<String, CustomerActiveJobInfo>> streamCustomerActiveCategoriesMap(String customerId) {
@@ -493,6 +521,14 @@ Stream<Map<String, CustomerActiveJobInfo>> streamCustomerActiveCategoriesMap(Str
               workerName: data['workerName']?.toString() ?? 'Worker',
               status: data['status']?.toString() ?? 'pending',
               price: (data['price'] as num?)?.toDouble() ?? 0.0,
+              workerId: data['workerId']?.toString() ?? '',
+              workerPhone: data['workerPhone']?.toString() ?? '',
+              workerImage: data['workerImage']?.toString() ?? '',
+              descriptionEn: data['descriptionEn']?.toString() ?? '',
+              descriptionUr: data['descriptionUr']?.toString() ?? '',
+              paymentMethod: data['paymentMethod']?.toString() ?? 'Cash',
+              customerLat: (data['customerLatitude'] as num?)?.toDouble(),
+              customerLng: (data['customerLongitude'] as num?)?.toDouble(),
             );
           }
         }

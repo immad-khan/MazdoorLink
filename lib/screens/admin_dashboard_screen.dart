@@ -37,6 +37,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
+    _pages = [
+      _HomeTab(onSelectTab: _onNavTap),
+      const AdminWorkerRegistrationsTab(),
+      const JobsTab(),
+      const AdminComplaintsTab(),
+    ];
     _micPulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -53,12 +59,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   // ── Pages ────────────────────────────────
-  final List<Widget> _pages = const [
-    _HomeTab(),
-    AdminWorkerRegistrationsTab(),
-    JobsTab(),
-    AdminComplaintsTab(),
-  ];
+  late final List<Widget> _pages;
 
   void _onNavTap(int index) {
     setState(() => _currentIndex = index);
@@ -260,7 +261,8 @@ class _NavBtn extends StatelessWidget {
 // TAB 0 – Home / Overview Dashboard
 // ─────────────────────────────────────────────
 class _HomeTab extends StatelessWidget {
-  const _HomeTab();
+  const _HomeTab({this.onSelectTab});
+  final ValueChanged<int>? onSelectTab;
 
   @override
   Widget build(BuildContext context) {
@@ -337,7 +339,11 @@ class _HomeTab extends StatelessWidget {
                                   .snapshots(),
                               builder: (_, snap) {
                                 final count = snap.data?.docs.length ?? 0;
-                                return _StatPill(label: 'Workers', value: '$count');
+                                return _StatPill(
+                                  label: 'Workers',
+                                  value: '$count',
+                                  onTap: () => onSelectTab?.call(1),
+                                );
                               },
                             ),
                             const SizedBox(width: 12),
@@ -348,13 +354,17 @@ class _HomeTab extends StatelessWidget {
                                         .where((d) => !((d.data() as Map)['resolved'] == true))
                                         .length ??
                                     0;
-                                return _StatPill(label: 'Complaints', value: '$openCount');
+                                return _StatPill(
+                                  label: 'Complaints',
+                                  value: '$openCount',
+                                  onTap: () => onSelectTab?.call(3),
+                                );
                               },
                             ),
                             const SizedBox(width: 12),
                             StreamBuilder<QuerySnapshot>(
                               stream: streamSecurityDeposits(),
-                              builder: (_, snap) {
+                              builder: (context, snap) {
                                 double totalRefunds = 0;
                                 if (snap.hasData) {
                                   for (final doc in snap.data!.docs) {
@@ -367,7 +377,11 @@ class _HomeTab extends StatelessWidget {
                                 final label = totalRefunds >= 1000
                                     ? 'Rs ${(totalRefunds / 1000).toStringAsFixed(totalRefunds >= 10000 ? 0 : 1)}k'
                                     : 'Rs ${totalRefunds.toStringAsFixed(0)}';
-                                return _StatPill(label: 'Refunds', value: label);
+                                return _StatPill(
+                                  label: 'Refunds',
+                                  value: label,
+                                  onTap: () => _showDepositsSheet(context),
+                                );
                               },
                             ),
                           ],
@@ -419,6 +433,24 @@ class _HomeTab extends StatelessWidget {
                       builder: (_) => const AdminEarningsScreen(),
                     ),
                   ),
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<QuerySnapshot>(
+                  stream: streamComplaints(),
+                  builder: (context, snap) {
+                    final openCount = snap.data?.docs
+                            .where((d) => !((d.data() as Map)['resolved'] == true))
+                            .length ??
+                        0;
+                    return _DashboardActionCard(
+                      icon: Icons.report_problem_outlined,
+                      title: 'Complaints & Disputes',
+                      subtitle: 'Review issues, contact users & resolve',
+                      color: const Color(0xFFEF4444),
+                      badgeCount: openCount > 0 ? openCount : null,
+                      onTap: () => onSelectTab?.call(3),
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 StreamBuilder<QuerySnapshot>(
@@ -597,28 +629,36 @@ class _RecentActivityList extends StatelessWidget {
 }
 
 class _StatPill extends StatelessWidget {
-  const _StatPill({required this.label, required this.value});
+  const _StatPill({required this.label, required this.value, this.onTap});
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.18),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(value,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-          const SizedBox(width: 4),
-          Text(label,
-              style: const TextStyle(color: Colors.white70, fontSize: 11)),
-        ],
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.18),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(value,
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(width: 4),
+              Text(label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11)),
+            ],
+          ),
+        ),
       ),
     );
   }

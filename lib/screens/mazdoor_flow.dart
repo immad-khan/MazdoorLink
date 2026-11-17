@@ -29,6 +29,7 @@ import 'issue_selection_screen.dart';
 import 'worker_services_setup_screen.dart';
 import '../services/cloudinary_service.dart';
 import '../services/workers_service.dart';
+import '../services/translation_service.dart';
 import '../services/smtp_service.dart';
 import '../services/sms_service.dart';
 import '../services/voice_assistant_service.dart';
@@ -1236,16 +1237,11 @@ class WelcomeScreen extends StatelessWidget {
                   duration: const Duration(milliseconds: 500),
                   builder: (_, value, child) =>
                       Transform.scale(scale: value, child: child),
-                  child: CircleAvatar(
-                    radius: 36,
-                    backgroundColor: const Color(
-                      0xFF0D9488,
-                    ).withValues(alpha: 0.14),
-                    child: const Icon(
-                      Icons.hardware,
-                      size: 34,
-                      color: Color(0xFF0D9488),
-                    ),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -3333,6 +3329,17 @@ class _AuthScreenState extends State<AuthScreen> {
       key: const ValueKey('loginScreen'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: 76,
+              height: 76,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
         Text(
           bilingual(context, 'Welcome back', 'خوش آمدید'),
           style: const TextStyle(
@@ -3499,6 +3506,17 @@ class _AuthScreenState extends State<AuthScreen> {
         key: const ValueKey('signupStep0'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 76,
+                height: 76,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
           const Text(
             'Create account',
             style: TextStyle(
@@ -4620,7 +4638,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 Navigator.pushNamed(
                   context,
                   AppRoutes.tracking,
-                  arguments: TrackingArguments(jobId: activeJob.jobId),
+                  arguments: TrackingArguments(
+                    jobId: activeJob.jobId,
+                    worker: activeJob.toWorkerModel(),
+                    job: JobPostingArguments(
+                      descriptionEn: activeJob.descriptionEn,
+                      descriptionUr: activeJob.descriptionUr,
+                      price: activeJob.price,
+                      categoryKey: activeJob.categoryKey,
+                      paymentMethod: activeJob.paymentMethod,
+                      customerLatitude: activeJob.customerLat,
+                      customerLongitude: activeJob.customerLng,
+                    ),
+                  ),
                 );
               },
               icon: const Icon(Icons.navigation_outlined, size: 16),
@@ -7971,11 +8001,19 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   Timer? _countdownTimer;
   bool _reminderEmailSent = false;
   String _jobDescEmail = '';
+  double? _liveJobPrice;
+  String? _liveJobDescEn;
+  String? _liveJobDescUr;
+
+  bool _initialized = false;
+  bool _isLoading = true;
+  WorkerModel? _resolvedWorker;
+  JobPostingArguments? _resolvedJob;
+  String? _resolvedJobId;
 
   @override
   void initState() {
     super.initState();
-    _listenToJob();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       final scheduled = _scheduledTime;
@@ -7990,15 +8028,37 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     });
   }
 
-  void _listenToJob() {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
-    final jobId = args?.jobId;
-    if (jobId == null) return;
-    _jobSub = streamJobById(jobId).listen((snapshot) {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      final args =
+          ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
+      _resolvedJobId = args?.jobId;
+      _resolvedWorker = args?.worker;
+      _resolvedJob = args?.job;
+
+      if (_resolvedJobId != null && _resolvedJobId!.isNotEmpty) {
+        _listenToJob(_resolvedJobId!);
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _listenToJob(String jobId) {
+    _jobSub = streamJobById(jobId).listen((snapshot) async {
       if (!mounted) return;
       final data = snapshot.data() as Map<String, dynamic>?;
-      if (data == null) return;
+      if (data == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
       final status = data['status']?.toString() ?? 'pending';
       if (status == 'cancelled') {
         showToast(
@@ -8029,13 +8089,58 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
         Navigator.pop(context);
         return;
       }
+
+      final workerId = data['workerId']?.toString() ?? '';
+      if ((_resolvedWorker == null || _resolvedWorker!.phone.isEmpty) && workerId.isNotEmpty) {
+        try {
+          final wDoc = await FirebaseFirestore.instance.collection('users').doc(workerId).get();
+          final wData = wDoc.data();
+          if (wData != null && mounted) {
+            _resolvedWorker = WorkerModel.fromFirestore(wData, docId: wDoc.id);
+          }
+        } catch (_) {}
+      }
+
+      if (_resolvedWorker == null) {
+        _resolvedWorker = WorkerModel(
+          id: workerId.isNotEmpty ? workerId : null,
+          name: data['workerName']?.toString() ?? 'Worker',
+          category: data['categoryKey']?.toString() ?? '',
+          phone: data['workerPhone']?.toString() ?? '',
+          image: data['workerImage']?.toString() ?? '',
+          priceValue: (data['price'] as num?)?.toDouble() ?? 0.0,
+          price: ((data['price'] as num?)?.toDouble() ?? 0.0) > 0
+              ? 'Rs. ${((data['price'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(0)}'
+              : '',
+        );
+      }
+
+      if (_resolvedJob == null) {
+        _resolvedJob = JobPostingArguments(
+          descriptionEn: data['descriptionEn']?.toString() ?? '',
+          descriptionUr: data['descriptionUr']?.toString() ?? '',
+          price: (data['price'] as num?)?.toDouble() ?? 0.0,
+          categoryKey: data['categoryKey']?.toString() ?? '',
+          paymentMethod: data['paymentMethod']?.toString() ?? 'Cash',
+          customerLatitude: (data['customerLatitude'] as num?)?.toDouble(),
+          customerLongitude: (data['customerLongitude'] as num?)?.toDouble(),
+        );
+      }
+
       double? lat, lng;
       if (data['customerLatitude'] != null &&
           data['customerLongitude'] != null) {
         lat = (data['customerLatitude'] as num).toDouble();
         lng = (data['customerLongitude'] as num).toDouble();
       }
+      final p = (data['price'] as num?)?.toDouble();
+      final dEn = data['descriptionEn']?.toString();
+      final dUr = data['descriptionUr']?.toString();
       setState(() {
+        _isLoading = false;
+        if (p != null && p > 0) _liveJobPrice = p;
+        if (dEn != null && dEn.isNotEmpty) _liveJobDescEn = dEn;
+        if (dUr != null && dUr.isNotEmpty) _liveJobDescUr = dUr;
         final scheduledRaw = data['scheduledReminderAt'];
         _scheduledTime = scheduledRaw is Timestamp
             ? scheduledRaw.toDate()
@@ -8112,7 +8217,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
     final t = DateFormat('hh:mm a, d MMM').format(scheduled);
     final args =
         ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
-    final worker = args?.worker;
+    final worker = args?.worker ?? _resolvedWorker;
 
     if (_scheduleConfirmed) {
       final remaining = scheduled.difference(DateTime.now());
@@ -8542,12 +8647,52 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   Widget build(BuildContext context) {
     final args =
         ModalRoute.of(context)?.settings.arguments as TrackingArguments?;
-    final worker = args?.worker;
-    final job = args?.job;
-    final jobId = args?.jobId;
+    final worker = args?.worker ?? _resolvedWorker;
+    final job = args?.job ?? _resolvedJob;
+    final jobId = args?.jobId ?? _resolvedJobId;
 
     if (worker == null) {
+      if (_isLoading) {
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              bilingual(context, 'Service Tracking', 'سروس ٹریکنگ'),
+              style: const TextStyle(
+                color: Color(0xFF1E293B),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          body: const Center(
+            child: CircularProgressIndicator(color: Color(0xFF0D9488)),
+          ),
+        );
+      }
       return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            bilingual(context, 'Service Tracking', 'سروس ٹریکنگ'),
+            style: const TextStyle(
+              color: Color(0xFF1E293B),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
         body: Center(
           child: Text(
             bilingual(
@@ -8833,8 +8978,23 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                       ),
                     ),
                     title: Text(worker.name),
-                    subtitle: Text(
-                      '${worker.category} • ${bilingual(context, job?.descriptionEn ?? "Service", job?.descriptionUr ?? "سروس")} • ${worker.price}',
+                    subtitle: Builder(
+                      builder: (context) {
+                        final priceVal = _liveJobPrice ??
+                            job?.price ??
+                            (double.tryParse(worker.price.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0);
+                        final priceStr = priceVal > 0
+                            ? 'Rs. ${priceVal.toStringAsFixed(0)}'
+                            : worker.price;
+                        final desc = bilingual(
+                          context,
+                          _liveJobDescEn ?? job?.descriptionEn ?? "Service",
+                          _liveJobDescUr ?? job?.descriptionUr ?? "سروس",
+                        );
+                        return Text(
+                          '${worker.category} • $desc • $priceStr',
+                        );
+                      },
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -10926,6 +11086,23 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool? _showUrduOverride;
   bool get _showUrdu => _showUrduOverride ?? AppScope.of(context).isUrdu;
   int _lastMsgCount = 0;
+  final Map<String, String> _onDemandTranslations = {};
+  final Set<String> _pendingTranslations = {};
+
+  void _requestTranslation(String text, String src, String target) {
+    final key = '$src->$target:$text';
+    if (_onDemandTranslations.containsKey(key) || _pendingTranslations.contains(key)) return;
+    _pendingTranslations.add(key);
+    TranslationService().translate(text: text, sourceLang: src, targetLang: target).then((res) {
+      if (mounted && res != text) {
+        setState(() {
+          _onDemandTranslations[key] = res;
+        });
+      }
+    }).catchError((_) {}).whenComplete(() {
+      _pendingTranslations.remove(key);
+    });
+  }
 
   StreamSubscription<DocumentSnapshot>? _convSub;
   StreamSubscription<DocumentSnapshot>? _presenceSub;
@@ -11819,9 +11996,42 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final raw = data['text'] as String? ?? '';
     final textUr = data['textUr'] as String? ?? '';
     final textEn = data['textEn'] as String? ?? '';
-    final text = _showUrdu
-        ? (textUr.isNotEmpty ? textUr : raw)
-        : (textEn.isNotEmpty ? textEn : raw);
+
+    String text;
+    bool isTranslated = false;
+    if (_showUrdu) {
+      if (textUr.isNotEmpty && textUr != raw) {
+        text = textUr;
+        isTranslated = true;
+      } else {
+        final key = 'en->ur:$raw';
+        if (_onDemandTranslations.containsKey(key)) {
+          text = _onDemandTranslations[key]!;
+          isTranslated = true;
+        } else {
+          text = raw;
+          if (raw.trim().isNotEmpty && detectLanguage(raw) == 'en') {
+            _requestTranslation(raw, 'en', 'ur');
+          }
+        }
+      }
+    } else {
+      if (textEn.isNotEmpty && textEn != raw) {
+        text = textEn;
+        isTranslated = true;
+      } else {
+        final key = 'ur->en:$raw';
+        if (_onDemandTranslations.containsKey(key)) {
+          text = _onDemandTranslations[key]!;
+          isTranslated = true;
+        } else {
+          text = raw;
+          if (raw.trim().isNotEmpty && detectLanguage(raw) == 'ur') {
+            _requestTranslation(raw, 'ur', 'en');
+          }
+        }
+      }
+    }
     final isMe = senderId == me;
     final ts = data['timestamp'] as Timestamp?;
     final readBy = List<String>.from(data['readBy'] as List? ?? []);
@@ -11865,6 +12075,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     fontSize: 10,
                   ),
                 ),
+                if (isTranslated) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.translate,
+                    size: 11,
+                    color: isMe ? const Color(0xFFA7F3D0) : const Color(0xFF0D9488),
+                  ),
+                ],
                 if (isMe) ...[
                   const SizedBox(width: 4),
                   Icon(

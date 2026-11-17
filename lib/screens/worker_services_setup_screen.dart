@@ -5,6 +5,7 @@ import 'package:service_frontend/app_theme.dart';
 import '../app_state.dart';
 import '../services/skill_deduplicator.dart';
 import 'signup_data.dart';
+import 'mazdoor_flow.dart' show AppRoutes;
 
 class ServiceItem {
   final String titleEn;
@@ -265,6 +266,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
   }
 
   bool _checkingDuplicate = false;
+  bool _isSaving = false;
 
   Future<void> _addCustomService(bool isUrdu) async {
     final title = _customTitleController.text.trim();
@@ -393,6 +395,8 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
       }
     }
 
+    setState(() => _isSaving = true);
+
     // Save skills/services to Firestore
     try {
       final selectedServices = _currentServices
@@ -403,6 +407,20 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                 'price': s.price,
               })
           .toList();
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null && _signupData == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isUrdu ? 'براہ کرم پہلے لاگ ان کریں' : 'Please log in to complete setup'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+          Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (route) => false);
+        }
+        return;
+      }
 
       if (_signupData != null) {
         // Signup mode - create user and save everything
@@ -500,14 +518,14 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
       }
 
       // Existing mode - update current user document
-      final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final categoryKey = _categoryIndex == 0 ? 'plumber' : 'electrician';
+        final catIndex = (_categoryIndex >= 0 && _categoryIndex < _skillNamesEn.length) ? _categoryIndex : 0;
+        final categoryKey = catIndex == 0 ? 'plumber' : 'electrician';
         await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
           'skills': selectedServices,
           'category': categoryKey,
-          'categoryNameEn': _skillNamesEn[_categoryIndex],
-          'categoryNameUr': _skillNamesUr[_categoryIndex],
+          'categoryNameEn': _skillNamesEn[catIndex],
+          'categoryNameUr': _skillNamesUr[catIndex],
           'setupComplete': true,
         });
       }
@@ -521,6 +539,10 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
         );
       }
       return;
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
 
     // Display success modal (existing mode)
@@ -589,7 +611,15 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context); // Pop dialog
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    } else {
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        AppRoutes.workerDashboard,
+                        (route) => false,
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0D9488),
@@ -601,7 +631,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                     elevation: 2,
                   ),
                   child: Text(
-                    isUrdu ? 'محفوظ کریں' : 'Save & Go Back',
+                    isUrdu ? 'ڈیش بورڈ پر جائیں' : 'Go to Dashboard',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
@@ -619,21 +649,46 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
     final controller = AppScope.of(context);
     final isUrdu = controller.isUrdu;
 
-    final categoryNameEn = _skillNamesEn[_categoryIndex];
-    final categoryNameUr = _skillNamesUr[_categoryIndex];
+    final safeCatIndex = (_categoryIndex >= 0 && _categoryIndex < _skillNamesEn.length) ? _categoryIndex : 0;
+    final categoryNameEn = _skillNamesEn[safeCatIndex];
+    final categoryNameUr = _skillNamesUr[safeCatIndex];
 
-    return Directionality(
-      textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF9FAFB),
-        appBar: AppBar(
-          title: Text(isUrdu ? 'خدمات اور قیمت کا سیٹ اپ' : 'Services & Rates Setup'),
-          centerTitle: true,
-          elevation: 0,
-          leading: IconButton(
-            onPressed: () => Navigator.maybePop(context),
-            icon: Icon(isUrdu ? Icons.arrow_forward : Icons.arrow_back),
-          ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.workerDashboard,
+            (route) => false,
+          );
+        }
+      },
+      child: Directionality(
+        textDirection: isUrdu ? TextDirection.rtl : TextDirection.ltr,
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF9FAFB),
+          appBar: AppBar(
+            title: Text(isUrdu ? 'خدمات اور قیمت کا سیٹ اپ' : 'Services & Rates Setup'),
+            centerTitle: true,
+            elevation: 0,
+            leading: IconButton(
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppRoutes.workerDashboard,
+                    (route) => false,
+                  );
+                }
+              },
+              icon: Icon(isUrdu ? Icons.arrow_forward : Icons.arrow_back),
+            ),
           actions: [
             TextButton.icon(
               onPressed: () {
@@ -994,19 +1049,29 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () => _completeSetup(isUrdu),
+                      onPressed: _isSaving ? null : () => _completeSetup(isUrdu),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0D9488),
                         foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.6),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         elevation: 1,
                       ),
-                      child: Text(
-                        isUrdu ? 'مکمل کریں' : 'Complete Setup',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              isUrdu ? 'مکمل کریں' : 'Complete Setup',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ),
                 ),
@@ -1014,6 +1079,7 @@ class _WorkerServicesSetupScreenState extends State<WorkerServicesSetupScreen> w
             ),
           ),
         ),
+      ),
       ),
     );
   }

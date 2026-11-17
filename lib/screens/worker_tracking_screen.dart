@@ -33,6 +33,8 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
   String _cancelMessage = '';
   String _cancelCategory = '';
   bool _cancellationAlertShown = false;
+  double? _liveJobPrice;
+  double get _effectiveJobPrice => _liveJobPrice ?? widget.jobPrice;
 
   @override
   void initState() {
@@ -46,6 +48,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
       final data = snapshot.data() as Map<String, dynamic>?;
       if (data == null) return;
       final isUrdu = AppScope.of(context).isUrdu;
+      final p = (data['price'] as num?)?.toDouble();
       double? lat, lng;
       if (data['customerLatitude'] != null && data['customerLongitude'] != null) {
         lat = (data['customerLatitude'] as num).toDouble();
@@ -58,6 +61,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
       }
       if (!mounted) return;
       setState(() {
+        if (p != null && p > 0) _liveJobPrice = p;
         final jobStatus = data['status']?.toString() ?? 'accepted';
         if (jobStatus == 'cancelled' || jobStatus == 'canceled') {
           _status = 8;
@@ -484,7 +488,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
           _ReceiptLine(label: isUrdu ? 'کام' : 'Job', value: _jobDesc.isEmpty ? 'Service' : _jobDesc),
           _ReceiptLine(label: isUrdu ? 'کسٹمر' : 'Customer', value: _customerName),
           _ReceiptLine(label: isUrdu ? 'ادائیگی' : 'Payment', value: _paymentMethod),
-          _ReceiptLine(label: isUrdu ? 'رقم' : 'Amount', value: 'PKR ${widget.jobPrice.toStringAsFixed(0)}'),
+          _ReceiptLine(label: isUrdu ? 'رقم' : 'Amount', value: 'PKR ${_effectiveJobPrice.toStringAsFixed(0)}'),
         ],
       ),
     );
@@ -516,7 +520,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$_jobDesc • Rs. ${widget.jobPrice.toStringAsFixed(0)}',
+                  '$_jobDesc • Rs. ${_effectiveJobPrice.toStringAsFixed(0)}',
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                 ),
               ],
@@ -924,7 +928,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'PKR ${widget.jobPrice.toStringAsFixed(0)} • $_paymentMethod',
+                      'PKR ${_effectiveJobPrice.toStringAsFixed(0)} • $_paymentMethod',
                       style: const TextStyle(fontSize: 16, color: Color(0xFF0D9488), fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 14),
@@ -947,7 +951,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      isUrdu ? 'وصول کیے گئے: PKR ${widget.jobPrice.toStringAsFixed(0)}' : 'Received: PKR ${widget.jobPrice.toStringAsFixed(0)}',
+                      isUrdu ? 'وصول کیے گئے: PKR ${_effectiveJobPrice.toStringAsFixed(0)}' : 'Received: PKR ${_effectiveJobPrice.toStringAsFixed(0)}',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 12),

@@ -44,4 +44,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 # docs
-/docs/* 
+/docs/*
+!/docs/*.drawio

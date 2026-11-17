@@ -22,16 +22,11 @@ class WelcomeScreen extends StatelessWidget {
                   duration: const Duration(milliseconds: 500),
                   builder: (_, value, child) =>
                       Transform.scale(scale: value, child: child),
-                  child: CircleAvatar(
-                    radius: 36,
-                    backgroundColor: const Color(
-                      0xFF0D9488,
-                    ).withValues(alpha: 0.14),
-                    child: const Icon(
-                      Icons.hardware,
-                      size: 34,
-                      color: Color(0xFF0D9488),
-                    ),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 18),

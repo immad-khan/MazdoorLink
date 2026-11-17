@@ -149,7 +149,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 Navigator.pushNamed(
                   context,
                   AppRoutes.tracking,
-                  arguments: TrackingArguments(jobId: activeJob.jobId),
+                  arguments: TrackingArguments(
+                    jobId: activeJob.jobId,
+                    worker: activeJob.toWorkerModel(),
+                    job: JobPostingArguments(
+                      descriptionEn: activeJob.descriptionEn,
+                      descriptionUr: activeJob.descriptionUr,
+                      price: activeJob.price,
+                      categoryKey: activeJob.categoryKey,
+                      paymentMethod: activeJob.paymentMethod,
+                      customerLatitude: activeJob.customerLat,
+                      customerLongitude: activeJob.customerLng,
+                    ),
+                  ),
                 );
               },
               icon: const Icon(Icons.navigation_outlined, size: 16),

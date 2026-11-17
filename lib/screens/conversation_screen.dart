@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../app_state.dart';
 import '../data/mock_data.dart' show WorkerModel;
 import '../services/workers_service.dart';
+import '../services/translation_service.dart';
 import 'mazdoor_flow.dart'
     show
         bilingual,
@@ -262,6 +263,23 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool? _showUrduOverride;
   bool get _showUrdu => _showUrduOverride ?? AppScope.of(context).isUrdu;
   int _lastMsgCount = 0;
+  final Map<String, String> _onDemandTranslations = {};
+  final Set<String> _pendingTranslations = {};
+
+  void _requestTranslation(String text, String src, String target) {
+    final key = '$src->$target:$text';
+    if (_onDemandTranslations.containsKey(key) || _pendingTranslations.contains(key)) return;
+    _pendingTranslations.add(key);
+    TranslationService().translate(text: text, sourceLang: src, targetLang: target).then((res) {
+      if (mounted && res != text) {
+        setState(() {
+          _onDemandTranslations[key] = res;
+        });
+      }
+    }).catchError((_) {}).whenComplete(() {
+      _pendingTranslations.remove(key);
+    });
+  }
 
   StreamSubscription<DocumentSnapshot>? _convSub;
   StreamSubscription<DocumentSnapshot>? _presenceSub;
@@ -1155,9 +1173,42 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final raw = data['text'] as String? ?? '';
     final textUr = data['textUr'] as String? ?? '';
     final textEn = data['textEn'] as String? ?? '';
-    final text = _showUrdu
-        ? (textUr.isNotEmpty ? textUr : raw)
-        : (textEn.isNotEmpty ? textEn : raw);
+
+    String text;
+    bool isTranslated = false;
+    if (_showUrdu) {
+      if (textUr.isNotEmpty && textUr != raw) {
+        text = textUr;
+        isTranslated = true;
+      } else {
+        final key = 'en->ur:$raw';
+        if (_onDemandTranslations.containsKey(key)) {
+          text = _onDemandTranslations[key]!;
+          isTranslated = true;
+        } else {
+          text = raw;
+          if (raw.trim().isNotEmpty && detectLanguage(raw) == 'en') {
+            _requestTranslation(raw, 'en', 'ur');
+          }
+        }
+      }
+    } else {
+      if (textEn.isNotEmpty && textEn != raw) {
+        text = textEn;
+        isTranslated = true;
+      } else {
+        final key = 'ur->en:$raw';
+        if (_onDemandTranslations.containsKey(key)) {
+          text = _onDemandTranslations[key]!;
+          isTranslated = true;
+        } else {
+          text = raw;
+          if (raw.trim().isNotEmpty && detectLanguage(raw) == 'ur') {
+            _requestTranslation(raw, 'ur', 'en');
+          }
+        }
+      }
+    }
     final isMe = senderId == me;
     final ts = data['timestamp'] as Timestamp?;
     final readBy = List<String>.from(data['readBy'] as List? ?? []);
@@ -1201,6 +1252,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     fontSize: 10,
                   ),
                 ),
+                if (isTranslated) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.translate,
+                    size: 11,
+                    color: isMe ? const Color(0xFFA7F3D0) : const Color(0xFF0D9488),
+                  ),
+                ],
                 if (isMe) ...[
                   const SizedBox(width: 4),
                   Icon(

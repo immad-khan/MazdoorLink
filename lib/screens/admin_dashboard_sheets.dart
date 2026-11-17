@@ -297,42 +297,44 @@ class _AdminStatsSheetState extends State<AdminStatsSheet> {
                 ),
               ),
             ),
-            const Text('Platform Analytics',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Color(0xFF1E293B))),
+            const Text(
+              'Platform Analytics',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: Color(0xFF1E293B),
+              ),
+            ),
             const SizedBox(height: 16),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _FilterChip(label: 'All Time', isSelected: _selectedPeriod == 'All Time', onTap: () => setState(() => _selectedPeriod = 'All Time')),
-                  _FilterChip(label: 'Today', isSelected: _selectedPeriod == 'Today', onTap: () => setState(() => _selectedPeriod = 'Today')),
-                  _FilterChip(label: 'This Week', isSelected: _selectedPeriod == 'This Week', onTap: () => setState(() => _selectedPeriod = 'This Week')),
-                  _FilterChip(label: 'This Month', isSelected: _selectedPeriod == 'This Month', onTap: () => setState(() => _selectedPeriod = 'This Month')),
+                  _FilterChip(
+                    label: 'All Time',
+                    isSelected: _selectedPeriod == 'All Time',
+                    onTap: () => setState(() => _selectedPeriod = 'All Time'),
+                  ),
+                  _FilterChip(
+                    label: 'Today',
+                    isSelected: _selectedPeriod == 'Today',
+                    onTap: () => setState(() => _selectedPeriod = 'Today'),
+                  ),
+                  _FilterChip(
+                    label: 'This Week',
+                    isSelected: _selectedPeriod == 'This Week',
+                    onTap: () => setState(() => _selectedPeriod = 'This Week'),
+                  ),
+                  _FilterChip(
+                    label: 'This Month',
+                    isSelected: _selectedPeriod == 'This Month',
+                    onTap: () => setState(() => _selectedPeriod = 'This Month'),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-            // Stats Cards (live)
-            _LiveStatsCards(period: _selectedPeriod),
-            const SizedBox(height: 24),
-            const Text('Bookings Trend',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Color(0xFF1E293B))),
-            const SizedBox(height: 12),
-            _LiveBarChart(period: _selectedPeriod),
-            const SizedBox(height: 24),
-            const Text('Top Service Categories',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Color(0xFF1E293B))),
-            const SizedBox(height: 12),
-            _LiveCategoryBars(period: _selectedPeriod),
+            _PlatformAnalyticsBody(period: _selectedPeriod),
           ],
         ),
       ),
@@ -340,198 +342,349 @@ class _AdminStatsSheetState extends State<AdminStatsSheet> {
   }
 }
 
-class _LiveStatsCards extends StatelessWidget {
-  const _LiveStatsCards({required this.period});
+class _PlatformAnalyticsBody extends StatelessWidget {
+  const _PlatformAnalyticsBody({required this.period});
   final String period;
 
-  DateTime? _periodStart() {
+  DateTime? _parseDocDate(Map<String, dynamic> data) {
+    final raw = data['createdAt'] ??
+        data['completedAt'] ??
+        data['paidAt'] ??
+        data['statusUpdatedAt'] ??
+        data['timestamp'];
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is String) return DateTime.tryParse(raw);
+    if (raw is int) return DateTime.fromMillisecondsSinceEpoch(raw);
+    return null;
+  }
+
+  bool _isInPeriod(DateTime? dt, String period) {
+    if (period == 'All Time') return true;
+    if (dt == null) return false;
     final now = DateTime.now();
     switch (period) {
       case 'Today':
-        return DateTime(now.year, now.month, now.day);
+        return dt.year == now.year && dt.month == now.month && dt.day == now.day;
       case 'This Week':
-        return now.subtract(Duration(days: now.weekday - 1));
+        final startOfWeek = DateTime(now.year, now.month, now.day)
+            .subtract(Duration(days: now.weekday - 1));
+        return dt.isAfter(startOfWeek) || dt.isAtSameMomentAs(startOfWeek);
       case 'This Month':
-        return DateTime(now.year, now.month, 1);
+        return dt.year == now.year && dt.month == now.month;
       default:
-        return null;
+        return true;
+    }
+  }
+
+  String _formatCategory(String raw) {
+    final key = raw.trim().toLowerCase();
+    switch (key) {
+      case 'electrician':
+        return 'Electrician';
+      case 'plumber':
+        return 'Plumber';
+      case 'carpentry':
+      case 'carpenter':
+        return 'Carpentry';
+      case 'cleaning':
+      case 'cleaner':
+        return 'Cleaning';
+      case 'painting':
+      case 'painter':
+        return 'Painting';
+      case 'ac_repair':
+      case 'ac':
+      case 'acrepair':
+      case 'ac repair':
+        return 'AC Repair';
+      case 'welding':
+      case 'welder':
+        return 'Welding';
+      case 'masonry':
+      case 'mason':
+        return 'Masonry';
+      default:
+        if (raw.trim().isEmpty) return 'General Service';
+        return raw.trim().replaceAll('_', ' ').split(' ').map((word) {
+          if (word.isEmpty) return '';
+          return '${word[0].toUpperCase()}${word.substring(1)}';
+        }).join(' ');
+    }
+  }
+
+  String _formatCurrency(double amount) {
+    if (amount >= 1000000) {
+      return 'Rs ${(amount / 1000000).toStringAsFixed(1)}M';
+    } else if (amount >= 1000) {
+      return 'Rs ${(amount / 1000).toStringAsFixed(1)}k';
+    } else {
+      return 'Rs ${amount.toStringAsFixed(0)}';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final start = _periodStart();
-
-    Query completedQuery = FirebaseFirestore.instance
-        .collection('jobs')
-        .where('status', isEqualTo: 'completed');
-    if (start != null) {
-      completedQuery = completedQuery.where('createdAt',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(start));
-    }
-
-    Query activeQuery = FirebaseFirestore.instance
-        .collection('jobs')
-        .where('status', whereIn: [
-      'pending', 'accepted', 'arrival_pending', 'working',
-      'worker_completed', 'payment_pending', 'worker_payment_pending',
-      'payment_disputed',
-    ]);
-    if (start != null) {
-      activeQuery = activeQuery.where('createdAt',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(start));
-    }
-
     return StreamBuilder<QuerySnapshot>(
-      stream: completedQuery.snapshots(),
-      builder: (_, completedSnap) {
+      stream: FirebaseFirestore.instance.collection('jobs').snapshots(),
+      builder: (context, jobsSnap) {
         return StreamBuilder<QuerySnapshot>(
-          stream: activeQuery.snapshots(),
-          builder: (_, activeSnap) {
-            return StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('users').snapshots(),
-              builder: (_, usersSnap) {
-                double totalRevenue = 0;
-                if (completedSnap.hasData) {
-                  for (final doc in completedSnap.data!.docs) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    totalRevenue += (data['price'] as num?)?.toDouble() ?? 0;
-                  }
-                }
-                final activeJobs = activeSnap.data?.docs.length ?? 0;
-                final totalUsers = usersSnap.data?.docs.length ?? 0;
+          stream: FirebaseFirestore.instance.collection('users').snapshots(),
+          builder: (context, usersSnap) {
+            if (jobsSnap.connectionState == ConnectionState.waiting && !jobsSnap.hasData) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator(color: Color(0xFF0D9488))),
+              );
+            }
 
-                String revenueStr;
-                if (totalRevenue >= 1000000) {
-                  revenueStr = 'Rs ${(totalRevenue / 1000000).toStringAsFixed(1)}M';
-                } else if (totalRevenue >= 1000) {
-                  revenueStr = 'Rs ${(totalRevenue / 1000).toStringAsFixed(1)}k';
-                } else {
-                  revenueStr = 'Rs ${totalRevenue.toStringAsFixed(0)}';
-                }
+            final jobsDocs = jobsSnap.data?.docs ?? [];
+            final usersDocs = usersSnap.data?.docs ?? [];
 
-                return Column(
+            double totalRevenue = 0;
+            int completedJobs = 0;
+            int activeJobs = 0;
+            final categoryCount = <String, int>{};
+
+            const activeStatuses = {
+              'pending',
+              'accepted',
+              'arrival_pending',
+              'working',
+              'worker_completed',
+              'payment_pending',
+              'worker_payment_pending',
+              'payment_disputed',
+              'scheduled',
+            };
+
+            for (final doc in jobsDocs) {
+              final data = doc.data() as Map<String, dynamic>;
+              final dt = _parseDocDate(data);
+
+              if (!_isInPeriod(dt, period)) {
+                continue;
+              }
+
+              final status = (data['status']?.toString() ?? '').toLowerCase().trim();
+              final price = (data['price'] as num?)?.toDouble() ?? 0.0;
+
+              if (status == 'completed') {
+                totalRevenue += price;
+                completedJobs++;
+              } else if (activeStatuses.contains(status)) {
+                activeJobs++;
+              }
+
+              // Count categories
+              final rawCat = data['categoryKey']?.toString() ??
+                  data['category']?.toString() ??
+                  data['categoryNameEn']?.toString() ??
+                  '';
+              final cat = _formatCategory(rawCat);
+              categoryCount[cat] = (categoryCount[cat] ?? 0) + 1;
+            }
+
+            final totalUsers = usersDocs.length;
+            int newUsersInPeriod = 0;
+            if (period != 'All Time') {
+              for (final uDoc in usersDocs) {
+                final uData = uDoc.data() as Map<String, dynamic>;
+                final uDt = _parseDocDate(uData);
+                if (_isInPeriod(uDt, period)) {
+                  newUsersInPeriod++;
+                }
+              }
+            }
+
+            final sortedCategories = categoryCount.entries.toList()
+              ..sort((a, b) => b.value.compareTo(a.value));
+            final totalCategoryBookings =
+                sortedCategories.fold<int>(0, (acc, e) => acc + e.value);
+
+            const categoryColors = [
+              Color(0xFF0D9488),
+              Color(0xFF6366F1),
+              Color(0xFFF59E0B),
+              Color(0xFFEF4444),
+              Color(0xFF3B82F6),
+              Color(0xFF8B5CF6),
+              Color(0xFF10B981),
+            ];
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 2x2 Stats Cards
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        _StatsCard(
-                            label: 'Total Revenue', value: revenueStr,
-                            icon: Icons.paid_outlined, color: const Color(0xFF10B981)),
-                        const SizedBox(width: 12),
-                        _StatsCard(
-                            label: 'Active Jobs', value: '$activeJobs',
-                            icon: Icons.work_outline, color: const Color(0xFF6366F1)),
-                      ],
+                    _StatsCard(
+                      label: 'Total Revenue',
+                      value: _formatCurrency(totalRevenue),
+                      icon: Icons.paid_outlined,
+                      color: const Color(0xFF10B981),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _StatsCard(
-                            label: 'Total Users', value: '$totalUsers',
-                            icon: Icons.people_outline, color: const Color(0xFF0D9488)),
-                        const SizedBox(width: 12),
-                        const Expanded(child: SizedBox()),
-                      ],
+                    const SizedBox(width: 12),
+                    _StatsCard(
+                      label: 'Active Jobs',
+                      value: '$activeJobs',
+                      icon: Icons.work_outline,
+                      color: const Color(0xFF6366F1),
                     ),
                   ],
-                );
-              },
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _StatsCard(
+                      label: 'Completed Jobs',
+                      value: '$completedJobs',
+                      icon: Icons.check_circle_outline,
+                      color: const Color(0xFF0D9488),
+                    ),
+                    const SizedBox(width: 12),
+                    _StatsCard(
+                      label: 'Total Users',
+                      value: '$totalUsers',
+                      icon: Icons.people_outline,
+                      color: const Color(0xFFF59E0B),
+                      sublabel: period != 'All Time' && newUsersInPeriod > 0
+                          ? '+$newUsersInPeriod new'
+                          : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+
+                // Top Service Categories Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Top Service Categories',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D9488).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        period,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0D9488),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                if (sortedCategories.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.category_outlined,
+                            size: 32,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No bookings recorded for $period yet',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  Column(
+                    children: List.generate(sortedCategories.length, (i) {
+                      final entry = sortedCategories[i];
+                      final fraction = totalCategoryBookings > 0
+                          ? entry.value / totalCategoryBookings
+                          : 0.0;
+                      final percentage = (fraction * 100).round();
+                      final color = categoryColors[i % categoryColors.length];
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: color,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      entry.key,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  '${entry.value} bookings ($percentage%)',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: fraction,
+                                minHeight: 8,
+                                backgroundColor: color.withOpacity(0.12),
+                                valueColor: AlwaysStoppedAnimation<Color>(color),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ),
+                const SizedBox(height: 16),
+              ],
             );
           },
-        );
-      },
-    );
-  }
-}
-
-class _LiveBarChart extends StatelessWidget {
-  const _LiveBarChart({required this.period});
-  final String period;
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: streamAllJobs(),
-      builder: (_, snap) {
-        if (!snap.hasData) {
-          return const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()));
-        }
-
-        final now = DateTime.now();
-        final months = <String, int>{};
-        const monthLabels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-        for (int i = 6; i >= 0; i--) {
-          final m = DateTime(now.year, now.month - i, 1);
-          months['${monthLabels[m.month - 1]}'] = 0;
-        }
-
-        for (final doc in snap.data!.docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          final createdAt = data['createdAt'];
-          if (createdAt is! Timestamp) continue;
-          final date = createdAt.toDate();
-          final label = monthLabels[date.month - 1];
-          if (months.containsKey(label)) {
-            months[label] = months[label]! + 1;
-          }
-        }
-
-        final maxVal = months.values.fold<int>(1, (a, b) => a > b ? a : b);
-        final bars = months.entries
-            .map((e) => (e.key, e.value / maxVal))
-            .toList();
-
-        return _BarChartWidget(bars: bars);
-      },
-    );
-  }
-}
-
-class _LiveCategoryBars extends StatelessWidget {
-  const _LiveCategoryBars({required this.period});
-  final String period;
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: streamAllJobs(),
-      builder: (_, snap) {
-        if (!snap.hasData || snap.data!.docs.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text('No jobs yet'),
-          );
-        }
-
-        final categoryCount = <String, int>{};
-        for (final doc in snap.data!.docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          final cat = data['categoryKey']?.toString() ?? 'Other';
-          categoryCount[cat] = (categoryCount[cat] ?? 0) + 1;
-        }
-
-        final sorted = categoryCount.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
-        final top = sorted.take(5).toList();
-        final total = top.fold<int>(0, (sum, e) => sum + e.value);
-
-        const colors = [
-          Color(0xFF0D9488),
-          Color(0xFF6366F1),
-          Color(0xFFF59E0B),
-          Color(0xFFEF4444),
-          Color(0xFF3B82F6),
-        ];
-
-        return Column(
-          children: List.generate(top.length, (i) {
-            final entry = top[i];
-            final fraction = total > 0 ? entry.value / total : 0.0;
-            final label = entry.key[0].toUpperCase() + entry.key.substring(1);
-            return _CategoryBar(
-                label: label, fraction: fraction, color: colors[i % colors.length]);
-          }),
         );
       },
     );
@@ -544,10 +697,12 @@ class _StatsCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
+    this.sublabel,
   });
   final String label, value;
   final IconData icon;
   final Color color;
+  final String? sublabel;
 
   @override
   Widget build(BuildContext context) {
@@ -562,55 +717,47 @@ class _StatsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 22),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: color, size: 22),
+                if (sublabel != null && sublabel!.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      sublabel!,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 8),
-            Text(value,
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: color)),
-            Text(label,
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+            Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade600,
+              ),
+            ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _BarChartWidget extends StatelessWidget {
-  const _BarChartWidget({required this.bars});
-  final List<(String, double)> bars;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 120,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: bars.map((b) {
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Container(
-                width: 28,
-                height: 80 * b.$2,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF006B5E), Color(0xFF0D9488)],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(b.$1,
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
-            ],
-          );
-        }).toList(),
       ),
     );
   }
@@ -621,7 +768,7 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback? onTap;
-  
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -632,7 +779,9 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF0D9488) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? const Color(0xFF0D9488) : Colors.grey.shade300),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF0D9488) : Colors.grey.shade300,
+          ),
         ),
         child: Text(
           label,
@@ -643,79 +792,6 @@ class _FilterChip extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _CategoryBar extends StatelessWidget {
-  const _CategoryBar({
-    required this.label,
-    required this.fraction,
-    required this.color,
-  });
-  final String label;
-  final double fraction;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B))),
-              Text('${(fraction * 100).round()}%',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: color)),
-            ],
-          ),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: fraction,
-              minHeight: 7,
-              backgroundColor: color.withOpacity(0.12),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.color});
-  final String title;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 16,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(title,
-            style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: color)),
-      ],
     );
   }
 }

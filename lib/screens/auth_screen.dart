@@ -1983,6 +1983,17 @@ class _AuthScreenState extends State<AuthScreen> {
       key: const ValueKey('loginScreen'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: 76,
+              height: 76,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
         Text(
           bilingual(context, 'Welcome back', 'خوش آمدید'),
           style: const TextStyle(
@@ -2149,6 +2160,17 @@ class _AuthScreenState extends State<AuthScreen> {
         key: const ValueKey('signupStep0'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 76,
+                height: 76,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
           const Text(
             'Create account',
             style: TextStyle(

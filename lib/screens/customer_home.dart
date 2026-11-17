@@ -4,6 +4,8 @@ import 'package:service_frontend/app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/location_service.dart';
 import '../services/workers_service.dart';
+import 'mazdoor_flow.dart' show TrackingArguments;
+import 'issue_selection_screen.dart' show JobPostingArguments;
 
 class CustomerHome extends StatefulWidget {
   @override
@@ -83,7 +85,23 @@ class _CustomerHomeState extends State<CustomerHome> with TickerProviderStateMix
             style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
             onPressed: () {
               Navigator.pop(ctx);
-              Navigator.pushNamed(context, '/customer/tracking');
+              Navigator.pushNamed(
+                context,
+                '/customer/tracking',
+                arguments: TrackingArguments(
+                  jobId: activeJob.jobId,
+                  worker: activeJob.toWorkerModel(),
+                  job: JobPostingArguments(
+                    descriptionEn: activeJob.descriptionEn,
+                    descriptionUr: activeJob.descriptionUr,
+                    price: activeJob.price,
+                    categoryKey: activeJob.categoryKey,
+                    paymentMethod: activeJob.paymentMethod,
+                    customerLatitude: activeJob.customerLat,
+                    customerLongitude: activeJob.customerLng,
+                  ),
+                ),
+              );
             },
             child: Text(isUrdu ? 'ٹریک کریں' : 'Track Job', style: const TextStyle(color: Colors.white)),
           ),

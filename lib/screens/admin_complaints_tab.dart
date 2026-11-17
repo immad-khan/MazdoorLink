@@ -65,10 +65,42 @@ class AdminComplaintsTab extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: streamComplaints(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: Color(0xFFEF4444)),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Failed to load complaints: ',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final docs = snapshot.data!.docs;
+          final docs = List<QueryDocumentSnapshot>.from(snapshot.data!.docs);
+          docs.sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>? ?? {};
+            final bData = b.data() as Map<String, dynamic>? ?? {};
+            DateTime? aDate;
+            DateTime? bDate;
+            if (aData['createdAt'] is Timestamp) aDate = (aData['createdAt'] as Timestamp).toDate();
+            if (bData['createdAt'] is Timestamp) bDate = (bData['createdAt'] as Timestamp).toDate();
+            if (aDate == null && aData['date'] != null) aDate = DateTime.tryParse(aData['date'].toString());
+            if (bDate == null && bData['date'] != null) bDate = DateTime.tryParse(bData['date'].toString());
+            aDate ??= DateTime.fromMillisecondsSinceEpoch(0);
+            bDate ??= DateTime.fromMillisecondsSinceEpoch(0);
+            return bDate.compareTo(aDate);
+          });
           final open = docs.where((d) => !((d.data() as Map)['resolved'] == true)).toList();
           final resolved = docs.where((d) => (d.data() as Map)['resolved'] == true).toList();
 
@@ -226,9 +258,10 @@ class _ComplaintCard extends StatelessWidget {
       dateStr = 'Recent';
     }
 
-    final amount = (complaint['amount'] as num?)?.toDouble() ??
-        (complaint['claimAmount'] as num?)?.toDouble() ??
-        0.0;
+    final rawAmount = complaint['amount'] ?? complaint['claimAmount'] ?? 0;
+    final amount = rawAmount is num
+        ? rawAmount.toDouble()
+        : (double.tryParse(rawAmount.toString()) ?? 0.0);
     final jobTitle = complaint['jobTitle']?.toString() ?? '';
 
     return Container(

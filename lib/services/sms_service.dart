@@ -5,7 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SmsService {
   // TextBee device configured from user dashboard
-  static const String _defaultDeviceId = '6ac0c343cf8e7692e0f415d6';
+  static const String _defaultDeviceId = '6afb1e745b9635c5dd155dc0';
 
   // API Key can be set in .env (TEXTBEE_API_KEY) or fallback placeholder
   static String get _apiKey =>

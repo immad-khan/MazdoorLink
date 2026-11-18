@@ -347,6 +347,7 @@ class _WorkerTrackingScreenState extends State<WorkerTrackingScreen> {
         'workerCompleted': true,
         'workerCompletedAt': FieldValue.serverTimestamp(),
       });
+      await deductPlatformCommission(jobId: widget.jobId);
 
       setState(() {
         _status = 3;

@@ -583,13 +583,8 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
             side: BorderSide(color: Colors.grey.shade300),
             borderRadius: BorderRadius.circular(8),
           ),
-          onTap: () {
-            setState(() => _step = PostJobStep.workerConfirmationWaiting);
-            Future.delayed(const Duration(seconds: 4), () {
-              if (mounted && _step == PostJobStep.workerConfirmationWaiting) {
-                setState(() => _step = PostJobStep.paymentSuccessTick);
-              }
-            });
+          onTap: () async {
+            await _markCustomerPaid(context);
           },
         ),
         const SizedBox(height: 16),

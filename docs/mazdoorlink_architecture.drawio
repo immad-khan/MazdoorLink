@@ -1,0 +1,254 @@
+<mxfile host="app.diagrams.net" modified="2026-11-09T00:00:00.000Z" agent="Antigravity" version="21.0.0" type="device">
+  <diagram id="mazdoorlink-architecture" name="MazdoorLink AI - System Architecture">
+    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ========================================== -->
+        <!-- HEADER / TITLE BANNER                      -->
+        <!-- ========================================== -->
+        <mxCell id="title_banner" value="MazdoorLink AI — System Architecture Diagram&#xa;Multi-Tier Reactive Flutter Architecture with Firebase, Safepay, Google Cloud, Groq AI &amp; Cloudinary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#004D40;strokeColor=#00251A;fontColor=#FFFFFF;fontStyle=1;fontSize=18;align=center;verticalAlign=middle;shadow=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1840" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ========================================== -->
+        <!-- TIER 1: PRESENTATION & CLIENT INTERFACE    -->
+        <!-- ========================================== -->
+        <mxCell id="tier1_container" value="TIER 1: PRESENTATION &amp; CLIENT INTERFACE TIER (Flutter Mobile &amp; Web Apps)" style="swimlane;whiteSpace=wrap;html=1;startSize=30;rounded=1;arcSize=6;fillColor=#E0F2F1;strokeColor=#00796B;fontStyle=1;fontSize=13;fontColor=#004D40;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="1840" height="280" as="geometry" />
+        </mxCell>
+
+        <!-- Customer Subsystem -->
+        <mxCell id="box_customer_app" value="&lt;b&gt;Customer App Experience&lt;/b&gt;&lt;br&gt;&lt;i&gt;Target: Service Consumers&lt;/i&gt;&#xa;────────────────────────────&#xa;• CustomerHomeScreen (Category Browser)&#xa;• IssueSelectionScreen (Cash / Safepay)&#xa;• ConfirmLocationScreen (Google Maps Pin)&#xa;• WorkerRecommendationsScreen (≤5 km Filter)&#xa;• FlowWorkerProfileScreen (Direct Hire / Offer)&#xa;• ServiceTrackingScreen (Live ETA &amp; Arrival)&#xa;• BookingHistoryScreen (Ongoing / Sched / Comp / Canc)&#xa;• RatingReviewScreen (Post-Job &amp; 5-Star Review)&#xa;• CustomerSupportScreen (Dispute Filing)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0288D1;fontColor=#01579B;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;shadow=1;" vertex="1" parent="tier1_container">
+          <mxGeometry x="30" y="45" width="410" height="215" as="geometry" />
+        </mxCell>
+
+        <!-- Worker Subsystem -->
+        <mxCell id="box_worker_app" value="&lt;b&gt;Worker App Experience&lt;/b&gt;&lt;br&gt;&lt;i&gt;Target: Skilled Blue-Collar Labor (Low Literacy Support)&lt;/i&gt;&#xa;────────────────────────────&#xa;• WorkerDashboardScreen (Online/Offline Toggle &amp; Job Radar)&#xa;• WorkerServicesSetupScreen (Custom Skills &amp; Pricing)&#xa;• WorkerTrackingScreen (GPS Route, Arrival Prompt, PIN Check)&#xa;• EarningsDashboardScreen (Wallet Balance, Earnings, Top-Up)&#xa;• WorkerVerificationScreen (CNIC &amp; Certificate Upload)&#xa;• VoiceNavigationScreen (Urdu Voice-Command Navigator)&#xa;• WorkerHome &amp; WorkerSupportScreen" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#388E3C;fontColor=#1B5E20;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;shadow=1;" vertex="1" parent="tier1_container">
+          <mxGeometry x="470" y="45" width="410" height="215" as="geometry" />
+        </mxCell>
+
+        <!-- Admin Subsystem -->
+        <mxCell id="box_admin_portal" value="&lt;b&gt;Admin Management Portal&lt;/b&gt;&lt;br&gt;&lt;i&gt;Target: Platform Operations &amp; Moderation&lt;/i&gt;&#xa;────────────────────────────&#xa;• AdminDashboardScreen (Overview KPIs &amp; Quick Actions)&#xa;• AdminWorkerRegistrationsTab (Approve/Reject &amp; CNIC Audit)&#xa;• JobsTab (Active Monitoring &amp; 5%/10%/Custom Penalty)&#xa;• AdminComplaintsTab (Dispute Resolution &amp; Admin Chat)&#xa;• AdminEarningsScreen (2% Platform Commission Ledger)&#xa;• AdminTransactionsScreen (Customer &amp; Top-Up Records)&#xa;• AdminStatsSheet (Trends: Today, Week, Month, Year)&#xa;• AdminDamageClaimsSheet &amp; DepositsSheet" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontColor=#4A148C;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;shadow=1;" vertex="1" parent="tier1_container">
+          <mxGeometry x="910" y="45" width="430" height="215" as="geometry" />
+        </mxCell>
+
+        <!-- Shared Shell Subsystem -->
+        <mxCell id="box_shared_shell" value="&lt;b&gt;Shared UI Shell &amp; Modules&lt;/b&gt;&lt;br&gt;&lt;i&gt;Target: Cross-Role Reusable Infrastructure&lt;/i&gt;&#xa;────────────────────────────&#xa;• MzScaffold (RTL/LTR Directionality &amp; Safe Frame)&#xa;• RoleBottomNav (Dynamic Role Icons &amp; Badges)&#xa;• VoiceOverlaySheet (Global Floating Microphone Listener)&#xa;• ConversationScreen (Real-Time Bilingual Chat Thread)&#xa;• ChatHistoryScreen (Unread Message Counters)&#xa;• SettingsScreen &amp; FavoriteWorkersScreen&#xa;• LanguageSelection &amp; TranslationToggleScreen (EN ↔ UR)&#xa;• WelcomeScreen &amp; AuthScreen (Login / Multi-Step Signup)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#F57C00;fontColor=#E65100;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;shadow=1;" vertex="1" parent="tier1_container">
+          <mxGeometry x="1370" y="45" width="440" height="215" as="geometry" />
+        </mxCell>
+
+
+        <!-- ========================================== -->
+        <!-- TIER 2: STATE & ROUTING CONTROL TIER       -->
+        <!-- ========================================== -->
+        <mxCell id="tier2_container" value="TIER 2: APPLICATION STATE MANAGEMENT &amp; CENTRAL ROUTING TIER" style="swimlane;whiteSpace=wrap;html=1;startSize=30;rounded=1;arcSize=6;fillColor=#EDE7F6;strokeColor=#512DA8;fontStyle=1;fontSize=13;fontColor=#311B92;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="405" width="1840" height="175" as="geometry" />
+        </mxCell>
+
+        <!-- AppController & AppScope -->
+        <mxCell id="box_app_controller" value="&lt;b&gt;AppController &amp;amp; AppScope&lt;/b&gt;&#xa;(&lt;i&gt;InheritedNotifier&amp;lt;AppController&amp;gt;&lt;/i&gt;)&#xa;────────────────────────────&#xa;• UserRole: customer | worker | admin&#xa;• Active Locale: en | ur (RTL/LTR Switch)&#xa;• Dual-Role Account Switcher&#xa;• SharedPreferences Persistence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#673AB7;fontColor=#311B92;fontSize=11;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="tier2_container">
+          <mxGeometry x="30" y="45" width="410" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ChatUnreadController -->
+        <mxCell id="box_chat_unread" value="&lt;b&gt;ChatUnreadController&lt;/b&gt;&#xa;(&lt;i&gt;ChangeNotifier&lt;/i&gt;)&#xa;────────────────────────────&#xa;• Subscribes to streamConversations()&#xa;• Real-time Unread Badge Calculation&#xa;• Auto-resets on Thread Open&#xa;• Disposed on Role/User Logout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#673AB7;fontColor=#311B92;fontSize=11;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="tier2_container">
+          <mxGeometry x="470" y="45" width="410" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Central Router (mazdoor_flow.dart) -->
+        <mxCell id="box_central_router" value="&lt;b&gt;Central Router &amp;amp; AppRoutes&lt;/b&gt;&#xa;(&lt;i&gt;lib/screens/mazdoor_flow.dart&lt;/i&gt;)&#xa;────────────────────────────&#xa;• onGenerateRoute() Dynamic Dispatcher&#xa;• Route Constants (/customer/home, /tracking, etc.)&#xa;• Exit MazdoorLink Dialog Modal&#xa;• Global bilingual(en, ur) String Helper" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#673AB7;fontColor=#311B92;fontSize=11;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="tier2_container">
+          <mxGeometry x="910" y="45" width="430" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Strong-Typed Arguments & DTOs -->
+        <mxCell id="box_dtos" value="&lt;b&gt;Navigation Contracts &amp;amp; DTOs&lt;/b&gt;&#xa;────────────────────────────&#xa;• RecommendationArguments (Category, Issues, Cash/Safepay, Lat/Lng)&#xa;• JobPostingArguments (Bilingual Task Specs, Price)&#xa;• ProfileArguments &amp; TrackingArguments (Worker, JobId, ArrivalPIN)&#xa;• ConversationArguments (ConversationId, TargetName, Avatar)&#xa;• WorkerSignupData &amp; ServicesSetupArguments" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#673AB7;fontColor=#311B92;fontSize=11;align=left;spacingLeft=12;verticalAlign=middle;shadow=1;" vertex="1" parent="tier2_container">
+          <mxGeometry x="1370" y="45" width="440" height="110" as="geometry" />
+        </mxCell>
+
+
+        <!-- ========================================== -->
+        <!-- TIER 3: BUSINESS LOGIC & MICRO-SERVICES    -->
+        <!-- ========================================== -->
+        <mxCell id="tier3_container" value="TIER 3: DOMAIN LOGIC &amp; MICRO-SERVICES TIER" style="swimlane;whiteSpace=wrap;html=1;startSize=30;rounded=1;arcSize=6;fillColor=#E8F5E9;strokeColor=#2E7D32;fontStyle=1;fontSize=13;fontColor=#1B5E20;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="605" width="1840" height="305" as="geometry" />
+        </mxCell>
+
+        <!-- WorkersService -->
+        <mxCell id="svc_workers" value="&lt;b&gt;WorkersService (Core Domain)&lt;/b&gt;&#xa;────────────────────────────&#xa;• Intelligent Skill Cross-Matching&#xa;• Haversine ≤5.0 km GPS Distance Filtering&#xa;• Security Deposit Balance Check (&gt;= 0)&#xa;• Job Offer State Pipeline (pending → completed)&#xa;• 4-Digit Arrival Security PIN Verification&#xa;• Favorite Workers Bookmarking Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontColor=#1B5E20;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;shadow=1;" vertex="1" parent="tier3_container">
+          <mxGeometry x="30" y="45" width="410" height="115" as="geometry" />
+        </mxCell>
+
+        <!-- WorkerPresenceService -->
+        <mxCell id="svc_presence" value="&lt;b&gt;WorkerPresenceService&lt;/b&gt;&#xa;────────────────────────────&#xa;• Online / Offline Manual Availability Toggle&#xa;• 30-Second Active Heartbeat Ping Loop&#xa;• Writes isOnline &amp; lastSeenAt to Firestore&#xa;• AppLifecycleListener: Auto-Offline on App Background" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontColor=#1B5E20;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;shadow=1;" vertex="1" parent="tier3_container">
+          <mxGeometry x="470" y="45" width="410" height="115" as="geometry" />
+        </mxCell>
+
+        <!-- LocationService -->
+        <mxCell id="svc_location" value="&lt;b&gt;LocationService (Geofencing)&lt;/b&gt;&#xa;────────────────────────────&#xa;• Device GPS Coordinate Capture (Geolocator)&#xa;• Twin-Cities Bounding Box Validation&#xa;• 30+ Predefined Islamabad/Rawalpindi Sectors&#xa;• Google Maps Geocoding &amp; Reverse Geocoding&#xa;• Live Customer-Worker Distance Calculations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontColor=#1B5E20;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;shadow=1;" vertex="1" parent="tier3_container">
+          <mxGeometry x="910" y="45" width="430" height="115" as="geometry" />
+        </mxCell>
+
+        <!-- SafepayService -->
+        <mxCell id="svc_safepay" value="&lt;b&gt;SafepayService (FinTech Gateway)&lt;/b&gt;&#xa;────────────────────────────&#xa;• Client Passport Token (TBT) Creation&#xa;• Hosted Checkout Sessions (Order Tracker)&#xa;• Customer Credit/Debit Card Processing&#xa;• Worker Security Deposit Top-Up Engine&#xa;• Admin 2% Commission Deduction Ledger" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontColor=#1B5E20;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;shadow=1;" vertex="1" parent="tier3_container">
+          <mxGeometry x="1370" y="45" width="440" height="115" as="geometry" />
+        </mxCell>
+
+        <!-- TranslationService -->
+        <mxCell id="svc_translation" value="&lt;b&gt;TranslationService (Bilingual AI)&lt;/b&gt;&#xa;────────────────────────────&#xa;• Regex Arabic-Script Urdu/English Detector&#xa;• Google Cloud Translation v2 REST Integration&#xa;• Produces textEn &amp; textUr Dual Payload&#xa;• Transparent Fallback to Original Text on Offline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontColor=#1B5E20;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;shadow=1;" vertex="1" parent="tier3_container">
+          <mxGeometry x="30" y="175" width="410" height="115" as="geometry" />
+        </mxCell>
+
+        <!-- VoiceAssistantService & SpeechService -->
+        <mxCell id="svc_voice" value="&lt;b&gt;VoiceAssistantService &amp;amp; SpeechService&lt;/b&gt;&#xa;────────────────────────────&#xa;• SpeechToText (STT) &amp; FlutterTts (TTS)&#xa;• Groq Cloud AI LLM (llama-3.3-70b-versatile)&#xa;• Urdu Natural Language Intent Parser&#xa;• Hands-Free Voice Route Navigation Actions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontColor=#1B5E20;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;shadow=1;" vertex="1" parent="tier3_container">
+          <mxGeometry x="470" y="175" width="410" height="115" as="geometry" />
+        </mxCell>
+
+        <!-- CloudinaryService -->
+        <mxCell id="svc_cloudinary" value="&lt;b&gt;CloudinaryService (Media Cloud)&lt;/b&gt;&#xa;────────────────────────────&#xa;• SHA-1 Multi-Part Signed Asset Uploads&#xa;• Worker CNIC Front &amp; Back Document Storage&#xa;• Vocational Certifications &amp; Diplomas Storage&#xa;• Customer Damage Claim Evidence Photos&#xa;• User Avatar Profile Image Optimization" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontColor=#1B5E20;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;shadow=1;" vertex="1" parent="tier3_container">
+          <mxGeometry x="910" y="175" width="430" height="115" as="geometry" />
+        </mxCell>
+
+        <!-- SmtpService & SmsService & NotificationService -->
+        <mxCell id="svc_messaging" value="&lt;b&gt;Messaging &amp;amp; Alert Dispatchers&lt;/b&gt;&#xa;────────────────────────────&#xa;• SmtpService: Direct Gmail SMTP for 4-Digit OTPs&#xa;• SmtpService: Worker Approval &amp; Rejection Emails&#xa;• SmsService: TextBee Gateway for Pakistani (+92) SMS&#xa;• NotificationService: Firebase Cloud Messaging (FCM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;fontColor=#1B5E20;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;shadow=1;" vertex="1" parent="tier3_container">
+          <mxGeometry x="1370" y="175" width="440" height="115" as="geometry" />
+        </mxCell>
+
+
+        <!-- ========================================== -->
+        <!-- TIER 4: DATA & CLOUD INFRASTRUCTURE        -->
+        <!-- ========================================== -->
+        <mxCell id="tier4_container" value="TIER 4: CLOUD INFRASTRUCTURE, PERSISTENCE &amp; EXTERNAL SERVICES TIER" style="swimlane;whiteSpace=wrap;html=1;startSize=30;rounded=1;arcSize=6;fillColor=#FFF3E0;strokeColor=#E65100;fontStyle=1;fontSize=13;fontColor=#BF360C;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="935" width="1840" height="270" as="geometry" />
+        </mxCell>
+
+        <!-- Cloud Firestore -->
+        <mxCell id="ext_firestore" value="&lt;b&gt;Cloud Firestore NoSQL Database&lt;/b&gt;&#xa;────────────────────────────&#xa;• /users (Roles, CNIC, Skills, Ratings, Wallet, Location)&#xa;• /jobs (Offers, PIN, Pricing, Status Pipeline, ExpiresAt)&#xa;• /conversations &amp; /messages (Bilingual EN/UR Chats)&#xa;• /complaints (Customer Support Tickets &amp; Admin Threads)&#xa;• /damage_claims (Security Deposit Deductions)&#xa;• /transactions (Top-up &amp; Customer Payment Audit)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontColor=#BF360C;fontSize=11;align=left;spacingLeft=12;verticalAlign=top;shadow=1;" vertex="1" parent="tier4_container">
+          <mxGeometry x="30" y="45" width="430" height="205" as="geometry" />
+        </mxCell>
+
+        <!-- Firebase Authentication -->
+        <mxCell id="ext_firebase_auth" value="&lt;b&gt;Firebase Authentication&lt;/b&gt;&#xa;────────────────────────────&#xa;• Email &amp; Password Engine&#xa;• Phone Number Resolution via Firestore&#xa;• Secure Token Issuance (JWT)&#xa;• Account Recovery &amp; Reset&#xa;• Password Complexity Rule Validation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontColor=#BF360C;fontSize=11;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="tier4_container">
+          <mxGeometry x="490" y="45" width="280" height="205" as="geometry" />
+        </mxCell>
+
+        <!-- Google Cloud Platform -->
+        <mxCell id="ext_google_cloud" value="&lt;b&gt;Google Cloud Platform (GCP)&lt;/b&gt;&#xa;────────────────────────────&#xa;• Google Maps SDK for Flutter (Android/iOS/Web)&#xa;• Google Geocoding &amp; Places API&#xa;• Google Cloud Translation API v2&#xa;• Twin-Cities Live Mapping &amp; Reverse Geocode" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontColor=#BF360C;fontSize=11;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="tier4_container">
+          <mxGeometry x="800" y="45" width="310" height="205" as="geometry" />
+        </mxCell>
+
+        <!-- Groq AI Cloud -->
+        <mxCell id="ext_groq_ai" value="&lt;b&gt;Groq AI Inference Cloud&lt;/b&gt;&#xa;────────────────────────────&#xa;• Ultra-Low-Latency LPU Inference&#xa;• Model: llama-3.3-70b-versatile&#xa;• System Prompting for Urdu Navigation&#xa;• Maps Voice Audio to App Screen Routes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontColor=#BF360C;fontSize=11;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="tier4_container">
+          <mxGeometry x="1140" y="45" width="310" height="205" as="geometry" />
+        </mxCell>
+
+        <!-- External Payment & CDN Gateways -->
+        <mxCell id="ext_gateways" value="&lt;b&gt;External Gateways &amp; CDNs&lt;/b&gt;&#xa;────────────────────────────&#xa;• Safepay Sandbox &amp; Production API&#xa;• Cloudinary Global Secure Image CDN&#xa;• TextBee SMS Android Hardware Gateway&#xa;• Google Gmail SMTP Server (Port 587/465)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E65100;fontColor=#BF360C;fontSize=11;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="tier4_container">
+          <mxGeometry x="1480" y="45" width="330" height="205" as="geometry" />
+        </mxCell>
+
+
+        <!-- ========================================== -->
+        <!-- CONNECTORS / DATA FLOW EDGES               -->
+        <!-- ========================================== -->
+
+        <!-- Tier 1 to Tier 2 -->
+        <mxCell id="edge_t1_t2_1" value="Role / Locale Binding" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#512DA8;strokeWidth=2;fontColor=#512DA8;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="box_customer_app" target="box_app_controller">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_t1_t2_2" value="Unread Badges" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#512DA8;strokeWidth=2;fontColor=#512DA8;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="box_worker_app" target="box_chat_unread">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_t1_t2_3" value="Route Dispatching" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#512DA8;strokeWidth=2;fontColor=#512DA8;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="box_admin_portal" target="box_central_router">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_t1_t2_4" value="Type-Safe Arguments" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#512DA8;strokeWidth=2;fontColor=#512DA8;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="box_shared_shell" target="box_dtos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+
+        <!-- Tier 2 to Tier 3 -->
+        <mxCell id="edge_t2_t3_1" value="Match Workers &amp; Create Jobs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2E7D32;strokeWidth=2;fontColor=#2E7D32;fontSize=10;exitX=0.25;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="box_app_controller" target="svc_workers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_t2_t3_2" value="Presence &amp; Heartbeat" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2E7D32;strokeWidth=2;fontColor=#2E7D32;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="box_chat_unread" target="svc_presence">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_t2_t3_3" value="GPS Pin &amp; Sectors" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2E7D32;strokeWidth=2;fontColor=#2E7D32;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="box_central_router" target="svc_location">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_t2_t3_4" value="Card Checkout &amp; Top-Up" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2E7D32;strokeWidth=2;fontColor=#2E7D32;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="box_dtos" target="svc_safepay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+
+        <!-- Tier 3 to Tier 4 -->
+        <mxCell id="edge_t3_t4_1" value="Job Offers &amp; Profiles Real-Time Sync" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E65100;strokeWidth=2;fontColor=#BF360C;fontSize=10;exitX=0.5;exitY=1;entryX=0.25;entryY=0;" edge="1" parent="1" source="svc_workers" target="ext_firestore">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_t3_t4_2" value="Heartbeat Writes &amp; Presence Sync" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E65100;strokeWidth=2;fontColor=#BF360C;fontSize=10;exitX=0.5;exitY=1;entryX=0.75;entryY=0;" edge="1" parent="1" source="svc_presence" target="ext_firestore">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_t3_t4_3" value="Credentials &amp; Roles" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E65100;strokeWidth=2;fontColor=#BF360C;fontSize=10;exitX=0.75;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="box_app_controller" target="ext_firebase_auth">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="590" />
+              <mxPoint x="450" y="590" />
+              <mxPoint x="450" y="915" />
+              <mxPoint x="670" y="915" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge_t3_t4_4" value="Live Map Rendering &amp; Reverse Geocode" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E65100;strokeWidth=2;fontColor=#BF360C;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="svc_location" target="ext_google_cloud">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_t3_t4_5" value="Translate REST API" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E65100;strokeWidth=2;fontColor=#BF360C;fontSize=10;exitX=0.5;exitY=1;entryX=0.25;entryY=0;" edge="1" parent="1" source="svc_translation" target="ext_google_cloud">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="275" y="915" />
+              <mxPoint x="878" y="915" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge_t3_t4_6" value="Groq LPU Inference (Llama 3.3)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E65100;strokeWidth=2;fontColor=#BF360C;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="svc_voice" target="ext_groq_ai">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_t3_t4_7" value="Encrypted File Uploads" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E65100;strokeWidth=2;fontColor=#BF360C;fontSize=10;exitX=0.5;exitY=1;entryX=0.25;entryY=0;" edge="1" parent="1" source="svc_cloudinary" target="ext_gateways">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1165" y="915" />
+              <mxPoint x="1560" y="915" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge_t3_t4_8" value="Card Payments &amp; Top-Ups" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E65100;strokeWidth=2;fontColor=#BF360C;fontSize=10;exitX=0.5;exitY=1;entryX=0.75;entryY=0;" edge="1" parent="1" source="svc_safepay" target="ext_gateways">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1630" y="915" />
+              <mxPoint x="1720" y="915" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge_t3_t4_9" value="OTP SMS &amp; Approval Emails" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E65100;strokeWidth=2;fontColor=#BF360C;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="svc_messaging" target="ext_gateways">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

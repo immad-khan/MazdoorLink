@@ -397,6 +397,11 @@ Future<void> updateJobStatus(String jobId, String status) async {
   }
 
   await FirebaseFirestore.instance.collection('jobs').doc(jobId).update(updates);
+
+  // Automatically deduct 2% platform commission whenever job reaches 'completed'
+  if (status == 'completed') {
+    await deductPlatformCommission(jobId: jobId);
+  }
 }
 
 const List<String> kBusyJobStatuses = [
@@ -643,6 +648,7 @@ Stream<QuerySnapshot> streamAllJobs() {
 
 Future<void> updateJobCompleted(String jobId) async {
   await updateJobStatus(jobId, 'completed');
+  await deductPlatformCommission(jobId: jobId);
 }
 
 /// Deducts 2% platform commission from worker's top-up balance when customer pays
@@ -671,9 +677,16 @@ Future<void> deductPlatformCommission({
         'Service Job';
     final categoryKey = data['categoryKey']?.toString() ?? 'general';
 
-    final totalPaid = amount ??
-        (data['price'] as num?)?.toDouble() ??
-        0.0;
+    double totalPaid = amount ?? 0.0;
+    if (totalPaid <= 0) {
+      final rawPrice = data['price'] ?? data['workerBasePrice'] ?? data['finalPrice'] ?? data['amount'];
+      if (rawPrice is num) {
+        totalPaid = rawPrice.toDouble();
+      } else if (rawPrice != null) {
+        final clean = rawPrice.toString().replaceAll(RegExp(r'[^0-9.]'), '');
+        totalPaid = double.tryParse(clean) ?? 0.0;
+      }
+    }
     if (totalPaid <= 0) return;
 
     const commissionRate = 0.02; // 2% fixed platform fee
@@ -695,8 +708,8 @@ Future<void> deductPlatformCommission({
 
       if (depositQuery.docs.isNotEmpty) {
         final docId = depositQuery.docs.first.id;
-        final currentBal =
-            (depositQuery.docs.first.data()['currentBalance'] as num?)?.toDouble() ?? 0.0;
+        final rawBal = depositQuery.docs.first.data()['currentBalance'];
+        final currentBal = rawBal is num ? rawBal.toDouble() : (double.tryParse(rawBal?.toString() ?? '') ?? 0.0);
         final updatedBal = currentBal - commissionAmount;
         await FirebaseFirestore.instance
             .collection('security_deposits')
@@ -704,6 +717,7 @@ Future<void> deductPlatformCommission({
             .update({
           'currentBalance': FieldValue.increment(-commissionAmount),
           'status': updatedBal < 0 ? 'Negative' : 'Active',
+          'lastDeductionAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
       } else {
@@ -729,6 +743,7 @@ Future<void> deductPlatformCommission({
       'commissionRate': commissionRate,
       'commissionAmount': commissionAmount,
       'commissionDeductedAt': FieldValue.serverTimestamp(),
+      'paymentStatus': 'paid',
     }, SetOptions(merge: true));
 
     // 3. Log to platform_earnings collection
@@ -1475,6 +1490,7 @@ Future<void> submitWorkerRating({
     'status': 'completed',
     if (cleanReviewText.isNotEmpty) 'customerReview': cleanReviewText,
   });
+  await deductPlatformCommission(jobId: jobId);
 
   // 6. Track ratings given by customer
   try {

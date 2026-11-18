@@ -1187,7 +1187,14 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () async {
+                              final currentJobId = jobId;
+                              if (currentJobId != null && currentJobId.isNotEmpty) {
+                                await updateJobCompleted(currentJobId);
+                                await deductPlatformCommission(jobId: currentJobId);
+                              }
+                              if (context.mounted) Navigator.pop(context);
+                            },
                             child: Text(bilingual(context, 'Done', 'مکمل')),
                           ),
                         ),

@@ -69,8 +69,9 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen>
       final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final data = doc.data();
       if (data != null && mounted) {
-        final role = data['role']?.toString() ?? 'customer';
-        _isWorker = role == 'worker';
+        final roles = data['roles'];
+        _isWorker = data['role'] == 'worker' ||
+            (roles is List && roles.contains('worker'));
         _notificationPreference = data['notificationPreference']?.toString() ??
             (data['otpVerifiedVia'] == 'phone' ? 'phone' : 'email');
         _nameController.text = data['name']?.toString() ?? '';

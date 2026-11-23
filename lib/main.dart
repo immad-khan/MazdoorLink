@@ -59,13 +59,8 @@ Future<_AuthResult> _resolveAuth() async {
       route = AppRoutes.customerHome;
     } else if (hasWorkerAccess && (savedActiveRole == 'worker' || firestoreRole == 'worker')) {
       if (workerStatus == 'approved') {
-        final setupComplete = data['setupComplete'] as bool? ?? false;
         userRole = UserRole.worker;
-        if (!setupComplete) {
-          route = AppRoutes.workerServicesSetup;
-        } else {
-          route = AppRoutes.workerDashboard;
-        }
+        route = AppRoutes.workerDashboard;
       } else if (workerStatus == 'pending') {
         userRole = UserRole.worker;
         route = AppRoutes.workerVerification;

@@ -12,7 +12,6 @@ import '../app_state.dart';
 import '../data/mock_data.dart';
 import '../services/workers_service.dart';
 import '../services/location_service.dart';
-import 'issue_selection_screen.dart';
 import 'mazdoor_flow.dart'
     show
         bilingual,
@@ -236,8 +235,8 @@ class SettingsScreen extends StatelessWidget {
                 Text(
                   bilingual(
                     context,
-                    'To switch to worker mode and start receiving jobs, you must submit your CNIC, optional certificates/experience letters, and skill details for admin approval.',
-                    'ورکر بننے اور کام وصول کرنے کے لیے اپنا شناختی کارڈ، سرٹیفکیٹ اور مہارت کی تفصیلات ایڈمن منظوری کے لیے جمع کروائیں۔',
+                    'To receive visit requests, submit your CNIC and trade category for admin approval. Certificates and experience letters are optional.',
+                    'معائنے کی درخواستیں وصول کرنے کے لیے اپنا شناختی کارڈ اور پیشے کا زمرہ ایڈمن کی منظوری کے لیے جمع کروائیں۔ سرٹیفکیٹ اور تجربے کے خطوط اختیاری ہیں۔',
                   ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.grey, height: 1.4),
@@ -786,20 +785,6 @@ class SettingsScreen extends StatelessWidget {
                 );
               },
             ),
-          if (isWorker)
-            GestureDetector(
-              onTap: () =>
-                  Navigator.pushNamed(context, AppRoutes.workerServicesSetup),
-              child: _SettingsItem(
-                icon: Icons.build,
-                color: const Color(0xFF0D9488),
-                title: bilingual(
-                  context,
-                  'Skills & Services',
-                  'مہارتیں اور خدمات',
-                ),
-              ),
-            ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () async {
@@ -1060,7 +1045,7 @@ class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
     for (final id in ids) {
       try {
         final doc = await FirebaseFirestore.instance
-            .collection('workers')
+            .collection('users')
             .doc(id)
             .get();
         final data = doc.data();
@@ -1125,7 +1110,7 @@ class _FavoriteWorkersScreenState extends State<FavoriteWorkersScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    '${w.category}${w.price.isNotEmpty ? '  •  ${w.price}' : ''}',
+                    w.categoryLabel(isUrdu),
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,

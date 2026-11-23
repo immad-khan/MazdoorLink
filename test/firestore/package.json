@@ -1,0 +1,11 @@
+{
+  "name": "mazdoorlink-firestore-tests",
+  "private": true,
+  "scripts": {
+    "test": "node --test visits.test.cjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.0",
+    "firebase": "12.7.0"
+  }
+}

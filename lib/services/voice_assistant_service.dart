@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../app_state.dart';
+import '../data/mock_data.dart';
 import '../screens/mazdoor_flow.dart';
 
 // ─────────────────────────────────────────────
@@ -111,13 +112,13 @@ class VoiceAssistantService {
   // ── Parse Intent via Groq LLM ─────────────
   Future<Map<String, dynamic>> parseIntent(String userText, {UserRole? role}) async {
     final roleContext = switch (role) {
-      UserRole.customer => 'The user is a CUSTOMER looking to hire workers for home services.',
-      UserRole.worker => 'The user is a WORKER looking for jobs and managing their profile.',
+      UserRole.customer => 'The user is a CUSTOMER looking for an inspection visit, not a repair booking.',
+      UserRole.worker => 'The user is a WORKER managing inspection visit requests and their profile.',
       UserRole.admin => 'The user is an ADMIN managing the platform.',
       _ => 'The user role is unknown.',
     };
 
-    final systemPrompt = '''You are an intent parser for MazdoorLink, a Pakistani home-services app connecting customers with workers (plumbers, electricians, carpenters, painters, cleaners, AC repair).
+    final systemPrompt = '''You are an intent parser for MazdoorLink, a Pakistani home-services app connecting customers with approved plumbers and electricians for inspection visits only.
 $roleContext
 
 Parse the user's natural language into a JSON intent. Respond ONLY with valid JSON, no explanation.
@@ -125,16 +126,14 @@ Parse the user's natural language into a JSON intent. Respond ONLY with valid JS
 Available intents:
 - {"intent": "navigate_home"} — Go to home screen
 - {"intent": "navigate_settings"} — Go to settings
-- {"intent": "navigate_bookings"} — Go to booking history
+- {"intent": "navigate_bookings"} — Go to visits
 - {"intent": "navigate_chat"} — Go to chat
 - {"intent": "navigate_earnings"} — Go to earnings (worker only)
 - {"intent": "navigate_profile"} — Go to profile management
 - {"intent": "navigate_support"} — Go to customer/worker support
-- {"intent": "post_job", "category": "<plumber|electrician|carpenter|painter|cleaner|ac_repair>"} — Post a new job
-- {"intent": "hire_worker", "category": "<plumber|electrician|carpenter|painter|cleaner|ac_repair>"} — Hire a worker
-- {"intent": "find_workers", "category": "<plumber|electrician|carpenter|painter|cleaner|ac_repair>"} — Find workers in category
-- {"intent": "check_price", "category": "<category>"} — Check price estimation
-- {"intent": "track_worker"} — Track current worker location
+- {"intent": "find_workers", "category": "<plumber|electrician>"} — Show a category directory. Requests to hire, call out or send a worker go here, not to repair booking.
+- {"intent": "check_price"} — Explain that a visit is free and does not book repair work.
+- {"intent": "track_worker"} — Show the status of a visit
 - {"intent": "view_notifications"} — View notification preferences
 - {"intent": "view_privacy"} — View privacy settings
 - {"intent": "change_language", "language": "urdu|english"} — Switch language
@@ -148,18 +147,13 @@ Available intents:
 If the user mentions a service category, map it:
 - plumber/plumbing/pipe/leak/tap → plumber
 - electrician/electric/wiring/switch/socket → electrician
-- carpenter/wood/furniture/door → carpenter
-- painter/paint/wall/color → painter
-- cleaner/cleaning/sweep/mop/wash → cleaner
-- ac/air conditioner/cooling/hvac → ac_repair
+- For unsupported categories, ask the user to choose plumber or electrician.
 
 Examples:
-User: "hire a plumber" → {"intent": "hire_worker", "category": "plumber"}
-User: "show my bookings" → {"intent": "navigate_bookings"}
-User: "I need someone to fix my AC" → {"intent": "hire_worker", "category": "ac_repair"}
-User: "mujhe electrician chahiye" → {"intent": "hire_worker", "category": "electrician"}
+User: "hire a plumber" → {"intent": "find_workers", "category": "plumber"}
+User: "show my visits" → {"intent": "navigate_bookings"}
+User: "mujhe electrician chahiye" → {"intent": "find_workers", "category": "electrician"}
 User: "go to settings" → {"intent": "navigate_settings"}
-User: "post a job for painting" → {"intent": "post_job", "category": "painter"}
 User: "switch to urdu" → {"intent": "change_language", "language": "urdu"}''';
 
     try {
@@ -187,16 +181,16 @@ User: "switch to urdu" → {"intent": "change_language", "language": "urdu"}''';
         return jsonDecode(content) as Map<String, dynamic>;
       } else {
         debugPrint('Groq API error: ${response.statusCode} — ${response.body}');
-        return _fallbackIntentParse(userText);
+        return _fallbackIntentParse(userText, role: role);
       }
     } catch (e) {
       debugPrint('Groq API exception: $e');
-      return _fallbackIntentParse(userText);
+      return _fallbackIntentParse(userText, role: role);
     }
   }
 
   // ── Fallback Rules-Based Parser ────────────
-  Map<String, dynamic> _fallbackIntentParse(String text) {
+  Map<String, dynamic> _fallbackIntentParse(String text, {UserRole? role}) {
     final lower = text.toLowerCase().trim();
 
     // Navigation intents
@@ -206,7 +200,7 @@ User: "switch to urdu" → {"intent": "change_language", "language": "urdu"}''';
     if (_match(lower, ['setting', 'preferences', 'ترتیبات'])) {
       return {'intent': 'navigate_settings'};
     }
-    if (_match(lower, ['booking', 'history', 'orders', 'بکنگ'])) {
+    if (_match(lower, ['booking', 'history', 'orders', 'my visits', 'show visits', 'بکنگ', 'میرے معائنے'])) {
       return {'intent': 'navigate_bookings'};
     }
     if (_match(lower, ['chat', 'message', 'چیٹ'])) {
@@ -240,44 +234,29 @@ User: "switch to urdu" → {"intent": "change_language", "language": "urdu"}''';
       return {'intent': 'change_language', 'language': 'english'};
     }
 
-    // Admin intents
-    if (_match(lower, ['worker', 'registration'])) {
-      return {'intent': 'show_workers'};
-    }
-    if (_match(lower, ['complaint', 'شکایت'])) {
-      return {'intent': 'show_complaints'};
-    }
-    if (_match(lower, ['stat', 'analytics', 'revenue'])) {
-      return {'intent': 'show_stats'};
+    if (role == UserRole.admin) {
+      if (_match(lower, ['worker', 'registration'])) {
+        return {'intent': 'show_workers'};
+      }
+      if (_match(lower, ['complaint', 'شکایت'])) {
+        return {'intent': 'show_complaints'};
+      }
+      if (_match(lower, ['stat', 'analytics', 'revenue'])) {
+        return {'intent': 'show_stats'};
+      }
     }
 
-    // Category detection
-    final category = _detectCategory(lower);
-
-    if (category != null) {
-      if (_match(lower, ['hire', 'need', 'want', 'find', 'get', 'chahiye', 'مطلوب'])) {
-        return {'intent': 'hire_worker', 'category': category};
-      }
-      if (_match(lower, ['post', 'create', 'new job'])) {
-        return {'intent': 'post_job', 'category': category};
-      }
-      if (_match(lower, ['price', 'cost', 'قیمت', 'rate'])) {
-        return {'intent': 'check_price', 'category': category};
-      }
-      // Default: hire if category is mentioned
-      return {'intent': 'hire_worker', 'category': category};
-    }
-
-    if (_match(lower, ['post', 'create', 'new job'])) {
-      return {'intent': 'post_job'};
-    }
-    if (_match(lower, ['price', 'cost', 'estimate', 'قیمت'])) {
+    if (_match(lower, ['price', 'cost', 'estimate', 'قیمت', 'rate'])) {
       return {'intent': 'check_price'};
+    }
+    final category = _detectCategory(lower);
+    if (category != null || _match(lower, ['visit', 'worker', 'hire', 'job', 'معائنہ'])) {
+      return {'intent': 'find_workers', 'category': category};
     }
 
     return {
       'intent': 'unknown',
-      'message': 'Sorry, I didn\'t understand. Try "hire a plumber" or "show bookings".'
+      'message': 'Sorry, I didn\'t understand. Try "find a plumber" or "show visits".'
     };
   }
 
@@ -289,14 +268,6 @@ User: "switch to urdu" → {"intent": "change_language", "language": "urdu"}''';
     if (_match(text, ['plumb', 'pipe', 'leak', 'tap', 'پلمبر'])) return 'plumber';
     if (_match(text, ['electric', 'wiring', 'switch', 'socket', 'الیکٹریشن'])) {
       return 'electrician';
-    }
-    if (_match(text, ['carpent', 'wood', 'furniture', 'door', 'بڑھئی'])) {
-      return 'carpenter';
-    }
-    if (_match(text, ['paint', 'wall', 'color', 'پینٹر'])) return 'painter';
-    if (_match(text, ['clean', 'sweep', 'mop', 'wash', 'صفائی'])) return 'cleaner';
-    if (_match(text, ['ac', 'air condition', 'cooling', 'hvac', 'اے سی'])) {
-      return 'ac_repair';
     }
     return null;
   }
@@ -326,8 +297,12 @@ User: "switch to urdu" → {"intent": "change_language", "language": "urdu"}''';
         return {'response': 'Opening settings.', 'navigated': true};
 
       case 'navigate_bookings':
-        Navigator.pushReplacementNamed(context, AppRoutes.sharedHistory);
-        return {'response': 'Showing your bookings.', 'navigated': true};
+        if (role == UserRole.worker) {
+          Navigator.pushNamed(context, AppRoutes.visits);
+        } else {
+          Navigator.pushReplacementNamed(context, AppRoutes.visits);
+        }
+        return {'response': 'Showing your visits.', 'navigated': true};
 
       case 'navigate_chat':
         Navigator.pushReplacementNamed(context, AppRoutes.sharedChat);
@@ -354,53 +329,33 @@ User: "switch to urdu" → {"intent": "change_language", "language": "urdu"}''';
         Navigator.pushNamed(context, route);
         return {'response': 'Opening support.', 'navigated': true};
 
-      // ── Job & Hiring Intents ─────────────
+      // Older voice intents also lead to visit-only discovery.
+      case 'post_job':
       case 'hire_worker':
       case 'find_workers':
-        if (category != null) {
-          _currentFlow = 'hiring';
-          _flowData = {'category': category};
-          Navigator.pushNamed(context, AppRoutes.jobPosting);
-          final categoryDisplay = _formatCategory(category);
-          return {
-            'response':
-                'Let me help you find a $categoryDisplay. Taking you to job posting.',
-            'navigated': true
-          };
+        if (role != UserRole.customer) {
+          return {'response': 'Switch to customer mode to request a visit.', 'navigated': false};
         }
-        Navigator.pushNamed(context, AppRoutes.customerHome);
-        return {
-          'response': 'Which type of worker do you need? Plumber, electrician, carpenter, painter, cleaner, or AC repair?',
-          'navigated': false
-        };
-
-      case 'post_job':
-        Navigator.pushNamed(context, AppRoutes.jobPosting);
-        if (category != null) {
-          final categoryDisplay = _formatCategory(category);
-          return {
-            'response': 'Creating a new $categoryDisplay job. Fill in the details.',
-            'navigated': true
-          };
+        final trade = serviceCategoryFor(category);
+        if (trade == null) {
+          Navigator.pushReplacementNamed(context, AppRoutes.customerHome);
+          return {'response': 'Choose a plumber or electrician to request a visit.', 'navigated': true};
         }
+        Navigator.pushNamed(context, AppRoutes.workerDirectory, arguments: trade.key);
         return {
-          'response': 'Opening job posting. Select a service category.',
-          'navigated': true
+          'response': 'Showing approved ${trade.en.toLowerCase()} profiles. Choose a worker to request a visit.',
+          'navigated': true,
         };
 
       case 'check_price':
-        Navigator.pushNamed(context, AppRoutes.priceEstimation);
         return {
-          'response': 'Opening price estimation tool.',
-          'navigated': true
+          'response': 'Inspection visits are free. Repair work is not booked or priced in the app.',
+          'navigated': false,
         };
 
       case 'track_worker':
-        Navigator.pushNamed(context, AppRoutes.tracking);
-        return {
-          'response': 'Opening worker tracking map.',
-          'navigated': true
-        };
+        Navigator.pushNamed(context, AppRoutes.visits);
+        return {'response': 'Showing your visit status.', 'navigated': true};
 
       case 'view_notifications':
         Navigator.pushNamed(context, AppRoutes.notificationPreferences);
@@ -475,21 +430,9 @@ User: "switch to urdu" → {"intent": "change_language", "language": "urdu"}''';
       case 'unknown':
       default:
         final message = intent['message'] as String? ??
-            'Sorry, I didn\'t understand that. Try saying "hire a plumber" or "show bookings".';
+            'Sorry, I didn\'t understand that. Try saying "find a plumber" or "show visits".';
         return {'response': message, 'navigated': false};
     }
-  }
-
-  String _formatCategory(String category) {
-    return switch (category) {
-      'plumber' => 'plumber',
-      'electrician' => 'electrician',
-      'carpenter' => 'carpenter',
-      'painter' => 'painter',
-      'cleaner' => 'cleaning service',
-      'ac_repair' => 'AC repair technician',
-      _ => category,
-    };
   }
 
   // ── Flow State ────────────────────────────

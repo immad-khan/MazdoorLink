@@ -20,18 +20,18 @@ flutter analyze
 
 ## Architecture
 
-**MazdoorConnect** — a bilingual (English/Urdu) Flutter service platform connecting customers with verified workers (plumbers, electricians, carpenters). Built for Pakistan's low-literacy market with Urdu-first UI patterns.
+**MazdoorLink** — a bilingual (English/Urdu) Flutter app for booking inspection visits from approved plumbers and electricians. Firebase Authentication and Firestore back user profiles, visits, and legacy repair bookings.
 
 ### State management
 
-`AppController` (ChangeNotifier) holds global `role` (customer/worker/admin) and `locale` (en/ur). Wired through `AppScope` (InheritedNotifier) — accessed via `AppScope.of(context)` throughout widgets. No persistence or backend integration.
+`AppController` (ChangeNotifier) holds global `role` (customer/worker/admin) and `locale` (en/ur). Wired through `AppScope` (InheritedNotifier) — accessed via `AppScope.of(context)` throughout widgets. Role and locale preferences are persisted with SharedPreferences.
 
 ### Routing
 
 All routes defined in `AppRoutes` class (`lib/screens/mazdoor_flow.dart`). Uses `onGenerateRoute` with custom page transitions (fade + slide). Routes are keyed by role:
-- **Customer**: `/customer/home` → `/customer/job-posting` → `/customer/recommendations` → `/customer/worker-profile` → `/customer/tracking` → `/customer/rating`
-- **Worker**: `/worker/onboarding` → `/worker/dashboard` → `/worker/earnings`, `/worker/job-notification`
-- **Shared**: `/shared/chat`, `/shared/history`, `/shared/settings`
+- **Customer**: `/customer/home` → `/customer/workers` → `/customer/worker-public-profile` → `/customer/request-visit` → `/shared/visits`
+- **Worker**: `/worker/onboarding` → `/worker/dashboard` → `/shared/visits`
+- **Legacy repairs**: `/shared/history` → `/customer/tracking` and `/customer/rating` for existing jobs only
 
 ### Key files
 
@@ -39,9 +39,10 @@ All routes defined in `AppRoutes` class (`lib/screens/mazdoor_flow.dart`). Uses 
 |------|---------|
 | `lib/app_state.dart` | `AppController` + `AppScope` (global role/locale state) |
 | `lib/app_theme.dart` | Custom teal/amber Material 3 theme, WorkSans font, text styles |
-| `lib/screens/mazdoor_flow.dart` | **~5000 lines** — contains most screens inline: auth, home, job posting, recommendations, worker profile, tracking, worker dashboard, earnings, bottom nav bar, voice overlay |
+| `lib/screens/mazdoor_flow.dart` | Routes, navigation, auth, worker dashboard, and legacy repair screens |
 | `lib/l10n/app_localizations.dart` | Custom localization (en/ur) with ~150 keys — NOT using Flutter's intl codegen |
-| `lib/data/mock_data.dart` | In-memory `ServiceCategory`, `WorkerModel`, `JobModel` definitions |
+| `lib/data/mock_data.dart` | Trade categories and Firestore worker directory model |
+| `lib/services/visit_repository.dart` | Visit creation, participant-specific streams, and status changes in `visit_requests` |
 | `lib/services/notification_service.dart` | Firebase Messaging wrapper (placeholder) |
 | `lib/services/speech_service.dart` | Urdu speech-to-text stub |
 | `lib/services/translation_service.dart` | Google Cloud Translation stub |
@@ -51,16 +52,16 @@ All routes defined in `AppRoutes` class (`lib/screens/mazdoor_flow.dart`). Uses 
 - **`MzScaffold`** — shared wrapper with app bar (optional back button), max-width container (430px), and `RoleBottomNav` (4 tabs with central mic button)
 - **Bilingual helper**: `bilingual(context, en, ur)` reads `AppScope.isUrdu` to pick text
 - **RTL**: `Directionality` set from `AppController.isUrdu` at the scaffold level
-- **Voice overlay**: `VoiceOverlaySheet` bottom sheet with animated wave bars, simulated speech recognition → navigates to `/shared/history`
+- **Voice overlay**: `VoiceOverlaySheet` bottom sheet with animated wave bars, speech commands for category discovery and visits
 - **Chat screen**, **worker earnings dashboard**, **admin dashboard**, **booking history** are standalone screens in `lib/screens/`
 
 ### Testing
 
-Single widget test at `test/widget_test.dart` — verifies app loads and renders MaterialApp.
+Run `flutter test` for Dart and widget tests. See the README for the Firestore emulator tests.
 
 ### Dependencies
 
-- `http` — network calls (unused in current code)
+- `http` — network calls (including the voice assistant)
 - `firebase_messaging` — push notifications (stub)
 - `flutter_localizations` + `intl` — locale support
 - `cupertino_icons` — iOS icon set

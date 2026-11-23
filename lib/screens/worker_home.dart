@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../services/location_service.dart';
 import '../services/workers_service.dart';
 import '../widgets/worker_todays_income_card.dart';
+import 'mazdoor_flow.dart' show AppRoutes, bilingual;
 
 class WorkerHome extends StatefulWidget {
   @override
@@ -405,7 +406,7 @@ class _WorkerHomeState extends State<WorkerHome> with TickerProviderStateMixin {
                 Divider(height: 1, color: AppTheme.notWhite, indent: 0),
                 _featureButton(Icons.app_registration, AppLocalizations.of(context).t('onboarding'), () => Navigator.pushNamed(context, '/worker/onboarding')),
                 Divider(height: 1, color: AppTheme.notWhite, indent: 16),
-                _featureButton(Icons.design_services, 'Manage Services & Rates', () => Navigator.pushNamed(context, '/worker/services-setup', arguments: 0)),
+                _featureButton(Icons.event_available_outlined, bilingual(context, 'Visit Requests', 'معائنے کی درخواستیں'), () => Navigator.pushNamed(context, AppRoutes.visits)),
                 Divider(height: 1, color: AppTheme.notWhite, indent: 16),
                 _featureButton(Icons.badge, AppLocalizations.of(context).t('cnic_upload'), () => Navigator.pushNamed(context, '/worker/document-upload')),
                 Divider(height: 1, color: AppTheme.notWhite, indent: 16),

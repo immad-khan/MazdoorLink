@@ -13,7 +13,7 @@ import '../services/workers_service.dart';
 import '../services/smtp_service.dart';
 import '../services/location_service.dart';
 import 'cancel_job_screen.dart';
-import 'issue_selection_screen.dart';
+import '../data/legacy_job_details.dart';
 import 'mazdoor_flow.dart'
     show
         bilingual,
@@ -48,7 +48,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
   bool _initialized = false;
   bool _isLoading = true;
   WorkerModel? _resolvedWorker;
-  JobPostingArguments? _resolvedJob;
+  LegacyJobDetails? _resolvedJob;
   String? _resolvedJobId;
 
   @override
@@ -148,7 +148,6 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
           category: data['categoryKey']?.toString() ?? '',
           phone: data['workerPhone']?.toString() ?? '',
           image: data['workerImage']?.toString() ?? '',
-          priceValue: (data['price'] as num?)?.toDouble() ?? 0.0,
           price: ((data['price'] as num?)?.toDouble() ?? 0.0) > 0
               ? 'Rs. ${((data['price'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(0)}'
               : '',
@@ -156,7 +155,7 @@ class _ServiceTrackingScreenState extends State<ServiceTrackingScreen> {
       }
 
       if (_resolvedJob == null) {
-        _resolvedJob = JobPostingArguments(
+        _resolvedJob = LegacyJobDetails(
           descriptionEn: data['descriptionEn']?.toString() ?? '',
           descriptionUr: data['descriptionUr']?.toString() ?? '',
           price: (data['price'] as num?)?.toDouble() ?? 0.0,

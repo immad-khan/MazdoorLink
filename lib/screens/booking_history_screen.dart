@@ -7,7 +7,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../app_state.dart';
 import '../services/workers_service.dart';
 import '../data/mock_data.dart';
-import 'issue_selection_screen.dart';
+import '../data/legacy_job_details.dart';
 import 'worker_tracking_screen.dart';
 import 'mazdoor_flow.dart'
     show
@@ -17,8 +17,7 @@ import 'mazdoor_flow.dart'
         MzScaffold,
         AppRoutes,
         TrackingArguments,
-        ConversationArguments,
-        ProfileArguments;
+        ConversationArguments;
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
 
@@ -424,7 +423,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                                   workerData,
                                   docId: workerDoc.id,
                                 );
-                                final jobArgs = JobPostingArguments(
+                                final jobArgs = LegacyJobDetails(
                                   descriptionEn: descEn,
                                   descriptionUr: descUr,
                                   price: (price as num?)?.toDouble() ?? 0,

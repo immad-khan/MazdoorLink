@@ -11,6 +11,7 @@ import '../services/smtp_service.dart';
 import '../services/workers_service.dart';
 import 'worker_tracking_screen.dart';
 import '../widgets/worker_todays_income_card.dart';
+import '../widgets/worker_visit_panel.dart';
 import 'mazdoor_flow.dart'
     show
         bilingual,
@@ -721,6 +722,8 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          const WorkerVisitPanel(),
+          const SizedBox(height: 12),
           const WorkerTodaysIncomeCard(),
           const SizedBox(height: 12),
           InkWell(
@@ -817,24 +820,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
                   return bTime.compareTo(aTime);
                 });
 
-                if (jobs.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32),
-                    child: Center(
-                      child: Text(
-                        bilingual(
-                          context,
-                          'No new jobs yet',
-                          'ابھی تک کوئی نیا کام نہیں',
-                        ),
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  );
-                }
+                if (jobs.isEmpty) return const SizedBox.shrink();
                 return Column(
                   children: jobs.map((doc) {
                     final jobData = doc.data() as Map<String, dynamic>;

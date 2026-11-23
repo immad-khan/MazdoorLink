@@ -926,8 +926,6 @@ class _AuthScreenState extends State<AuthScreen> {
               'category': categoryKey,
               'categoryNameEn': _selectedCategory,
               'categoryNameUr': categoryNameUr,
-              'skills': [],
-              'setupComplete': false,
               'latitude': LocationService.instance.currentLocation.latitude,
               'longitude': LocationService.instance.currentLocation.longitude,
               'city': LocationService.instance.currentLocation.city,
@@ -1312,7 +1310,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     content: Text(
                       bilingual(
                         context,
-                        'You are registered as a Customer. To login as a Worker, you must complete worker verification (CNIC, optional experience/certificates, and skills) and be approved by admin.\\n\\nYou can continue as a Customer or submit worker registration.',
+                        'You are registered as a Customer. To login as a Worker, you must complete worker verification (CNIC, optional experience/certificates, and trade category) and be approved by admin.\\n\\nYou can continue as a Customer or submit worker registration.',
                         'آپ کسٹمر کے طور پر رجسٹرڈ ہیں۔ ورکر لاگ ان کے لیے شناختی کارڈ، سرٹیفکیٹ/تجربہ اور مہارت کی ایڈمن منظوری درکار ہے۔\\n\\nآپ کسٹمر کے طور پر جاری رکھ سکتے ہیں۔',
                       ),
                     ),
@@ -1483,22 +1481,13 @@ class _AuthScreenState extends State<AuthScreen> {
               return;
             }
 
-            // Approved worker
-            final setupComplete = data['setupComplete'] as bool? ?? false;
+            // Approved workers can access visit requests right away.
             AppScope.of(context).selectRole(UserRole.worker);
-            if (!setupComplete) {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.workerServicesSetup,
-                (route) => false,
-              );
-            } else {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.workerDashboard,
-                (route) => false,
-              );
-            }
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.workerDashboard,
+              (route) => false,
+            );
             return;
           }
         } else if (mounted) {

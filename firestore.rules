@@ -15,15 +15,42 @@ service cloud.firestore {
         request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
     }
 
+    function isBlocked(profile) {
+      return profile.get('status', '') in ['suspended', 'banned'];
+    }
+
+    function hasWorkerRole(profile) {
+      let roles = profile.get('roles', []);
+      return profile.get('role', '') == 'worker' || (roles is list && 'worker' in roles);
+    }
+
+    function isApprovedWorker(profile) {
+      let workerStatus = profile.get('workerStatus', null);
+      return hasWorkerRole(profile) && !isBlocked(profile) &&
+             (workerStatus == null ? profile.get('status', '') : workerStatus) == 'approved';
+    }
+
+    // Approval and account restrictions are admin decisions. A user can still
+    // edit their profile or submit/re-submit a pending worker application.
+    function mayWriteOwnProfile(before, after) {
+      let status = after.get('status', '');
+      let workerStatus = after.get('workerStatus', '');
+      return after.get('role', '') != 'admin' &&
+             (!hasWorkerRole(after) || hasWorkerRole(before) || workerStatus == 'pending') &&
+             (status == before.get('status', '') || (status == 'pending' && !isBlocked(before))) &&
+             (workerStatus == before.get('workerStatus', '') || workerStatus == 'pending') &&
+             after.get('acceptsVisits', true) is bool;
+    }
+
     // Users: directory is readable so users can log in via phone number lookup.
-    // Users edit only their own doc (admins may update anyone).
-    // Customers may update rating and reviews on worker profile after job.
+    // Customers may update rating and reviews on worker profile after a legacy job.
     match /users/{uid} {
       allow read: if true;
-      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        mayWriteOwnProfile({}, request.resource.data);
       allow update: if isSignedIn() && (
-        request.auth.uid == uid || 
-        isAdmin() || 
+        (request.auth.uid == uid && mayWriteOwnProfile(resource.data, request.resource.data)) ||
+        isAdmin() ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviews', 'ratingCount', 'ratingSum'])
       );
       allow delete: if false;
@@ -41,15 +68,63 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Jobs: any signed-in user can read/create; updates only by the owning
-    // customer, the assigned worker, or an admin.
+    // Existing repair bookings can finish normally. New bookings are visits.
     match /jobs/{jobId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      allow create: if false;
       allow update: if isSignedIn() &&
         (resource.data.customerId == request.auth.uid ||
          resource.data.workerId == request.auth.uid ||
          isAdmin());
+      allow delete: if false;
+    }
+
+    function validVisitParticipants(visit) {
+      let customer = get(/databases/$(database)/documents/users/$(visit.customerId)).data;
+      let worker = get(/databases/$(database)/documents/users/$(visit.workerId)).data;
+      return !isBlocked(customer) && isApprovedWorker(worker) &&
+             worker.get('acceptsVisits', true) != false &&
+             visit.customerName is string && visit.customerName == customer.get('name', '') &&
+             visit.workerName is string && visit.workerName == worker.get('name', '');
+    }
+
+    function validVisitCreation(visit) {
+      let fields = ['customerId', 'customerName', 'workerId', 'workerName', 'status',
+                    'address', 'note', 'preferredAt', 'createdAt', 'updatedAt'];
+      return visit.keys().hasAll(fields) && visit.keys().hasOnly(fields) &&
+             visit.customerId == request.auth.uid &&
+             visit.workerId is string && visit.workerId.matches('[^/]+') &&
+             visit.workerId != visit.customerId && visit.status == 'requested' &&
+             visit.address is string && visit.address.size() <= 300 && visit.address.trim().size() > 0 &&
+             visit.note is string && visit.note.size() <= 500 &&
+             visit.preferredAt is timestamp && visit.preferredAt > request.time &&
+             visit.preferredAt < request.time + duration.value(31, 'd') &&
+             visit.createdAt == request.time && visit.updatedAt == request.time &&
+             validVisitParticipants(visit);
+    }
+
+    function validVisitTransition(visit, next) {
+      return (visit.customerId == request.auth.uid &&
+              visit.status in ['requested', 'accepted'] && next == 'cancelled') ||
+             (visit.workerId == request.auth.uid && (
+               (visit.status == 'requested' && (
+                 next == 'declined' || (next == 'accepted' && visit.preferredAt > request.time &&
+                   isApprovedWorker(get(/databases/$(database)/documents/users/$(request.auth.uid)).data))
+               )) ||
+               (visit.status == 'accepted' && next in ['completed', 'cancelled'])
+             ));
+    }
+
+    // A visit's address and note are private to the two parties. No repair price
+    // or payment fields are allowed, and only the visit status may change.
+    match /visit_requests/{visitId} {
+      allow read: if isSignedIn() &&
+        (resource.data.customerId == request.auth.uid || resource.data.workerId == request.auth.uid);
+      allow create: if isSignedIn() && validVisitCreation(request.resource.data);
+      allow update: if isSignedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+        request.resource.data.updatedAt == request.time &&
+        validVisitTransition(resource.data, request.resource.data.status);
       allow delete: if false;
     }
 

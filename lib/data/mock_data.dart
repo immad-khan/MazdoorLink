@@ -14,156 +14,142 @@ class ServiceCategory {
   final IconData icon;
 }
 
-class WorkerSkill {
-  final String titleEn;
-  final String titleUr;
-  final double price;
+const List<ServiceCategory> categories = [
+  ServiceCategory(
+    key: 'electrician',
+    en: 'Electrician',
+    ur: 'الیکٹریشن',
+    icon: Icons.electrical_services,
+  ),
+  ServiceCategory(
+    key: 'plumber',
+    en: 'Plumber',
+    ur: 'پلمبر',
+    icon: Icons.plumbing,
+  ),
+];
 
-  const WorkerSkill({
-    required this.titleEn,
-    required this.titleUr,
-    required this.price,
-  });
-
-  factory WorkerSkill.fromMap(Map<String, dynamic> map) {
-    return WorkerSkill(
-      titleEn: map['titleEn']?.toString() ?? '',
-      titleUr: map['titleUr']?.toString() ?? '',
-      price: (map['price'] is num)
-          ? (map['price'] as num).toDouble()
-          : (double.tryParse(map['price']?.toString() ?? '0') ?? 0.0),
-    );
+ServiceCategory? serviceCategoryFor(Object? value) {
+  final key = value?.toString().trim().toLowerCase();
+  for (final category in categories) {
+    if (key == category.key ||
+        key == category.en.toLowerCase() ||
+        key == category.ur) {
+      return category;
+    }
   }
+  return null;
 }
 
+bool isBlockedAccount(Map<String, dynamic> data) =>
+    ['banned', 'suspended'].contains(data['status']);
+
+bool isApprovedWorker(Map<String, dynamic> data) {
+  final roles = data['roles'];
+  final hasWorkerRole =
+      data['role'] == 'worker' || (roles is List && roles.contains('worker'));
+  return hasWorkerRole &&
+      !isBlockedAccount(data) &&
+      (data['workerStatus'] ?? data['status']) == 'approved';
+}
+
+// A worker can receive requests while offline. Workers may pause visits without
+// affecting their presence or existing bookings.
+bool canReceiveVisits(Map<String, dynamic> data) =>
+    isApprovedWorker(data) && data['acceptsVisits'] != false;
+
 class WorkerModel {
-  WorkerModel({
+  const WorkerModel({
     this.id,
     required this.name,
     required this.category,
+    this.categoryKey,
     this.rating = 0,
     this.reviews = 0,
-    this.distanceKm = 0,
     this.price = '',
     this.image = '',
-    this.skills = const [],
-    this.skillsEn = const [],
-    this.skillsUr = const [],
     this.phone = '',
-    this.email = '',
-    this.priceValue = 0,
-    this.latitude,
-    this.longitude,
+    this.area = '',
+    this.isApproved = false,
+    this.isOnline = false,
+    this.acceptsVisits = true,
   });
 
   final String? id;
   final String name;
   final String category;
+  final String? categoryKey;
   final double rating;
   final int reviews;
-  final double distanceKm;
+
+  /// Populated by legacy repair tracking, never by the directory.
   final String price;
   final String image;
-  final List<WorkerSkill> skills;
-  final List<String> skillsEn;
-  final List<String> skillsUr;
   final String phone;
-  final String email;
-  final double priceValue;
-  final double? latitude;
-  final double? longitude;
+  final String area;
+  final bool isApproved;
+  final bool isOnline;
+  final bool acceptsVisits;
 
-  WorkerModel copyWith({
-    String? id,
-    String? name,
-    String? category,
-    double? rating,
-    int? reviews,
-    double? distanceKm,
-    String? price,
-    String? image,
-    List<WorkerSkill>? skills,
-    List<String>? skillsEn,
-    List<String>? skillsUr,
-    String? phone,
-    String? email,
-    double? priceValue,
-    double? latitude,
-    double? longitude,
-  }) {
-    return WorkerModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      category: category ?? this.category,
-      rating: rating ?? this.rating,
-      reviews: reviews ?? this.reviews,
-      distanceKm: distanceKm ?? this.distanceKm,
-      price: price ?? this.price,
-      image: image ?? this.image,
-      skills: skills ?? this.skills,
-      skillsEn: skillsEn ?? this.skillsEn,
-      skillsUr: skillsUr ?? this.skillsUr,
-      phone: phone ?? this.phone,
-      email: email ?? this.email,
-      priceValue: priceValue ?? this.priceValue,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-    );
+  bool get canRequestVisit =>
+      isApproved && acceptsVisits && id?.isNotEmpty == true;
+
+  String categoryLabel(bool isUrdu) {
+    final trade = serviceCategoryFor(categoryKey ?? category);
+    return trade == null ? category : (isUrdu ? trade.ur : trade.en);
   }
 
-  factory WorkerModel.fromFirestore(Map<String, dynamic> data, {String? docId}) {
-    final List<dynamic> skillsData = data['skills'] as List<dynamic>? ?? [];
-    final List<WorkerSkill> skillsList = [];
-    final List<String> skillsEn = [];
-    final List<String> skillsUr = [];
+  factory WorkerModel.fromFirestore(
+    Map<String, dynamic> data, {
+    String? docId,
+  }) {
+    final trade =
+        serviceCategoryFor(data['category']) ??
+        serviceCategoryFor(data['categoryKey']) ??
+        serviceCategoryFor(data['categoryNameEn']);
 
-    for (final s in skillsData) {
-      if (s is Map) {
-        final map = Map<String, dynamic>.from(s);
-        final skill = WorkerSkill.fromMap(map);
-        skillsList.add(skill);
-        if (skill.titleEn.isNotEmpty) skillsEn.add(skill.titleEn);
-        if (skill.titleUr.isNotEmpty) skillsUr.add(skill.titleUr);
-      } else if (s is String && s.isNotEmpty) {
-        skillsList.add(WorkerSkill(titleEn: s, titleUr: s, price: 0.0));
-        skillsEn.add(s);
-        skillsUr.add(s);
-      }
-    }
-
-    final categoryNameEn = data['categoryNameEn']?.toString() ?? '';
-
-    final double lowestPrice = skillsList.fold<double>(0, (prev, s) {
-      final p = s.price;
-      return prev == 0 ? p : (p < prev && p > 0 ? p : prev);
-    });
-
-    final lat = (data['latitude'] as num?)?.toDouble();
-    final lng = (data['longitude'] as num?)?.toDouble();
+    final rating = data['rating'];
+    final reviews = data['ratingCount'] ?? data['reviews'];
 
     return WorkerModel(
       id: docId ?? data['uid']?.toString(),
       name: data['name']?.toString() ?? '',
-      category: categoryNameEn,
-      rating: (data['rating'] ?? 4.5).toDouble(),
-      reviews: (data['reviews'] ?? 0) as int,
-      distanceKm: (data['distanceKm'] ?? 2.0).toDouble(),
-      price: lowestPrice > 0 ? 'Rs. ${lowestPrice.toStringAsFixed(0)}' : '',
-      image: data['profileImage']?.toString() ?? data['profilePicUrl']?.toString() ?? '',
-      skills: skillsList,
-      skillsEn: skillsEn,
-      skillsUr: skillsUr,
+      categoryKey: trade?.key,
+      category: trade?.en ?? data['categoryNameEn']?.toString() ?? '',
+      rating: rating is num ? rating.toDouble() : 0,
+      reviews: reviews is num ? reviews.toInt() : 0,
+      image:
+          data['profileImage']?.toString() ??
+          data['profilePicUrl']?.toString() ??
+          '',
       phone: data['phone']?.toString() ?? '',
-      email: data['email']?.toString() ?? '',
-      priceValue: lowestPrice,
-      latitude: lat,
-      longitude: lng,
+      area: data['area']?.toString() ?? data['city']?.toString() ?? '',
+      isApproved: isApprovedWorker(data),
+      isOnline: data['isOnline'] == true,
+      acceptsVisits: data['acceptsVisits'] != false,
     );
   }
 }
 
-const List<ServiceCategory> categories = [
-  ServiceCategory(key: 'electrician', en: 'Electrician', ur: 'الیکٹریشن', icon: Icons.electrical_services),
-  ServiceCategory(key: 'plumber', en: 'Plumber', ur: 'پلمبر', icon: Icons.plumbing),
-];
-
+List<WorkerModel> directoryWorkers(
+  Iterable<WorkerModel> workers, {
+  required String? viewerId,
+  String? categoryKey,
+}) {
+  final listed = workers
+      .where(
+        (worker) =>
+            worker.isApproved &&
+            worker.id != viewerId &&
+            (categoryKey == null || worker.categoryKey == categoryKey),
+      )
+      .toList();
+  int priority(WorkerModel worker) =>
+      (worker.acceptsVisits ? 2 : 0) + (worker.isOnline ? 1 : 0);
+  return listed..sort((a, b) {
+    final availability = priority(b).compareTo(priority(a));
+    if (availability != 0) return availability;
+    final rating = b.rating.compareTo(a.rating);
+    return rating == 0 ? a.name.compareTo(b.name) : rating;
+  });
+}

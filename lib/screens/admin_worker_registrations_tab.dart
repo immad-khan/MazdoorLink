@@ -6,6 +6,7 @@ import '../services/smtp_service.dart';
 import '../services/sms_service.dart';
 import '../services/workers_service.dart';
 import '../app_state.dart';
+import '../data/mock_data.dart' show canReceiveVisits;
 import 'mazdoor_flow.dart' show bilingual, showToast;
 
 typedef _WorkerRegistrationsTab = AdminWorkerRegistrationsTab;
@@ -238,8 +239,6 @@ class _AdminWorkerRegistrationsTabState extends State<AdminWorkerRegistrationsTa
     final category = w['category'];
     final categoryNameEn = w['categoryNameEn'];
     final categoryNameUr = w['categoryNameUr'];
-    final skills = w['skills'] as List<dynamic>?;
-    final setupComplete = w['setupComplete'] as bool? ?? false;
     final profilePicUrl = w['profilePicUrl'] ?? w['profileImage'];
 
     showModalBottomSheet(
@@ -392,59 +391,11 @@ class _AdminWorkerRegistrationsTabState extends State<AdminWorkerRegistrationsTa
                     const SizedBox(height: 16),
                   ],
 
-                  // Skills / Services
-                  if (setupComplete && skills != null && skills.isNotEmpty) ...[
-                    const Text('Selected Services / Skills', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                    const SizedBox(height: 8),
-                    ...skills.map((s) {
-                      final skill = s as Map<String, dynamic>;
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0FDFA),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFF99F6E4)),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${skill['titleEn'] ?? ''} / ${skill['titleUr'] ?? ''}',
-                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              'Rs. ${(skill['price'] as num?)?.toStringAsFixed(0) ?? '0'}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0D9488)),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 16),
-                  ],
-
-                  if (!setupComplete && status == 'approved')
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFFDE68A)),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.info_outline, color: Color(0xFFD97706), size: 18),
-                          SizedBox(width: 8),
-                          Expanded(child: Text('Worker approved but hasn\'t completed services setup yet.', style: TextStyle(color: Color(0xFF92400E), fontSize: 13))),
-                        ],
-                      ),
+                  if (status == 'approved')
+                    _detailField(
+                      'Visit availability',
+                      canReceiveVisits(w) ? 'Accepting requests' : 'Not accepting requests',
+                      Icons.event_available_outlined,
                     ),
                   if (status == 'pending') ...[
                     const Divider(height: 24),

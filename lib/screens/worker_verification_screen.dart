@@ -288,7 +288,6 @@ class _WorkerVerificationScreenState extends State<WorkerVerificationScreen> {
         'idBackUrl': backUrl,
         'certificates': allCertUrls,
         'verificationRequestedAt': FieldValue.serverTimestamp(),
-        'setupComplete': false,
       };
 
       if (allCertUrls.isNotEmpty) {

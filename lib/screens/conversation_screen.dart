@@ -458,7 +458,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final isWorker = role == 'worker' ||
         data.containsKey('category') ||
         data.containsKey('categoryKey') ||
-        data.containsKey('skills');
+        (data['roles'] is List && (data['roles'] as List).contains('worker'));
 
     if (isWorker) {
       final worker = WorkerModel.fromFirestore(data, docId: _otherId);
